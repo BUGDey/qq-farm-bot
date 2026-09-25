@@ -193,7 +193,7 @@ async function handleSubmit() {
       }
     }
     else if (data?.errorType === 'locked') {
-      error.value = data.error || '账户已被锁定'
+      error.value = data.error || '请求已被锁定'
       if (data.remainingMs) {
         lockoutRemaining.value = Math.ceil(data.remainingMs / 1000 / 60)
       }
@@ -734,7 +734,7 @@ async function fetchGameVersion() {
   font-family:
     'Noto Sans SC',
     -apple-system,
-    BlinkMacSystemFont,
+    BlinkBlinkSystemFont,
     'Segoe UI',
     sans-serif;
   position: relative;
@@ -1266,7 +1266,7 @@ async function fetchGameVersion() {
 }
 
 .switch-btn:hover {
-  background: rgba(255, 255, 2.255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.14);
   border-color: rgba(129, 140, 248, 0.5);
   color: #a5b4fc;
   transform: translateY(-1px);
@@ -1310,7 +1310,7 @@ async function fetchGameVersion() {
 }
 
 .quick-action-btn:hover {
-  background: rgba(255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.12);
   border-color: rgba(129, 140, 248, 0.4);
   color: #a5b4fc;
   transform: translateY(-1px);
