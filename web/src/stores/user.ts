@@ -91,7 +91,7 @@ export function formatTimeDuration(card: Partial<Card> | Partial<UserCard> | nul
   if (Number.isFinite(durationValue) && durationValue > 0)
     return `${formatNumber(durationValue)}${durationUnit === 'hour' ? '小时' : '天'}`
   const days = Number(card.days)
-  if (Number.isFinite(duration) && days > 0)
+  if (Number.isFinite(days) && days > 0)
     return `${formatNumber(days)}天`
   return '未激活'
 }
@@ -264,7 +264,7 @@ export const useUserStore = defineStore('user', () => {
     type?: 'time' | 'quota',
     payload?: {
       confirmed?: boolean
-      confirmText?: boolean
+      confirmText?: string
       durationValue?: number
       durationUnit?: 'hour' | 'day'
       value?: number
