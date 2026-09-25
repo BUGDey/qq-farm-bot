@@ -224,7 +224,7 @@ const statusFilterOptions = [
       </span>
       <BaseButton variant="secondary" size="sm" @click="$emit('copySelected')">
         一键复制
-      </span>
+      </BaseButton>
       <BaseButton variant="danger" size="sm" @click="$emit('deleteSelected')">
         批量删除
       </BaseButton>
