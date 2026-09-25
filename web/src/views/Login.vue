@@ -1266,7 +1266,7 @@ async function fetchGameVersion() {
 }
 
 .switch-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 2.255, 255, 0.14);
   border-color: rgba(129, 140, 248, 0.5);
   color: #a5b4fc;
   transform: translateY(-1px);
@@ -1310,7 +1310,7 @@ async function fetchGameVersion() {
 }
 
 .quick-action-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 0.12);
   border-color: rgba(129, 140, 248, 0.4);
   color: #a5b4fc;
   transform: translateY(-1px);
@@ -1357,7 +1357,7 @@ async function fetchGameVersion() {
 .purchase-link {
   color: #bbf7d0;
   background: rgba(34, 197, 94, 0.18);
-  border-color: rgba(34, 197, 255, 255, 0.32);
+  border-color: rgba(34, 197, 94, 0.32);
 }
 .purchase-link:hover {
   background: rgba(34, 197, 94, 0.28);
