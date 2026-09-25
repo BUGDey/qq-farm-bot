@@ -683,7 +683,7 @@ function updateUser(username, updates) {
     saveUsers();
     return {
         username: user.username,
-        role: u.role,
+        role: user.role,
         card: user.card,
         accountLimit: getEffectiveAccountLimit(user)
     };
