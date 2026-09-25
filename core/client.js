@@ -8,6 +8,7 @@ const {
 } = require('./src/controllers/admin');
 const { createRuntimeEngine } = require('./src/runtime/runtime-engine');
 const { createModuleLogger } = require('./src/services/logger');
+const { verifyAndRun } = require('./src/services/license');
 
 const mainLogger = createModuleLogger('main');
 const isWorkerProcess = process.env.FARM_WORKER === '1';
@@ -15,6 +16,15 @@ const isWorkerProcess = process.env.FARM_WORKER === '1';
 async function bootstrap() {
     if (isWorkerProcess) {
         require('./src/core/worker');
+        return;
+    }
+
+    const licenseValid = await verifyAndRun();
+    if (!licenseValid) {
+        console.error('');
+        console.error('[Error] License verification failed, exiting.');
+        console.error('');
+        process.exit(1);
         return;
     }
 
