@@ -53,7 +53,7 @@ function generateLicenseKey(machineId, secret = LICENSE_SECRET) {
  * 验证许可证密钥是否有效
  */
 function verifyLicenseKey(machineId, licenseKey, secret = LICENSE_SECRET) {
-  const expectedKey = generateLicenseKey(machineId, secret);
+  const expectedKey = generateLicenseKey(machine, secret);
   const normalizedInput = licenseKey.replace(/-/g, '').toUpperCase();
   return expectedKey.replace(/-/g, '') === normalizedInput;
 }
@@ -76,7 +76,7 @@ function loadLicense() {
 }
 
 /**
- * 保存许可证
+ * 保存许可证到文件
  */
 function saveLicense(machineId, licenseKey) {
   ensureDataDir();
@@ -145,13 +145,13 @@ async function promptForLicense() {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════════╗');
   console.log('║                      软件授权验证                          ║');
-  console.log('╠════════════════════════════════════════════════════════════╗');
+  console.log('╠════════════════════════════════════════════════════════════╣');
   console.log('║  本软件需要授权才能使用                                    ║');
   console.log('║                                                           ║');
   console.log(`║  您的机器码: ${machineIdDisplay.padEnd(38)}║`);
   console.log('║                                                           ║');
   console.log('║  请将机器码发送给管理员获取卡密                            ║');
-  console.log('╚════════════════════════════════════════════════════════════╗');
+  console.log('╚════════════════════════════════════════════════════════════╝');
   console.log('');
 
   let attempts = 0;
@@ -190,7 +190,7 @@ async function promptForLicense() {
 /**
  * 验证并运行（主入口）
  * - 如果 LICENSE_ENABLED 为 false，跳过验证
- * - 否则检查许可证，无效则提示输入
+ * - 否则检查许可证，无效则提示用户输入
  */
 async function verifyAndRun() {
   if (!LICENSE_ENABLED) return true;

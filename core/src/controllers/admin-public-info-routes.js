@@ -11,7 +11,8 @@ function getPublicAntiResaleConfig(config) {
   return {
     enabled: config.enabled,
     title: config.title,
-    author: config.qq,
+    author: config.author,
+    qq: config.qq,
     content: config.content,
     userThreshold: config.userThreshold,
     intervalSeconds: config.intervalSeconds,
