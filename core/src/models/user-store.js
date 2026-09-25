@@ -512,7 +512,7 @@ function registerUser(username, password, cardCode) {
 
     // 密码强度
     const pwdResult = validatePasswordStrength(password);
-    if (!pwdResult) return { ok: false, error: pwdResult.errors.join('；') };
+    if (!pwdResult.valid) return { ok: false, error: pwdResult.errors.join('；') };
 
     // 卡密验证
     const card = cards.find(c => c.code === cardCode);
@@ -683,7 +683,7 @@ function updateUser(username, updates) {
     saveUsers();
     return {
         username: user.username,
-        role: user.role,
+        role: u.role,
         card: user.card,
         accountLimit: getEffectiveAccountLimit(user)
     };
@@ -1055,7 +1055,7 @@ function clearExpiredUsers() {
             continue;
         }
         if (user.card && user.card.expiresAt && user.card.expiresAt < now) {
-            toDelete(user.username);
+            toDelete.push(user.username);
         } else {
             keep.push(user);
         }
