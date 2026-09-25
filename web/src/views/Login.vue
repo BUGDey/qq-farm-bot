@@ -856,7 +856,7 @@ async function fetchGameVersion() {
   animation: star-twinkle 4.5s ease-in-out infinite;
   animation-delay: -1.5s;
 }
-.cloud-2::before { width: 2px; height: 2px; top: 14px; left: 10px; }
+.cloud-2::before { width: 2px 2px; top: 14px; left: 10px; }
 .cloud-2::after { width: 3px; height: 3px; top: -10px; left: 18px; }
 
 .cloud-3 {
@@ -940,26 +940,12 @@ async function fetchGameVersion() {
 
 @keyframes glow-breathe {
   0% { opacity: 0.4; transform: translateX(-50%) scaleY(0.9); }
- 100% { opacity: 0.8; transform: translateX(-50%) scaleY(1.2); }
+  100% { opacity: 0.8; transform: translateX(-50%) scaleY(1.2); }
 }
 
 /* --- Logo 区域 --- */
 .logo-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  margin-bottom: 18px;
-  position: relative;
-  z-index: 1;
-}
-
-.logo-icon-wrapper {
-  position: relative;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  -webkit-backdrop-filter: blur(16px);
 }
 
 /* 呼吸光环 */
@@ -994,7 +980,7 @@ async function fetchGameVersion() {
     0 0 0 1px rgba(255, 255, 255, 0.6) inset;
   position: relative;
   z-index: 1;
-  transition: transform 0.3s ease, box-shadow: 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .logo-icon:hover {
@@ -1011,7 +997,7 @@ async function fetchGameVersion() {
   margin: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
-  background: linear-gradient(135deg, #2e7d32, #43a047, #66bb6a);
+  background: 线性渐变(135deg, #2e7d32, #43a047, #66bb6a);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1078,11 +1064,7 @@ async function fetchGameVersion() {
   top: 50%;
   transform: translateY(-50%);
   font-size: 1rem;
-  color: #a0aec0;
-  z-index: 2;
-  pointer-events: none;
-  transition: color 0.25s ease;
-}
+  color: #a0aec0;}
 
 .input-wrapper:focus-within .input-icon {
   color: var(--theme-primary, #22c55e);
@@ -1163,7 +1145,7 @@ async function fetchGameVersion() {
   backdrop-filter: blur(8px);
 }
 
-/* 消息滑入动画 */
+/* 丢失动画 */
 .msg-slide-enter-active {
   animation: msg-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1179,7 +1161,7 @@ async function fetchGameVersion() {
   100% { opacity: 0; transform: translateY(-6px) scale(0.96); max-height: 0; padding: 0; margin: 0; }
 }
 
-/* --- 提交按钮（带微光效） --- */
+/* --- 提交按钮 --- */
 .submit-btn {
   margin-top: 4px;
   height: 46px;
@@ -1344,7 +1326,7 @@ async function fetchGameVersion() {
   font-weight: 600;
   font-size: 0.72rem;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   cursor: pointer;
   border: 1px solid transparent;
 }
@@ -1398,35 +1380,8 @@ async function fetchGameVersion() {
   white-space: nowrap;
 }
 
-/* --- 免费领取按钮（带闪烁星星） --- */
-.claim-card-btn {
-  width: 100%;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(16, 185, 129, 0.22));
-  border: 1px solid rgba(34, 197, 94, 0.4);
-  border-radius: 12px;
-  color: #86efac;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.claim-card-btn:hover:not(:disabled) {
-  border-color: #86efac;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.34), rgba(16, 185, 129, 0.34));
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.25);
-}
-
-.claim-card-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+/* --- 免费领取按钮 --- */
+.claim-card-btn {}
 
 .sparkle-icon {
   display: inline-block;
@@ -1439,49 +1394,10 @@ async function fetchGameVersion() {
 }
 
 /* --- 响应式 --- */
-@media (max-width: 480px) {
-  .login-container {
-    align-items: flex-start;
-    padding: 28px 12px 12px;
-  }
-
-  .login-card {
-    padding: 24px 18px 18px;
-    border-radius: 18px;
-  }
-
-  .logo-icon {
-    width: 56px;
-    height: 56px;
-  }
-
-  .logo-title {
-    font-size: 1.2rem;
-  }
-
-  .cloud-3 {
-    display: none;
-  }
-
-  .particle {
-    opacity: 0.15;
-  }
-}
+@media (max-width: 480px) {}
 
 @media (prefers-reduced-motion: reduce) {
-  .login-card,
-  .submit-btn,
-  .switch-btn,
-  .quick-action-btn,
-  .cloud,
-  .particle,
-  .sun-core,
-  .sun-glow-1,
-  .sun-glow-2,
-  .card-glow,
-  .logo-ring-1,
-  .logo-ring-2,
-  .sparkle-icon {
+  .claim-card-btn {
     animation: none !important;
     transition-duration: 0.01ms !important;
   }
