@@ -35,7 +35,7 @@ function registerAdminUserRoutes({
     "/api/admin/users/clear-expired",
     requireAdminToken,
     requireAdminRole,
-    (req, res) {
+    (req, res) => {
       try {
         if (!requireDangerConfirmation(req, res, "CLEAR_EXPIRED_USERS")) return;
         const result = userStore.clearExpiredUsers();
@@ -164,7 +164,7 @@ function registerAdminUserRoutes({
             .json({ ok: false, error: "不能删除自己的账号" });
         }
 
-        const mutationError = getAdminUserMutationError(current, username);
+        const mutationError = getAdminUserMutationError(currentUser, username);
         if (mutationError) {
           return res.status(403).json({ ok: false, error: mutationError });
         }
