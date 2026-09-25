@@ -156,7 +156,7 @@ export function useAdminCards(options: UseAdminCardsOptions) {
       const result = await userStore.getAllCards()
       if (result.ok) {
         cards.value = result.data
-        availableTimeCards.value = result.data.filter((card: Card) => card.type === 'time' && !c.usedBy && card.enabled).length
+        availableTimeCards.value = result.data.filter((card: Card) => card.type === 'time' && !card.usedBy && card.enabled).length
       }
       else {
         toast.error(result.error || '获取卡密列表失败')
@@ -345,7 +345,7 @@ export function useAdminCards(options: UseAdminCardsOptions) {
   }
 
   async function confirmDeleteCard() {
-    if (!pendingToggleCard.value)
+    if (!pendingDeleteCard.value)
       return
 
     deleteCardLoading.value = true
