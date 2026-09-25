@@ -211,7 +211,7 @@ function registerAdminCardRoutes({
           availableTimeCards,
         });
       } catch (error) {
-        reserees.status(500).json({ ok: false, error: error.message });
+        res.status(500).json({ ok: false, error: error.message });
       }
     },
   );
