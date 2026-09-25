@@ -176,6 +176,11 @@ watch(
 )
 
 const showThemeDropdown = ref(false)
+
+function handleLogout() {
+  userStore.logout()
+  window.location.href = '/login'
+}
 </script>
 
 <template>
@@ -239,6 +244,29 @@ const showThemeDropdown = ref(false)
 
     <!-- Footer Status -->
     <div class="relative mt-4 flex-none rounded-xl px-3 py-2.5" style="background: color-mix(in srgb, var(--surface-2) 80%, transparent);">
+      <!-- 当前登录用户 + 登出 -->
+      <div
+        class="mb-2 flex items-center justify-between gap-2 border-b pb-2"
+        style="border-color: color-mix(in srgb, var(--theme-text) 10%, transparent);"
+      >
+        <div class="flex min-w-0 items-center gap-2">
+          <div
+            class="flex h-7 w-7 flex-none items-center justify-center overflow-hidden rounded-full text-sm"
+            style="background: var(--theme-gradient);"
+          >
+            <span class="text-white">{{ userStore.avatar || userStore.username?.charAt(0)?.toUpperCase() }}</span>
+          </div>
+          <span class="truncate text-xs font-medium" style="color: var(--theme-text);">{{ userStore.username }}</span>
+        </div>
+        <button
+          class="flex h-7 w-7 flex-none items-center justify-center rounded-lg transition-colors hover:bg-gray-200/60 dark:hover:bg-gray-700/60"
+          title="退出登录"
+          @click="handleLogout"
+        >
+          <div class="i-carbon-logout text-sm" :style="{ color: 'var(--theme-primary)' }" />
+        </button>
+      </div>
+
       <div class="flex items-center justify-between text-xs">
         <div class="flex items-center gap-1.5 font-medium" style="color: var(--theme-text);">
           <span class="h-2 w-2 rounded-full" :class="[connectionStatus.color, { 'animate-pulse': connectionStatus.pulse }]" />
