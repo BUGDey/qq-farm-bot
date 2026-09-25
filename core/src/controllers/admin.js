@@ -37,6 +37,7 @@ const { registerAdminAnalyticsRoutes } = require("./admin-analytics-routes");
 const { createAdminAccountAccess } = require("./admin-account-access");
 const { registerAdminAuthRoutes } = require("./admin-auth-routes");
 const { registerAdminBagRoutes } = require("./admin-bag-routes");
+const { registerAdminCardRoutes } = require("./admin-card-routes");
 const { registerAdminCareerRoutes } = require("./admin-career-routes");
 const { registerAdminCaptureRoutes, setEmbeddedCapture } = require("./admin-capture-routes");
 const { createCaptureCore } = require("../capture/index");
@@ -49,6 +50,7 @@ const {
 } = require("./admin-farm-resource-routes");
 const { registerAdminFriendRoutes } = require("./admin-friend-routes");
 const { registerAdminIllustratedRoutes } = require("./admin-illustrated-routes");
+const { registerAdminLoginLogRoutes } = require("./admin-login-log-routes");
 const { registerAdminPetRoutes } = require("./admin-pet-routes");
 const {
   registerAdminPlantBlacklistRoutes,
@@ -61,7 +63,9 @@ const { createAdminRouteHelpers } = require("./admin-route-helpers");
 const { registerAdminSettingsRoutes } = require("./admin-settings-routes");
 const { registerAdminShopRoutes } = require("./admin-shop-routes");
 const { createAdminSessionManager } = require("./admin-session-manager");
+const { registerAdminSuperAdminRoutes } = require("./admin-super-admin-routes");
 const { registerAdminSystemRoutes } = require("./admin-system-routes");
+const { registerAdminUserRoutes } = require("./admin-user-routes");
 const userStore = require("../models/user-store");
 
 const adminLogger = createModuleLogger("admin");
@@ -75,9 +79,15 @@ const PUBLIC_API_PATHS = new Set([
   "/auto-login",
   "/qr/create",
   "/qr/check",
+  "/card-claim/status",
+  "/card-claim/claim",
   "/game-version",
   "/public/login-links",
+  "/user-count",
   "/changelog",
+  "/public/renew",
+  "/public/reset-password/verify",
+  "/public/reset-password/confirm",
   "/health",
 ]);
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -380,6 +390,9 @@ function startAdminServer(dataProvider) {
     getProvider: () => provider,
   });
   const {
+    checkAccountLimit,
+    checkAccountLimitInterval,
+    getAdminUserMutationError,
     requireAdminRole,
     requireDangerConfirmation,
     requireSuperAdminRole,
@@ -409,6 +422,9 @@ function startAdminServer(dataProvider) {
   );
   app.use("/login-assets", (req, res) => res.sendStatus(404));
   adminScheduler.setIntervalTask("session_cleanup", FIVE_MINUTES_MS, cleanupInvalidAdminSessions, {
+    preventOverlap: true,
+  });
+  adminScheduler.setIntervalTask("account_limit_check", ONE_MINUTE_MS, checkAccountLimitInterval, {
     preventOverlap: true,
   });
 
@@ -541,6 +557,16 @@ function startAdminServer(dataProvider) {
     getRuntimeConfig,
     updateRuntimeConfig,
   });
+  registerAdminSuperAdminRoutes({
+    app,
+    store,
+    userStore,
+    logger: adminLogger,
+    requireAdminToken,
+    requireSuperAdminRole,
+    requireDangerConfirmation,
+    checkAccountLimit,
+  });
   adminLogger.info("抓包服务默认关闭，未随管理面板启动运行");
   registerAdminCaptureRoutes({
     app,
@@ -562,6 +588,26 @@ function startAdminServer(dataProvider) {
     userStore,
     store,
   });
+  registerAdminCardRoutes({
+    app,
+    requireAdminToken,
+    requireAdminRole,
+    requireDangerConfirmation,
+    userStore,
+    adminLogger,
+  });
+  registerAdminUserRoutes({
+    app,
+    requireAdminToken,
+    requireAdminRole,
+    requireSuperAdminRole,
+    requireDangerConfirmation,
+    getAdminUserMutationError,
+    userStore,
+    adminLogger,
+    invalidateAdminSessions,
+    updateAdminSessions,
+  });
   registerAdminAccountRoutes({
     app,
     provider,
@@ -582,6 +628,14 @@ function startAdminServer(dataProvider) {
   registerAdminQrLoginRoutes({ app });
   registerAdminNapcatLoginRoutes({ app });
   registerAdminProxyRoutes({ app, logger: adminLogger });
+  registerAdminLoginLogRoutes({
+    app,
+    userStore,
+    logger: adminLogger,
+    requireAdminToken,
+    requireAdminRole,
+    requireDangerConfirmation,
+  });
   registerSpaFallback(app, webDist);
 
   const subscribeSocketToAccount = (socket, accountRef = "") => {
