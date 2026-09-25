@@ -1,5 +1,5 @@
-const LOWERCASE_RE = /[a-z]
-const UPPERCASE_RE = /[A-Z]
+const LOWERCASE_RE = /[a-z]/
+const UPPERCASE_RE = /[A-Z]/
 const DIGIT_RE = /\d/
 const SPECIAL_CHAR_RE = /[!@#$%^&*(),.?":{}|<>_\-+=[\]\\;'/`~]/
 const COMMON_PASSWORDS = ['password', '123456', 'qwerty', 'abc123', '111111']
