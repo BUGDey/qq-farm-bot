@@ -3,11 +3,13 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
 import AdminSystemPanel from '@/components/admin/AdminSystemPanel.vue'
+import AdminLicensePanel from '@/components/admin/AdminLicensePanel.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import AccountFeatureSettings from '@/components/settings/AccountFeatureSettings.vue'
 import AccountSettingsTab from '@/components/settings/AccountSettingsTab.vue'
 import AutoCodeRefreshCard from '@/components/settings/AutoCodeRefreshCard.vue'
 import DeviceProtocolCard from '@/components/settings/DeviceProtocolCard.vue'
+import MyAccountPanel from '@/components/settings/MyAccountPanel.vue'
 import OfflineReminderCard from '@/components/settings/OfflineReminderCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAccountSettings } from '@/composables/settings/useAccountSettings'
@@ -20,14 +22,16 @@ import { useSettingStore } from '@/stores/setting'
 const settingStore = useSettingStore()
 const route = useRoute()
 
-type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'system'
+type SettingsTabKey = 'my-account' | 'account' | 'account-config' | 'notification' | 'license' | 'system'
 
-const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'system']
+const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['my-account', 'account', 'account-config', 'notification', 'license', 'system']
 const LEGACY_SETTINGS_TABS: Record<string, SettingsTabKey> = {
   'strategy': 'account-config',
   'automation': 'account-config',
   'default-plan': 'account-config',
   'user': 'notification',
+  'card': 'license',
+  'cards': 'license',
   'capture': 'system',
 }
 
@@ -60,10 +64,12 @@ watch(activeTab, (newTab) => {
 })
 
 const tabs = [
+  { key: 'my-account', label: '我的账号', icon: 'i-carbon-user' },
   { key: 'account', label: '账号管理', icon: 'i-carbon-user-settings' },
   { key: 'account-config', label: '账号设置', icon: 'i-carbon-settings-adjust' },
   { key: 'notification', label: '通知设置', icon: 'i-carbon-notification' },
-  { key: 'system', label: '系统配置', icon: 'i-carbon-settings-services' },
+  { key: 'license', label: '卡密管理', icon: 'i-carbon-ticket', adminOnly: true },
+  { key: 'system', label: '系统配置', icon: 'i-carbon-settings-services', adminOnly: true },
 ] as const
 
 const modalVisible = ref(false)
@@ -393,6 +399,7 @@ onMounted(async () => {
         <nav ref="settingsTabsNav" class="flex gap-1 overflow-x-auto p-2">
           <button
             v-for="tab in tabs"
+            v-show="!('adminOnly' in tab && tab.adminOnly) || userIsAdmin"
             :key="tab.key"
             :data-settings-tab="tab.key"
             class="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all"
@@ -409,9 +416,12 @@ onMounted(async () => {
       </div>
 
       <div class="p-4">
-        <!-- 账号管理 -->
+        <!-- 我的账号（系统用户） -->
+        <MyAccountPanel v-if="activeTab === 'my-account'" />
+
+        <!-- 账号管理（QQ 游戏账号） -->
         <AccountSettingsTab
-          v-if="activeTab === 'account'"
+          v-else-if="activeTab === 'account'"
           :accounts="accounts"
           :accounts-loading="accountsLoading"
           :current-account-id="currentAccountId"
@@ -489,6 +499,8 @@ onMounted(async () => {
             @test="handleTestOffline"
           />
         </div>
+
+        <AdminLicensePanel v-else-if="activeTab === 'license'" />
 
         <div v-else-if="activeTab === 'system'" class="space-y-5">
           <div class="sticky top-0 z-10 flex items-center justify-between border border-gray-200 rounded-xl bg-white/95 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
