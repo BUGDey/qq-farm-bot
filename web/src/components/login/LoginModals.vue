@@ -230,7 +230,7 @@ const resetPasswordTouched = defineModel<boolean>('resetPasswordTouched', { requ
 .claim-modal {
   width: 100%;
   max-width: 360px;
-  background: rgba(255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(102, 187, 106, 0.22);
   border-radius: 18px;
   box-shadow:
