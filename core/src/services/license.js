@@ -53,7 +53,7 @@ function generateLicenseKey(machineId, secret = LICENSE_SECRET) {
  * 验证许可证密钥是否有效
  */
 function verifyLicenseKey(machineId, licenseKey, secret = LICENSE_SECRET) {
-  const expectedKey = generateLicenseKey(machine, secret);
+  const expectedKey = generateLicenseKey(machineId, secret);
   const normalizedInput = licenseKey.replace(/-/g, '').toUpperCase();
   return expectedKey.replace(/-/g, '') === normalizedInput;
 }
@@ -190,7 +190,7 @@ async function promptForLicense() {
 /**
  * 验证并运行（主入口）
  * - 如果 LICENSE_ENABLED 为 false，跳过验证
- * - 否则检查许可证，无效则提示用户输入
+ * - 否则检查许可证，无效则提示输入
  */
 async function verifyAndRun() {
   if (!LICENSE_ENABLED) return true;
