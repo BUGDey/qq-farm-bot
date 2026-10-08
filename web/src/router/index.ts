@@ -1,5 +1,4 @@
 import { useStorage } from '@vueuse/core'
-import axios from 'axios'
 import NProgress from 'nprogress'
 import { createRouter, createWebHistory } from 'vue-router'
 import { menuRoutes } from './menu'
@@ -8,40 +7,11 @@ import 'nprogress/nprogress.css'
 NProgress.configure({ showSpinner: false })
 
 const adminToken = useStorage('admin_token', '')
-const userInfo = useStorage('user_info', '')
-let sessionPromise: Promise<boolean> | null = null
-let sessionBootstrapAttempted = false
-
-async function ensureAdminSession() {
-  // 管理页面采用宽松鉴权：已有 token 时直接放行，不在导航时重复校验。
-  if (adminToken.value || sessionBootstrapAttempted)
-    return true
-
-  if (!sessionPromise) {
-    sessionBootstrapAttempted = true
-    sessionPromise = axios.post('/api/auto-login', {}, { timeout: 6000 })
-      .then(({ data }) => {
-        if (!data?.ok)
-          return false
-        adminToken.value = data.data.token
-        userInfo.value = JSON.stringify({
-          username: 'admin',
-          role: 'admin',
-          card: null,
-          accountLimit: data.data.accountLimit,
-          mustChangePassword: false,
-        })
-        return true
-      })
-      .catch(() => false)
-      .finally(() => { sessionPromise = null })
-  }
-  return sessionPromise
-}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    { path: '/login', name: 'login', component: () => import('@/views/Login.vue') },
     {
       path: '/',
       component: () => import('@/layouts/DefaultLayout.vue'),
@@ -51,16 +21,30 @@ const router = createRouter({
         component: route.component,
       })),
     },
-    { path: '/admin', redirect: '/settings?tab=system' },
-    { path: '/login', redirect: '/' },
-    { path: '/renewal', redirect: '/' },
+    { path: '/admin', redirect: '/admin-panel' },
+    { path: '/renewal', redirect: '/account' },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
 
-router.beforeEach(async () => {
+/**
+ * 登录守卫
+ * - 未持有 token 一律跳转登录页
+ * - 已登录访问 /login 时回到首页
+ */
+router.beforeEach(async (to) => {
   NProgress.start()
-  await ensureAdminSession()
+
+  const hasToken = !!adminToken.value
+  if (to.path === '/login') {
+    if (hasToken)
+      return { path: '/' }
+    return true
+  }
+
+  if (!hasToken) {
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
   return true
 })
 

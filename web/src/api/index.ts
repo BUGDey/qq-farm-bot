@@ -43,22 +43,24 @@ api.interceptors.response.use((response) => {
   const toast = useToastStore()
 
   if (error.response) {
+    const backendError = String(error.response.data?.error || error.response.data?.message || '').trim()
+
     if (error.response.status === 401) {
       if (!window.location.pathname.includes('/login')) {
         tokenRef.value = ''
         window.location.href = '/login'
-        toast.warning('登录已过期，请重新登录')
+        toast.warning(backendError || '登录已过期，请重新登录')
       }
     }
     else if (error.response.status >= 500) {
-      const backendError = String(error.response.data?.error || error.response.data?.message || '')
       if (backendError === '账号未运行' || backendError === 'API Timeout' || backendError === 'Request Timeout') {
         return Promise.reject(error)
       }
-      toast.error(`服务器错误 ${error.response.status} ${error.response.statusText}`)
+      toast.error(backendError || `服务器错误 ${error.response.status} ${error.response.statusText}`)
     }
     else {
-      toast.error('请求失败，请联系管理员')
+      // 优先展示后端给出的具体原因（权限不足、额度已满、卡密无效等），便于自查
+      toast.error(backendError || `请求失败（${error.response.status}）`)
     }
   }
   else if (error.request) {

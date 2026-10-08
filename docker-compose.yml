@@ -12,8 +12,9 @@ services:
       - "18000:18000"             # 抓包登录 MITM 代理端口（默认关闭，启用后供手机 Wi-Fi 代理连入）
 
     volumes:
-      - ../data:/app/core/data
-      - ../data/napcat/auth:/app/napcat-auth:ro
+      # 数据固定落在项目内的 ./data，与部署位置无关，备份只需打包这一个目录
+      - ./data:/app/core/data
+      - ./data/napcat/auth:/app/napcat-auth:ro
 
     environment:
       TZ: Asia/Shanghai
@@ -24,6 +25,21 @@ services:
       NAPCAT_LOGIN_ENABLED: "${NAPCAT_LOGIN_ENABLED:-false}"
       NAPCAT_WEBUI_URL: http://napcat:6099/api
       NAPCAT_OPENAUTH_URL: http://napcat:6099/plugin/qq-miniapp-openauth/api
+      # ---- 多用户账号与卡密体系 ----
+      # 关闭后退回单机模式（auto-login 可用，不做用户校验）
+      FARM_USER_SYSTEM_ENABLED: "${FARM_USER_SYSTEM_ENABLED:-true}"
+      # 内置管理员初始凭据，部署后务必修改
+      FARM_ADMIN_USERNAME: "${FARM_ADMIN_USERNAME:-admin}"
+      FARM_ADMIN_PASSWORD: "${FARM_ADMIN_PASSWORD:-admin123}"
+      # 超级管理员（可选，留空则不启用）
+      # FARM_SUPER_ADMIN_USERNAME: "superadmin"
+      # FARM_SUPER_ADMIN_PASSWORD: "ChangeMe@2026"
+      # 是否开放自助注册 / 免登录续费 / 卡密找回密码
+      FARM_ALLOW_REGISTER: "${FARM_ALLOW_REGISTER:-true}"
+      FARM_ALLOW_PUBLIC_RENEW: "${FARM_ALLOW_PUBLIC_RENEW:-true}"
+      FARM_ALLOW_PUBLIC_RESET_PASSWORD: "${FARM_ALLOW_PUBLIC_RESET_PASSWORD:-true}"
+      # 新用户默认可添加的农场账号数量
+      FARM_DEFAULT_ACCOUNT_LIMIT: "${FARM_DEFAULT_ACCOUNT_LIMIT:-2}"
       # 抓包服务默认关闭；在面板“系统配置 → Code/GID 抓取服务”开启后才会运行。
       # 代理端口固定使用 18000：
       # CAPTURE_PORTS: "18000"
@@ -52,17 +68,18 @@ services:
         NAPCAT_IMAGE: "${NAPCAT_IMAGE:-mlikiowa/napcat-docker:v4.18.19}"
     image: qq-farm-napcat:latest
     container_name: qq-farm-napcat
-    hostname: "${NAPCAT_DEVICE_NAME:-QQ-Farm-NapCat}"
+    hostname: "${NAPCAT_DEVICE_NAME:-qq-farm-bot}"
     restart: unless-stopped
     environment:
       NAPCAT_UID: "${NAPCAT_UID:-1000}"
       NAPCAT_GID: "${NAPCAT_GID:-1000}"
     ports:
-      - "127.0.0.1:6099:6099"
+      # NapCat WebUI：默认只监听本机，且会走 NapCat 自带的 Token 校验
+      - "${NAPCAT_WEBUI_HOST:-127.0.0.1}:${NAPCAT_WEBUI_PORT:-6099}:6099"
     volumes:
-      - ../data/napcat/config:/app/napcat/config
-      - ../data/napcat/QQ:/app/.config/QQ
-      - ../data/napcat/auth:/app/napcat-auth
+      - ./data/napcat/config:/app/napcat/config
+      - ./data/napcat/QQ:/app/.config/QQ
+      - ./data/napcat/auth:/app/napcat-auth
     logging:
       driver: json-file
       options:
