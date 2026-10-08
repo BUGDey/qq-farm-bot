@@ -254,7 +254,10 @@ qq-farm-bot/
 
 ## 💖 支持项目
 
-如果这个项目对你有帮助，可以通过[爱发电支持 xxxscarlxrd404](https://afdian.com/a/xxxscarlxrd404)。支持完全自愿，不影响项目功能与正常使用。
+> [!NOTE]
+> 本项目是在 [xxxscarlxrd404/qq-farm-bot](https://github.com/xxxscarlxrd404/qq-farm-bot) 基础上自行修改的**二次修改版本**，仅供个人学习交流使用，**非官方版本，与原作者无关**。
+
+原项目由原作者在业余时间维护，如果你觉得原项目不错，欢迎通过[爱发电支持原作者 xxxscarlxrd404](https://afdian.com/a/xxxscarlxrd404)。赞助完全自愿，不影响项目功能与正常使用。
 
 ## 📌 免责声明
 本项目仅供学习与研究用途。使用本工具可能违反游戏服务条款，由此产生的一切后果由使用者自行承担。
