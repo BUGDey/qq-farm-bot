@@ -15,6 +15,8 @@ export interface Account {
   avatar?: string
   avatarUrl?: string
   username?: string
+  /** 创建者/绑定用户（后端归一化字段，优先 owner，兼容旧数据回落 username） */
+  owner?: string
   platform?: string
   running?: boolean
   // Add other fields as discovered

@@ -16,6 +16,8 @@ const props = defineProps<{
   currentAccountId: string | number | null | undefined
   loading: boolean
   saving: boolean
+  /** 只读模式：普通用户仅可查看配置摘要，不能开关模块或进入配置弹窗 */
+  isReadonly?: boolean
   plantingStrategyOptions: any[]
   bagFallbackStrategyOptions: any[]
   strategyPreviewLabel: string | null
@@ -244,6 +246,8 @@ function finish() {
   activeModule.value = null
 }
 function openModule(key: ModuleKey) {
+  if (props.isReadonly)
+    return
   editSnapshot.value = {
     strategy: JSON.parse(JSON.stringify(strategy.value)),
     automation: JSON.parse(JSON.stringify(automation.value)),
@@ -305,7 +309,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
             </div>
             <BaseSwitch
               :model-value="moduleEnabled(key as ModuleKey)"
-              :disabled="saving"
+              :disabled="isReadonly || saving"
               @update:model-value="setModuleEnabled(key as ModuleKey, !!$event)"
             />
           </div>
@@ -325,7 +329,10 @@ watch(() => props.currentAccountId, loadQixiFriends)
               <span class="h-2 w-2 rounded-full" :class="moduleEnabled(key as ModuleKey) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'" />
               {{ moduleStateLabel(key as ModuleKey) }}
             </span>
-            <BaseButton variant="secondary" size="sm" @click="openModule(key as ModuleKey)">
+            <span v-if="isReadonly" class="text-xs text-gray-400 dark:text-gray-500">
+              只读（仅管理员可修改）
+            </span>
+            <BaseButton v-else variant="secondary" size="sm" @click="openModule(key as ModuleKey)">
               配置
             </BaseButton>
           </div>

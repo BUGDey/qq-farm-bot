@@ -6,7 +6,7 @@
 
 🌱 一位会自己浇水、除草、收菜的 QQ 农场小帮手
 
-[能做什么](#-能做什么) · [微信扫码](#-微信扫码登录) · [开始种田](#-开始种田) · [Docker 部署](#-docker-部署) · [更新记录](docs/CHANGELOG.md) · [使用文档](#-使用文档) · [支持项目](#-支持项目)
+[能做什么](#-能做什么) · [微信扫码](#-微信扫码登录) · [开始种田](#-开始种田) · [Docker 部署](#-docker-部署) · [已部署更新](#-已部署环境更新) · [更新记录](docs/CHANGELOG.md) · [使用文档](#-使用文档) · [支持项目](#-支持项目)
 
 </div>
 
@@ -138,6 +138,95 @@ docker compose up -d --build
 ```dotenv
 CAPTURE_ADVERTISE_IPS=192.168.1.100,100.64.0.2
 ```
+
+## 🔄 已部署环境更新
+
+适用于服务器上已经在跑、只想把代码更到新版的情况。用户、卡密、农场账号配置都在数据目录里，
+**正常更新不会丢失**；但版本跨度较大或需要回滚时，务必先备份。
+
+> [!WARNING]
+> - Docker 模式的数据在 `./data`，Node 直跑的数据在 `core/data`，两种模式不共用。
+>   切换模式时 `start.sh` 会提示是否迁移，不要手动复制数据目录。
+> - Docker 模式下 `./start.sh restart` 只重启容器（**不会重新构建镜像**），
+>   更新代码后必须 `docker compose up -d --build`，否则跑的还是旧代码。
+> - Node 直跑模式下 `start.sh` 只在 `core/node_modules` 或 `web/dist` **缺失**时才安装依赖、构建前端，
+>   更新代码后必须手动重新构建前端，否则页面仍是旧版本。
+
+### 1. 备份（建议每次都做）
+
+```bash
+cd /root/qq-farm-bot
+TS=$(date +%Y%m%d-%H%M%S)
+[ -d data ] && cp -a data "data.bak.$TS"
+[ -d core/data ] && cp -a core/data "core-data.bak.$TS"
+[ -f .env ] && cp .env ".env.bak.$TS"
+```
+
+### 2. 拉取新代码
+
+当初用 `git clone` 部署的（推荐，后续更新最省事）：
+
+```bash
+cd /root/qq-farm-bot
+git pull
+```
+
+如果服务器上改过文件导致 `git pull` 失败：
+
+```bash
+git stash push -m "服务器本地改动"   # 先收起本地改动
+git pull
+git stash pop                      # 再放回来，按提示合并冲突
+```
+
+直接丢弃本地改动（确认不再需要时）：`git checkout -- <冲突文件>`
+
+当初是手动上传 / 拷贝目录部署的：把新版里除数据目录和 `.env` 之外的内容覆盖过去即可，
+**不要覆盖** `data/`（或 `core/data/`）和 `.env`，否则会清空用户、卡密与管理员密码。
+
+### 3. 按运行模式更新并重启
+
+Docker 模式（含 QQ 登录版）：
+
+```bash
+cd /root/qq-farm-bot
+docker compose up -d --build          # 重新构建镜像并启动
+docker compose ps                     # 确认容器为 Up
+docker compose logs -f --tail=100     # 看启动日志
+```
+
+Node 直跑 / systemd 模式：
+
+```bash
+cd /root/qq-farm-bot
+pnpm -C core install --prod --frozen-lockfile   # 依赖有更新时执行
+pnpm -C web install --frozen-lockfile           # 依赖有更新时执行
+pnpm -C web build                               # 必须重新构建前端
+./start.sh restart
+```
+
+也可以直接 `./start.sh` 重新走一遍部署菜单（幂等，不会清数据）。
+
+### 4. 更新后自检
+
+```bash
+./start.sh status      # 查看服务状态与访问地址
+./start.sh logs        # 跟踪日志
+```
+
+打开管理面板确认：版本号/功能是否有变化、账号与卡密数据是否完整、农场账号是否仍在线。
+
+### 5. 出问题怎么回滚
+
+- Git 部署：回到上一个可用版本
+  ```bash
+  git log --oneline -5          # 找到更新前的 commit
+  git checkout <旧commit>
+  docker compose up -d --build  # Docker 模式
+  # Node 模式：pnpm -C web build && ./start.sh restart
+  ```
+  确认正常后再 `git checkout main` 回到主线。
+- 数据异常：停掉服务，把第 1 步的备份目录改回 `data`（或 `core/data`）即可。
 
 ## 🔑 登录方式
 

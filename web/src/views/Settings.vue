@@ -16,9 +16,14 @@ import { useStrategySettings } from '@/composables/settings/useStrategySettings'
 import { useUserSettings } from '@/composables/settings/useUserSettings'
 import { useAdminSystemConfig } from '@/composables/useAdminSystemConfig'
 import { useSettingStore } from '@/stores/setting'
+import { useUserStore } from '@/stores/user'
 
 const settingStore = useSettingStore()
+const userStore = useUserStore()
 const route = useRoute()
+
+/** 普通用户对账号配置只读，且不加载任何管理员专属接口（避免右上角弹出"需要管理员权限"） */
+const isAdminUser = computed(() => userStore.isAdmin)
 
 type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'system'
 
@@ -46,6 +51,9 @@ function getInitialSettingsTab(): SettingsTabKey {
 }
 
 const activeTab = ref<SettingsTabKey>(getInitialSettingsTab())
+// 普通用户从 localStorage 恢复到"系统配置"时回落到账号管理
+if (!isAdminUser.value && activeTab.value === 'system')
+  activeTab.value = 'account'
 const settingsTabsNav = ref<HTMLElement | null>(null)
 
 async function scrollActiveTabIntoView() {
@@ -65,6 +73,11 @@ const tabs = [
   { key: 'notification', label: '通知设置', icon: 'i-carbon-notification' },
   { key: 'system', label: '系统配置', icon: 'i-carbon-settings-services' },
 ] as const
+
+/** 系统配置 tab 仅管理员可见（其接口均为管理员专属） */
+const visibleTabs = computed(() =>
+  isAdminUser.value ? tabs : tabs.filter(tab => tab.key !== 'system'),
+)
 
 const modalVisible = ref(false)
 const defaultPlanSettingId = ref('')
@@ -146,6 +159,7 @@ const {
   currentAccountId,
   currentAccountName,
   userIsAdmin,
+  currentUserUsername,
   showModal,
   showDeleteConfirm,
   deleteLoading,
@@ -367,7 +381,9 @@ watch(currentAccountId, async () => {
 })
 
 onMounted(async () => {
-  await Promise.all([loadSystemConfig(), loadCaptureConfig()])
+  // 系统配置/抓包配置接口仅管理员可用；普通用户加载会得到 403 并触发全局错误 toast
+  if (isAdminUser.value)
+    await Promise.all([loadSystemConfig(), loadCaptureConfig()])
   await fetchAccounts()
   await fetchDeviceProtocol()
   selectFirstAccountIfNeeded()
@@ -392,7 +408,7 @@ onMounted(async () => {
       <div class="border-b border-gray-200 dark:border-gray-700">
         <nav ref="settingsTabsNav" class="flex gap-1 overflow-x-auto p-2">
           <button
-            v-for="tab in tabs"
+            v-for="tab in visibleTabs"
             :key="tab.key"
             :data-settings-tab="tab.key"
             class="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all"
@@ -416,6 +432,7 @@ onMounted(async () => {
           :accounts-loading="accountsLoading"
           :current-account-id="currentAccountId"
           :user-is-admin="userIsAdmin"
+          :current-user-username="currentUserUsername"
           :stopped-accounts-count="stoppedAccountsCount"
           :is-add-account-disabled="isAddAccountDisabled"
           :add-account-disabled-reason="addAccountDisabledReason"
@@ -456,6 +473,7 @@ onMounted(async () => {
           :current-account-id="currentAccountId"
           :loading="settingsLoading"
           :saving="accountSettingsSaving"
+          :is-readonly="!isAdminUser"
           :planting-strategy-options="plantingStrategyOptions"
           :bag-fallback-strategy-options="bagFallbackStrategyOptions"
           :strategy-preview-label="strategyPreviewLabel"

@@ -70,6 +70,35 @@ function actionText(action: string) {
   return { text: '续费核销', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' }
 }
 
+/** 登录日志事件中文名（后端存的是英文标识，展示层统一翻译；未识别的原样显示） */
+const LOGIN_EVENT_LABELS: Record<string, string> = {
+  login_success: '登录成功',
+  login_failed: '登录失败',
+  login_rejected: '登录拒绝',
+  register_success: '注册成功',
+  register_failed: '注册失败',
+}
+
+/** 登录日志错误类型中文名 */
+const LOGIN_ERROR_LABELS: Record<string, string> = {
+  invalid_credentials: '用户名或密码错误',
+  rate_limit: '尝试过于频繁',
+  locked: '已临时锁定',
+  disabled: '账号已禁用',
+  expired: '账号已过期',
+  invalid_card: '卡密无效',
+}
+
+function loginEventText(event: string) {
+  return LOGIN_EVENT_LABELS[event] || event
+}
+
+function loginErrorText(errorType?: string | null) {
+  if (!errorType)
+    return ''
+  return LOGIN_ERROR_LABELS[errorType] || errorType
+}
+
 watch(tab, (value) => {
   if (value === 'redemptions')
     loadRedemptions()
@@ -236,9 +265,9 @@ onMounted(() => {
                     ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                     : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'"
                 >
-                  {{ log.event }}
+                  {{ loginEventText(log.event) }}
                 </span>
-                <span v-if="log.errorType" class="ml-1.5 text-[11px] text-gray-400">{{ log.errorType }}</span>
+                <span v-if="log.errorType" class="ml-1.5 text-[11px] text-gray-400">{{ loginErrorText(log.errorType) }}</span>
               </td>
               <td class="px-3 py-2.5 text-xs">
                 {{ log.username || '-' }}
