@@ -153,6 +153,11 @@ const navItems = computed(() => {
     }))
 })
 
+async function handleLogout() {
+  await userStore.logout()
+  router.push('/login')
+}
+
 const hasActiveMysteryOffer = computed(() => {
   const offer = mysteryOffer.value
   if (!currentAccountId.value || mysteryOfferAccountId.value !== String(currentAccountId.value))
@@ -237,6 +242,48 @@ const showThemeDropdown = ref(false)
       </router-link>
     </nav>
 
+    <!-- 当前登录用户 -->
+    <div class="mt-2 flex-none px-1">
+      <div class="flex items-center gap-2 rounded-xl px-2 py-2" style="background: color-mix(in srgb, var(--surface-2) 70%, transparent);">
+        <div class="h-8 w-8 flex flex-none items-center justify-center rounded-full text-xs text-white font-bold" style="background: var(--theme-gradient);">
+          {{ (userStore.username || '?').slice(0, 2).toUpperCase() }}
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-xs text-gray-900 font-semibold dark:text-gray-100">
+            {{ userStore.username || '未登录' }}
+          </div>
+          <div class="truncate text-[10px]" :class="userStore.isExpired ? 'text-red-500' : 'text-gray-400'">
+            <template v-if="userStore.isAdmin">
+              管理员 · 永久有效
+            </template>
+            <template v-else-if="userStore.isExpired">
+              已过期，请续费
+            </template>
+            <template v-else>
+              {{ userStore.expireTimeText }}
+            </template>
+          </div>
+        </div>
+        <button
+          class="h-7 w-7 flex flex-none items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-500/10 hover:text-red-500"
+          title="退出登录"
+          @click="handleLogout"
+        >
+          <div class="i-carbon-logout text-sm" />
+        </button>
+      </div>
+
+      <button
+        v-if="!userStore.isAdmin"
+        class="mt-1.5 w-full flex items-center justify-center gap-1.5 border rounded-xl px-2 py-1.5 text-[11px] transition hover:opacity-80"
+        style="border-color: var(--surface-border); color: var(--theme-primary);"
+        @click="$router.push('/account')"
+      >
+        <div class="i-carbon-gift text-xs" />
+        卡密续费
+      </button>
+    </div>
+
     <!-- Footer Status -->
     <div class="relative mt-4 flex-none rounded-xl px-3 py-2.5" style="background: color-mix(in srgb, var(--surface-2) 80%, transparent);">
       <div class="flex items-center justify-between text-xs">
@@ -262,12 +309,12 @@ const showThemeDropdown = ref(false)
       <div class="mt-1 flex items-center justify-between text-[11px] font-mono opacity-45" style="color: var(--theme-text);">
         <span>v{{ version }}</span>
         <a
-          href="https://github.com/xxxscarlxrd404/qq-farm-bot"
+          href="https://github.com/BUGDey/qq-farm-bot"
           target="_blank"
           rel="noopener noreferrer"
           class="transition-opacity hover:opacity-70"
           title="打开 GitHub 项目主页"
-        >xxxscarlxrd404</a>
+        >BUGDey</a>
       </div>
 
       <!-- 主题选择弹出面板 -->

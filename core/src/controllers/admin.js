@@ -34,7 +34,10 @@ const {
 } = require("./admin-account-runtime-routes");
 const { registerAdminAccountRoutes } = require("./admin-account-routes");
 const { registerAdminAnalyticsRoutes } = require("./admin-analytics-routes");
-const { createAdminAccountAccess } = require("./admin-account-access");
+const {
+  createAdminAccountAccess,
+  isAccountOwner,
+} = require("./admin-account-access");
 const { registerAdminAuthRoutes } = require("./admin-auth-routes");
 const { registerAdminBagRoutes } = require("./admin-bag-routes");
 const { registerAdminCareerRoutes } = require("./admin-career-routes");
@@ -62,6 +65,9 @@ const { registerAdminSettingsRoutes } = require("./admin-settings-routes");
 const { registerAdminShopRoutes } = require("./admin-shop-routes");
 const { createAdminSessionManager } = require("./admin-session-manager");
 const { registerAdminSystemRoutes } = require("./admin-system-routes");
+const { registerAdminUserRoutes } = require("./admin-user-routes");
+const { registerAdminCardRoutes } = require("./admin-card-routes");
+const { registerAdminLoginLogRoutes } = require("./admin-login-log-routes");
 const userStore = require("../models/user-store");
 
 const adminLogger = createModuleLogger("admin");
@@ -72,6 +78,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
 ];
 const PUBLIC_API_PATHS = new Set([
   "/login",
+  "/register",
   "/auto-login",
   "/qr/create",
   "/qr/check",
@@ -79,7 +86,15 @@ const PUBLIC_API_PATHS = new Set([
   "/public/login-links",
   "/changelog",
   "/health",
+  "/card-claim/status",
+  "/card-claim/claim",
 ]);
+/** 前缀匹配的公开路径（/api 之后的部分） */
+const PUBLIC_API_PREFIXES = [
+  "/card/info/",
+  "/public/renew",
+  "/public/reset-password/",
+];
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 const ONE_MINUTE_MS = 60 * 1000;
 const LOG_SNAPSHOT_LIMIT = 100;
@@ -153,12 +168,15 @@ function configureStaticAssets(expressApp, webDist) {
   );
 }
 
+function isPublicApiPath(path) {
+  if (PUBLIC_API_PATHS.has(path)) return true;
+  if (PUBLIC_API_PREFIXES.some(prefix => path.startsWith(prefix))) return true;
+  return path.startsWith("/public/capture-certificate/");
+}
+
 function registerAuthGate(expressApp, requireAdminToken) {
   expressApp.use("/api", (req, res, next) => {
-    if (
-      PUBLIC_API_PATHS.has(req.path)
-      || req.path.startsWith("/public/capture-certificate/")
-    ) return next();
+    if (isPublicApiPath(req.path)) return next();
     return requireAdminToken(req, res, next);
   });
 }
@@ -380,6 +398,7 @@ function startAdminServer(dataProvider) {
     getProvider: () => provider,
   });
   const {
+    getAdminUserMutationError,
     requireAdminRole,
     requireDangerConfirmation,
     requireSuperAdminRole,
@@ -433,6 +452,37 @@ function startAdminServer(dataProvider) {
     sendProviderError,
   });
   registerLogoutRoute(app, invalidateAdminSessionAndDisconnect);
+
+  registerAdminUserRoutes({
+    app,
+    requireAdminToken,
+    requireAdminRole,
+    requireSuperAdminRole,
+    requireDangerConfirmation,
+    getAdminUserMutationError,
+    userStore,
+    adminLogger,
+    invalidateAdminSessions,
+    updateAdminSessions,
+    getAccountsForUser,
+    store,
+  });
+  registerAdminCardRoutes({
+    app,
+    requireAdminToken,
+    requireAdminRole,
+    requireDangerConfirmation,
+    userStore,
+    adminLogger,
+  });
+  registerAdminLoginLogRoutes({
+    app,
+    requireAdminToken,
+    requireAdminRole,
+    requireDangerConfirmation,
+    userStore,
+    adminLogger,
+  });
 
   registerAdminFarmResourceRoutes({
     app,
@@ -561,6 +611,7 @@ function startAdminServer(dataProvider) {
     requireAdminRole,
     userStore,
     store,
+    getAccountsForUser,
   });
   registerAdminAccountRoutes({
     app,
@@ -596,7 +647,7 @@ function startAdminServer(dataProvider) {
     if (accountId && session && !hasElevatedAdminRole(session)) {
       const accounts = getAccountsForUser();
       const account = accounts.find((item) => item.id === accountId);
-      if (!account || account.username !== session.username) {
+      if (!account || !isAccountOwner(account, session)) {
         socket.emit("subscribed", {
           accountId: "all",
           error: "无权访问此账号",

@@ -227,15 +227,12 @@ function registerAdminAccountRoutes({
         }
       }
 
+      // 新增账号时校验额度：额度卡可提升上限，管理员/超管不受限制（-1 表示不限）
       if (!isUpdate && currentUser && !isAdmin) {
         const accountCount = getAccountsForUser(currentUser.username).length;
-        const accountLimit =
-          currentUser.accountLimit || userStore.DEFAULT_ACCOUNT_LIMIT || 2;
-        if (accountCount >= accountLimit) {
-          return res.status(403).json({
-            ok: false,
-            error: `账号数量已达上限（${  accountLimit  }个），请购买额度卡密增加额度`,
-          });
+        const quota = userStore.checkAccountQuota(currentUser, accountCount);
+        if (!quota.ok) {
+          return res.status(403).json({ ok: false, error: quota.error, quota });
         }
       }
 

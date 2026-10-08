@@ -56,7 +56,7 @@
 ### 把农场跑起来
 
 ```bash
-git clone https://github.com/xxxscarlxrd404/qq-farm-bot.git
+git clone https://github.com/BUGDey/qq-farm-bot.git
 cd qq-farm-bot
 
 corepack enable
@@ -73,10 +73,32 @@ pnpm dev:core
 pnpm dev:web
 ```
 
+## 🚀 一键部署（Linux）
+
+项目根目录的 `start.sh` 是统一入口，会自动装依赖、构建前端并启动服务：
+
+```bash
+git clone https://github.com/BUGDey/qq-farm-bot.git
+cd qq-farm-bot
+./start.sh
+```
+
+菜单提供两种模式：
+
+| 选项 | 说明 |
+| --- | --- |
+| `1` 默认版 | 仅农场服务。有 Docker 走 Compose，否则 Node 直跑 |
+| `2` QQ 登录版 | 额外启动 NapCat，自动配置 QQ 扫码登录（需要 Docker） |
+
+也可跳过菜单：`./start.sh 1` / `./start.sh 2`；
+运维：`./start.sh status|logs|restart|stop`；本地开发：`./start.sh dev`。
+
+详细部署与运维见 `docs/部署说明.md`（旧版 `deploy.sh` 已合并进 `start.sh`，保留仅为兼容转发）。
+
 ## 🐳 Docker 部署
 
 ```bash
-git clone https://github.com/xxxscarlxrd404/qq-farm-bot.git
+git clone https://github.com/BUGDey/qq-farm-bot.git
 cd qq-farm-bot
 docker compose up -d --build
 ```
@@ -101,7 +123,7 @@ docker compose up -d --build
 | --- | --- |
 | Web 管理面板 | `3007` |
 | 抓包代理端口 | `18000` |
-| 持久化数据 | 仓库上级目录的 `data/` |
+| 持久化数据 | 项目根目录下的 `data/` |
 
 源码运行、Docker 和二进制发布版的抓包服务均默认关闭；只有在
 “系统配置 → Code/GID 抓取服务”中开启后才会启动，并且只使用代理端口 `18000`。
@@ -124,7 +146,16 @@ NapCat 默认不启动，低配置机器继续使用原来的启动命令即可�
 docker compose up -d --build
 ```
 
-需要 QQ 扫码登录时，复制示例配置：
+需要 QQ 扫码登录时，最简单的方式是直接：
+
+```bash
+./start.sh 2
+```
+
+它会按 CPU 架构选好 NapCat 镜像、把设备名固定为 `qq-farm-bot`、建好并授权
+`data/napcat` 目录、写入下面这些配置，然后启动两个容器。
+
+手动配置则复制示例配置：
 
 ```bash
 cp .env.compose.example .env
@@ -137,11 +168,12 @@ COMPOSE_PROFILES=napcat
 NAPCAT_LOGIN_ENABLED=true
 ```
 
-随后执行 `./compose.sh up -d --build`。脚本会读取当前 macOS 或 Linux 宿主机名并将其设置为
-QQ 登录记录中的设备名称，然后由 Compose 启动农场和 NapCat 两个服务。构建 NapCat
+随后执行 `./compose.sh up -d --build` 即可由 Compose 启动农场和 NapCat 两个服务。
+QQ 登录记录中的设备名称默认为 `qq-farm-bot`；`.env` 与环境变量都没有配置
+`NAPCAT_DEVICE_NAME` 时，`compose.sh` 才会回退使用 macOS 或 Linux 宿主机名。构建 NapCat
 派生镜像时自动安装 OpenAuth 插件，容器首次启动会生成内部随机 Token，并通过只读文件提供给农场
 后端，不需要在环境变量中保存密钥。更新农场或插件代码后仍使用同一条命令，不需要手动运行安装
-脚本。NapCat 的配置、内部 Token 和 QQ 登录数据保存在 `../data/napcat/`。
+脚本。NapCat 的配置、内部 Token 和 QQ 登录数据保存在 `./data/napcat/`。
 如需覆盖自动检测结果，可在 `.env` 中设置 `NAPCAT_DEVICE_NAME`；建议只使用英文字母、数字和
 连字符，并在首次登录后保持不变。修改已有部署的名称后，需要重新创建 NapCat 容器才会生效。
 
