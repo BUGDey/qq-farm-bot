@@ -184,7 +184,7 @@ export const useUserStore = defineStore('user', () => {
   const role = computed<UserRole>(() => userInfo.value?.role || 'user')
   const subscription = computed(() => userInfo.value?.subscription || userInfo.value?.card || null)
   const userCard = computed(() => subscription.value)
-  const accountLimit = computed(() => userInfo.value?.accountLimit ?? 2)
+  const accountLimit = computed(() => userInfo.value?.accountLimit ?? 1)
   const accountCount = computed(() => userInfo.value?.accountCount ?? 0)
   const isExpired = computed(() => {
     const sub = subscription.value
@@ -209,7 +209,7 @@ export const useUserStore = defineStore('user', () => {
           email: '',
           phone: '',
           remark: '',
-          accountLimit: res.data.data.accountLimit ?? 2,
+          accountLimit: res.data.data.accountLimit ?? 1,
           subscription: res.data.data.subscription || res.data.data.card || null,
           card: res.data.data.subscription || res.data.data.card || null,
           isExpired: res.data.data.isExpired === true,

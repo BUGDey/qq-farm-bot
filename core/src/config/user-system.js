@@ -40,8 +40,8 @@ const USER_SYSTEM_CONFIG = {
   /** 是否开放卡密自助领取（发号机） */
   cardClaimEnabled: readBoolean('FARM_CARD_CLAIM_ENABLED', false),
 
-  /** 新用户默认可添加的农场账号数量（额度） */
-  defaultAccountLimit: readNumber('FARM_DEFAULT_ACCOUNT_LIMIT', 2),
+  /** 新用户默认可添加的农场账号数量（额度）；只影响新注册用户，已有用户以 users.json 中保存的值为准 */
+  defaultAccountLimit: readNumber('FARM_DEFAULT_ACCOUNT_LIMIT', 1),
 
   /** 管理员账号默认额度（-1 表示不限制） */
   adminAccountLimit: -1,

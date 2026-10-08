@@ -24,10 +24,19 @@ export function useAccountSettings(showAlert: (message: string, type?: AlertType
 
   const userIsAdmin = computed(() => userStore.isAdmin)
   const isAccountOpsDisabled = computed(() => !userStore.isAdmin && userStore.isExpired)
+  const currentUserUsername = computed(() => String(userStore.username || '').trim())
+
+  /** 账号是否归属当前登录用户（管理员视为全部归属）。普通用户对非本人账号只读。 */
+  function isAccountOwnedByCurrentUser(acc: any) {
+    if (userIsAdmin.value)
+      return true
+    const owner = String(acc?.owner || acc?.username || '').trim()
+    return !!owner && owner === currentUserUsername.value
+  }
   const quotaLimit = computed(() => {
     const limit = userStore.accountLimit
     if (limit === undefined || limit === null)
-      return 3
+      return 1
     return limit
   })
   const isOverQuota = computed(() => {
@@ -187,6 +196,8 @@ export function useAccountSettings(showAlert: (message: string, type?: AlertType
     currentAccountId,
     currentAccountName,
     userIsAdmin,
+    currentUserUsername,
+    isAccountOwnedByCurrentUser,
     showModal,
     showDeleteConfirm,
     deleteLoading,

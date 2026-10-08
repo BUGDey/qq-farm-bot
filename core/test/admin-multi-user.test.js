@@ -167,7 +167,7 @@ test('注册绑定 3 天卡并自动激活', async () => {
     body: { username: 'alice', password: 'Alice@123', cardCode: aliceCard },
   });
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.equal(res.body.data.accountLimit, 2);
+  assert.equal(res.body.data.accountLimit, 1);
   const expiresAt = res.body.data.subscription.expiresAt;
   assert.ok(expiresAt > Date.now() + 2.9 * 86400000);
 });
@@ -191,7 +191,7 @@ test('普通用户登录成功且只能看到自己的额度', async () => {
 
   const me = await api('/api/user/me', { token: aliceToken });
   assert.equal(me.body.data.username, 'alice');
-  assert.equal(me.body.data.accountLimit, 2);
+  assert.equal(me.body.data.accountLimit, 1);
   assert.equal(me.body.data.isExpired, false);
 });
 
@@ -212,16 +212,11 @@ test('普通用户可以添加农场账号并绑定归属', async () => {
 });
 
 test('额度用尽后拒绝新增农场账号', async () => {
-  // alice 默认额度 2，先加第二个
-  await api('/api/accounts', {
-    method: 'POST',
-    token: aliceToken,
-    body: { name: 'alice的农场2', platform: 'qq', uin: '10002' },
-  });
+  // alice 默认额度 1，已有 1 个账号，再添加即被拒绝
   const res = await api('/api/accounts', {
     method: 'POST',
     token: aliceToken,
-    body: { name: 'alice的农场3', platform: 'qq', uin: '10003' },
+    body: { name: 'alice的农场2', platform: 'qq', uin: '10002' },
   });
   assert.equal(res.status, 403);
   assert.match(res.body.error, /额度/);
@@ -241,7 +236,7 @@ test('额度卡提升账号配额后可继续添加', async () => {
     body: { cardCode: quotaCode },
   });
   assert.equal(renew.body.ok, true, JSON.stringify(renew.body));
-  assert.equal(renew.body.data.accountLimit, 5);
+  assert.equal(renew.body.data.accountLimit, 4);
   assert.equal(renew.body.data.cardType, 'quota');
 
   const res = await api('/api/accounts', {
@@ -274,15 +269,19 @@ test('普通用户不能访问他人的农场账号', async () => {
     body: { name: 'bob的农场', platform: 'qq', uin: '20001' },
   });
 
-  // alice 只能看到自己的账号
+  // 账号列表对所有登录用户可见（普通用户对配置只读），alice 能看到 bob 的账号但无法操作
   const list = await api('/api/accounts', { token: aliceToken });
-  const owners = new Set((list.body.data.accounts || []).map(item => item.username));
-  assert.deepEqual([...owners], ['alice']);
+  const listAccounts = list.body.data.accounts || [];
+  const owners = new Set(listAccounts.map(item => item.username));
+  assert.ok(owners.has('alice'));
+  assert.ok(owners.has('bob'));
+  // 返回结果带归一化的创建者字段
+  assert.ok(listAccounts.every(item => item.owner));
 
-  // alice 不能操作 bob 的账号
+  // alice 不能操作 bob 的账号（列表是全量的，按归属过滤出 bob 的账号再尝试删除）
   const bobAccounts = await api('/api/accounts', { token: bobToken });
-  const bobAccountId = bobAccounts.body.data.accounts[0].id;
-  const del = await api(`/api/accounts/${bobAccountId}`, { method: 'DELETE', token: aliceToken });
+  const bobAccount = (bobAccounts.body.data.accounts || []).find(item => item.username === 'bob');
+  const del = await api(`/api/accounts/${bobAccount.id}`, { method: 'DELETE', token: aliceToken });
   assert.equal(del.status, 403);
 });
 
@@ -296,7 +295,7 @@ test('管理员可查看全部用户与名下账号配置', async () => {
 
   const detail = await api('/api/admin/users/alice/accounts?withConfig=1', { token: adminToken });
   assert.equal(detail.status, 200);
-  assert.equal(detail.body.data.total, 3);
+  assert.equal(detail.body.data.total, 2);
   assert.ok(detail.body.data.accounts[0].config);
   assert.ok(detail.body.data.accounts[0].config.automation);
 });

@@ -4,11 +4,12 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { getPlatformClass, getPlatformLabel } from '@/stores/account'
 
-defineProps<{
+const props = defineProps<{
   accounts: any[]
   accountsLoading: boolean
   currentAccountId: string | number | null | undefined
   userIsAdmin: boolean
+  currentUserUsername: string
   stoppedAccountsCount: number
   isAddAccountDisabled: boolean
   addAccountDisabledReason: string
@@ -43,6 +44,19 @@ const emit = defineEmits<{
   closeClearStoppedConfirm: []
   confirmClearStopped: []
 }>()
+
+/** 账号是否归属当前登录用户（管理员视为全部归属）。普通用户对非本人账号只能查看，不能启停。 */
+function isOwnedAccount(acc: any) {
+  if (props.userIsAdmin)
+    return true
+  const owner = String(acc?.owner || acc?.username || '').trim()
+  return !!owner && owner === String(props.currentUserUsername || '').trim()
+}
+
+/** 创建者展示文案 */
+function ownerLabel(acc: any) {
+  return String(acc?.owner || acc?.username || '').trim() || '未绑定'
+}
 
 function accountAvatar(acc: any) {
   const direct = String(acc?.avatar || acc?.avatarUrl || acc?.avatar_url || '').trim()
@@ -150,6 +164,12 @@ function accountAvatar(acc: any) {
                 >
                   {{ getPlatformLabel(acc.platform) }}
                 </span>
+                <span
+                  class="max-w-full truncate rounded bg-gray-100 px-1.5 py-0.5 text-[10px] leading-tight text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                  :title="`创建者：${ownerLabel(acc)}`"
+                >
+                  创建者：{{ ownerLabel(acc) }}
+                </span>
               </div>
             </div>
           </div>
@@ -163,8 +183,8 @@ function accountAvatar(acc: any) {
               size="sm"
               class="border rounded-full shadow-sm transition-all duration-500 ease-in-out sm:w-20 active:scale-95"
               :class="acc.running ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 focus:ring-red-500 active:border-red-300 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 dark:focus:ring-red-500 dark:active:border-red-700' : 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100 focus:ring-green-500 active:border-green-300 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30 dark:focus:ring-green-500 dark:active:border-green-700'"
-              :disabled="!acc.running && isAccountOpsDisabled"
-              :title="!acc.running && isAccountOpsDisabled ? '账号已到期，无法启动账号' : ''"
+              :disabled="!isOwnedAccount(acc) || (!acc.running && isAccountOpsDisabled)"
+              :title="!isOwnedAccount(acc) ? '仅账号归属用户或管理员可以操作' : (!acc.running && isAccountOpsDisabled ? '账号已到期，无法启动账号' : '')"
               @click="emit('toggle', acc)"
             >
               <div :class="acc.running ? 'i-carbon-stop-filled' : 'i-carbon-play-filled'" class="mr-1" />
@@ -174,15 +194,16 @@ function accountAvatar(acc: any) {
         </div>
 
         <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 sm:mt-4 dark:border-gray-700 sm:pt-4">
-          <div class="hidden items-center gap-2 text-sm text-gray-500 sm:flex">
+          <div class="hidden shrink-0 items-center gap-2 text-sm whitespace-nowrap text-gray-500 sm:flex">
             <span class="flex items-center gap-1">
               <div class="h-2 w-2 rounded-full" :class="acc.running ? 'bg-green-500' : 'bg-gray-300'" />
               {{ acc.running ? '运行中' : '已停止' }}
             </span>
           </div>
 
-          <div class="flex flex-1 justify-end gap-1 sm:flex-initial sm:gap-2">
+          <div class="flex flex-1 flex-wrap justify-end gap-1 sm:flex-initial sm:gap-2">
             <BaseButton
+              v-if="userIsAdmin"
               :data-testid="`set-default-plan-${acc.id}`"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
@@ -198,6 +219,7 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
             <BaseButton
+              v-if="userIsAdmin"
               :data-testid="`apply-default-plan-${acc.id}`"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
@@ -225,6 +247,7 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
             <BaseButton
+              v-if="userIsAdmin"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
               aria-label="编辑"
@@ -237,6 +260,7 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
             <BaseButton
+              v-if="userIsAdmin"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] text-red-500 !p-2 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300"
               aria-label="删除"

@@ -1,3 +1,5 @@
+const { getAccountOwner } = require("./admin-account-access");
+
 function createLogQuery(query) {
   return {
     limit: Number.parseInt(query.limit) || 100,
@@ -89,16 +91,19 @@ function registerAdminAccountRoutes({
       const currentUser = req.currentUser;
       let data;
       if (currentUser) {
+        // 所有登录用户都能看到全部账号（普通用户对配置只读，修改入口由前端隐藏 + 接口层归属校验兜底）。
+        // owner 为归一化后的创建者/绑定用户字段（优先 owner，兼容旧数据回落 username）。
         const accounts = provider.getAccounts();
         data =
-          currentUser.role === "admin" || currentUser.role === "super_admin"
-            ? accounts
-            : {
+          accounts && Array.isArray(accounts.accounts)
+            ? {
                 ...accounts,
-                accounts: accounts.accounts.filter(
-                  (account) => account.username === currentUser.username,
-                ),
-              };
+                accounts: accounts.accounts.map((account) => ({
+                  ...account,
+                  owner: getAccountOwner(account),
+                })),
+              }
+            : accounts;
       } else {
         data = { accounts: [], nextId: 1 };
       }
