@@ -46,7 +46,11 @@ const USER_SYSTEM_CONFIG = {
   /** 管理员账号默认额度（-1 表示不限制） */
   adminAccountLimit: -1,
 
-  /** 引导管理员：首次启动自动创建 */
+  /**
+   * 引导管理员：首次启动自动创建。
+   * 下方默认口令仅用于本地开发；对外部署务必通过 FARM_ADMIN_PASSWORD 设置强密码
+   * （./start.sh 会自动生成随机密码写入 .env），否则任何人都能登录管理后台。
+   */
   bootstrapAdminUsername: readEnv('FARM_ADMIN_USERNAME', 'admin'),
   bootstrapAdminPassword: readEnv('FARM_ADMIN_PASSWORD', 'admin123'),
 

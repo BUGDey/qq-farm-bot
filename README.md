@@ -97,9 +97,14 @@ cd qq-farm-bot
 
 ## 🐳 Docker 部署
 
+> [!IMPORTANT]
+> 手动使用 Compose 时，需要先在 `.env` 中设置 `FARM_ADMIN_PASSWORD`（管理员初始密码，必填）。
+> 更省事的做法是直接 `./start.sh`，它会自动生成随机密码并写入 `.env`。
+
 ```bash
 git clone https://github.com/BUGDey/qq-farm-bot.git
 cd qq-farm-bot
+cp .env.compose.example .env    # 然后编辑 .env，填入 FARM_ADMIN_PASSWORD
 docker compose up -d --build
 ```
 
