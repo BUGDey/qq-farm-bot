@@ -40,7 +40,7 @@ services:
       FARM_ALLOW_PUBLIC_RENEW: "${FARM_ALLOW_PUBLIC_RENEW:-true}"
       FARM_ALLOW_PUBLIC_RESET_PASSWORD: "${FARM_ALLOW_PUBLIC_RESET_PASSWORD:-true}"
       # 新用户默认可添加的农场账号数量
-      FARM_DEFAULT_ACCOUNT_LIMIT: "${FARM_DEFAULT_ACCOUNT_LIMIT:-2}"
+      FARM_DEFAULT_ACCOUNT_LIMIT: "${FARM_DEFAULT_ACCOUNT_LIMIT:-1}"
       # 抓包服务默认关闭；在面板“系统配置 → Code/GID 抓取服务”开启后才会运行。
       # 代理端口固定使用 18000：
       # CAPTURE_PORTS: "18000"
