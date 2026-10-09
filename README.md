@@ -93,7 +93,7 @@ cd qq-farm-bot
 也可跳过菜单：`./start.sh 1` / `./start.sh 2`；
 运维：`./start.sh status|logs|restart|stop`；本地开发：`./start.sh dev`。
 
-详细部署与运维见 `docs/部署说明.md`（旧版 `deploy.sh` 已合并进 `start.sh`，保留仅为兼容转发）。
+详细部署与运维见 `docs/部署说明.md。
 
 ## 🐳 Docker 部署
 
