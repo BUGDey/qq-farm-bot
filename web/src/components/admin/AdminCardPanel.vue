@@ -93,13 +93,44 @@ async function submitCreate() {
 }
 
 async function copyText(text: string, successTip = '卡密已复制到剪贴板') {
-  try {
-    await navigator.clipboard.writeText(text)
+  const value = String(text ?? '')
+  if (!value) {
+    toast.warning('没有可复制的内容')
+    return
+  }
+
+  let copied = false
+  // 仅在安全上下文（https / localhost）下使用 Clipboard API
+  if (window.isSecureContext && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value)
+      copied = true
+    }
+    catch {}
+  }
+  // 兜底：HTTP 或局域网 IP 访问时 Clipboard API 不可用，走 execCommand
+  if (!copied) {
+    try {
+      const textarea = document.createElement('textarea')
+      textarea.value = value
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.top = '0'
+      textarea.style.left = '0'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      textarea.setSelectionRange(0, value.length)
+      copied = document.execCommand('copy')
+      textarea.remove()
+    }
+    catch {}
+  }
+
+  if (copied)
     toast.success(successTip)
-  }
-  catch {
+  else
     toast.error('复制失败，请手动选择')
-  }
 }
 
 async function copyCodes(list: Card[]) {
