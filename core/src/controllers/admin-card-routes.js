@@ -46,8 +46,9 @@ function registerAdminCardRoutes({
       } = req.body || {};
       const countNum = Math.max(Number.parseInt(count, 10) || 1, 1);
       if (!requireDangerConfirmation(req, res, countNum > 1 ? 'CREATE_CARDS_BATCH' : 'CREATE_CARD')) return;
-      if (!description || (days === undefined && durationValue === undefined && value === undefined && !isPermanent)) {
-        return res.status(400).json({ ok: false, error: '请提供卡密描述和面值' });
+      // 卡密描述为选填；仅校验面值（加时卡需时长/永久，额度卡需数量）
+      if (days === undefined && durationValue === undefined && value === undefined && !isPermanent) {
+        return res.status(400).json({ ok: false, error: '请提供卡密面值' });
       }
 
       const result = userStore.createCard({

@@ -3,7 +3,6 @@ import type { Card } from '@/stores/user'
 import { computed, onMounted, ref } from 'vue'
 import { useToastStore } from '@/stores/toast'
 import {
-
   cardStatusText,
   formatCardValue,
   useUserStore,
@@ -19,17 +18,29 @@ const selected = ref<string[]>([])
 
 const filter = ref({ type: '', status: '', keyword: '' })
 
+const showCreateModal = ref(false)
 const createForm = ref({
   description: '',
   type: 'time' as 'time' | 'quota',
   durationValue: 3,
-  durationUnit: 'day' as 'day' | 'hour',
+  durationUnit: 'day' as 'day' | 'hour' | 'week' | 'month' | 'year' | 'permanent',
   value: 1,
   isPermanent: false,
   count: 1,
 })
 const creating = ref(false)
 const lastBatch = ref<Card[]>([])
+
+const isPermanentUnit = computed(() => createForm.value.durationUnit === 'permanent' || createForm.value.isPermanent)
+
+function openCreateModal() {
+  lastBatch.value = []
+  showCreateModal.value = true
+}
+
+function closeCreateModal() {
+  showCreateModal.value = false
+}
 
 const filteredCards = computed(() => cards.value)
 
@@ -49,10 +60,6 @@ async function load() {
 }
 
 async function submitCreate() {
-  if (!createForm.value.description.trim()) {
-    toast.warning('请填写卡密描述')
-    return
-  }
   creating.value = true
   try {
     const payload: Record<string, any> = {
@@ -63,7 +70,7 @@ async function submitCreate() {
     if (createForm.value.type === 'quota') {
       payload.value = createForm.value.value
     }
-    else if (createForm.value.isPermanent) {
+    else if (isPermanentUnit.value) {
       payload.isPermanent = true
       payload.days = -1
     }
@@ -85,16 +92,46 @@ async function submitCreate() {
   }
 }
 
-async function copyCodes(list: Card[]) {
-  if (list.length === 0)
-    return
+async function copyText(text: string, successTip = '卡密已复制到剪贴板') {
   try {
-    await navigator.clipboard.writeText(list.map(c => c.code).join('\n'))
-    toast.success('卡密已复制到剪贴板')
+    await navigator.clipboard.writeText(text)
+    toast.success(successTip)
   }
   catch {
     toast.error('复制失败，请手动选择')
   }
+}
+
+async function copyCodes(list: Card[]) {
+  if (list.length === 0)
+    return
+  await copyText(list.map(c => c.code).join('\n'))
+}
+
+/** 批量导出为 txt：创建时间 / 卡密内容 / 卡密类型 */
+function exportBatchTxt(list: Card[]) {
+  if (list.length === 0) {
+    toast.warning('没有可导出的卡密')
+    return
+  }
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const formatTime = (ts: number) => {
+    const d = new Date(ts)
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  }
+  const lines = list.map(card =>
+    `${formatTime(card.createdAt)}\t${card.code}\t${card.type === 'quota' ? '额度卡' : '加时卡'}`,
+  )
+  const content = ['创建时间\t卡密内容\t卡密类型', ...lines].join('\r\n')
+  // 加 BOM，避免 Windows 记事本 / Excel 打开乱码
+  const blob = new Blob([`\ufeff${content}`], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `卡密导出_${formatTime(Date.now()).replace(/[-: ]/g, '')}.txt`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast.success(`已导出 ${list.length} 张卡密`)
 }
 
 async function toggleCard(card: Card, action: 'revoke' | 'enable' | 'disable') {
@@ -162,93 +199,7 @@ defineExpose({ load })
 
 <template>
   <div class="space-y-4">
-    <!-- 生成卡密 -->
-    <div class="ui-card rounded-xl p-4">
-      <h3 class="mb-3 flex items-center gap-2 text-sm text-gray-900 font-semibold dark:text-gray-100">
-        <div class="i-carbon-add-alt" />
-        生成卡密
-      </h3>
-      <div class="grid gap-3 md:grid-cols-6">
-        <div class="md:col-span-2">
-          <label class="mb-1 block text-xs text-gray-500">卡密描述</label>
-          <input v-model="createForm.description" class="form-input" placeholder="例如：3 天体验卡">
-        </div>
-        <div>
-          <label class="mb-1 block text-xs text-gray-500">类型</label>
-          <select v-model="createForm.type" class="form-input">
-            <option value="time">
-              加时卡
-            </option>
-            <option value="quota">
-              额度卡
-            </option>
-          </select>
-        </div>
-        <template v-if="createForm.type === 'time'">
-          <div>
-            <label class="mb-1 block text-xs text-gray-500">时长</label>
-            <input
-              v-model.number="createForm.durationValue"
-              type="number"
-              min="1"
-              class="form-input"
-              :disabled="createForm.isPermanent"
-            >
-          </div>
-          <div>
-            <label class="mb-1 block text-xs text-gray-500">单位</label>
-            <select v-model="createForm.durationUnit" class="form-input" :disabled="createForm.isPermanent">
-              <option value="day">
-                天
-              </option>
-              <option value="hour">
-                小时
-              </option>
-            </select>
-          </div>
-        </template>
-        <template v-else>
-          <div>
-            <label class="mb-1 block text-xs text-gray-500">额度数量</label>
-            <input v-model.number="createForm.value" type="number" min="1" class="form-input">
-          </div>
-          <div />
-        </template>
-        <div>
-          <label class="mb-1 block text-xs text-gray-500">生成数量</label>
-          <input v-model.number="createForm.count" type="number" min="1" max="200" class="form-input">
-        </div>
-      </div>
-
-      <div class="mt-3 flex flex-wrap items-center gap-3">
-        <label v-if="createForm.type === 'time'" class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
-          <input v-model="createForm.isPermanent" type="checkbox" class="accent-primary">
-          永久卡
-        </label>
-        <button class="btn-primary-sm" :disabled="creating" @click="submitCreate">
-          {{ creating ? '生成中…' : '生成' }}
-        </button>
-        <span v-if="stats" class="text-xs text-gray-400">
-          库存：共 {{ stats.total }} 张（未使用 {{ stats.unused }} / 已使用 {{ stats.used }} / 已作废 {{ stats.revoked }}）
-        </span>
-      </div>
-
-      <div v-if="lastBatch.length" class="mt-3 border rounded-xl p-3" style="border-color: var(--surface-border);">
-        <div class="mb-2 flex items-center justify-between">
-          <span class="text-xs text-gray-500">本次生成 {{ lastBatch.length }} 张</span>
-          <button class="text-primary text-xs hover:underline" @click="copyCodes(lastBatch)">
-            复制全部
-          </button>
-        </div>
-        <div class="custom-scrollbar max-h-28 overflow-auto text-[11px] leading-relaxed font-mono">
-          <div v-for="card in lastBatch" :key="card.code">
-            {{ card.code }} · {{ formatCardValue(card) }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 过滤与批量 -->
+    <!-- 过滤与批量操作 -->
     <div class="flex flex-wrap items-center gap-2">
       <input
         v-model="filter.keyword"
@@ -289,6 +240,10 @@ defineExpose({ load })
         <div class="i-carbon-renew" :class="{ 'animate-spin': loading }" />
         刷新
       </button>
+      <button class="btn-primary-sm" @click="openCreateModal">
+        <div class="i-carbon-add-alt mr-1 inline-block align-[-2px]" />
+        生成卡密
+      </button>
       <button
         class="flex items-center gap-1.5 border border-red-300 rounded-xl px-3 py-2 text-sm text-red-600 transition hover:bg-red-50 dark:hover:bg-red-900/20"
         @click="removeSelected"
@@ -296,6 +251,10 @@ defineExpose({ load })
         <div class="i-carbon-trash-can" />
         批量删除（{{ selected.length }}）
       </button>
+    </div>
+
+    <div v-if="stats" class="text-xs text-gray-400">
+      库存：共 {{ stats.total }} 张（未使用 {{ stats.unused }} / 已使用 {{ stats.used }} / 已作废 {{ stats.revoked }}）
     </div>
 
     <!-- 卡密列表 -->
@@ -307,6 +266,9 @@ defineExpose({ load })
               <th class="w-10 px-3 py-2.5" />
               <th class="px-3 py-2.5 font-medium">
                 卡密
+              </th>
+              <th class="px-3 py-2.5 font-medium">
+                描述
               </th>
               <th class="px-3 py-2.5 font-medium">
                 类型 / 面值
@@ -324,7 +286,7 @@ defineExpose({ load })
           </thead>
           <tbody>
             <tr v-if="filteredCards.length === 0">
-              <td colspan="6" class="px-3 py-8 text-center text-gray-400">
+              <td colspan="7" class="px-3 py-8 text-center text-gray-400">
                 暂无卡密
               </td>
             </tr>
@@ -342,11 +304,20 @@ defineExpose({ load })
                   @change="toggleSelect(card.code)"
                 >
               </td>
-              <td class="px-3 py-2.5 text-xs font-mono">
-                {{ card.code }}
-                <div class="text-[11px] text-gray-400 font-sans">
-                  {{ card.description }}
+              <td class="px-3 py-2.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-mono">{{ card.code }}</span>
+                  <button
+                    class="icon-btn !h-6 !w-6"
+                    title="复制卡密"
+                    @click="copyText(card.code)"
+                  >
+                    <div class="i-carbon-copy text-xs" />
+                  </button>
                 </div>
+              </td>
+              <td class="max-w-40 truncate px-3 py-2.5 text-xs text-gray-500" :title="card.description">
+                {{ card.description || '-' }}
               </td>
               <td class="px-3 py-2.5 text-xs">
                 <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" :class="card.type === 'quota' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'">
@@ -389,6 +360,118 @@ defineExpose({ load })
         </table>
       </div>
     </div>
+
+    <!-- 生成卡密弹窗 -->
+    <Teleport to="body">
+      <div
+        v-if="showCreateModal"
+        class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4"
+        @click.self="closeCreateModal"
+      >
+        <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-xl dark:bg-gray-800" style="background: var(--surface-1);">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="flex items-center gap-2 text-base text-gray-900 font-semibold dark:text-gray-100">
+              <div class="i-carbon-add-alt" />
+              生成卡密
+            </h3>
+            <button class="icon-btn" title="关闭" @click="closeCreateModal">
+              <div class="i-carbon-close" />
+            </button>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <label class="mb-1 block text-xs text-gray-500">卡密描述（选填）</label>
+              <input v-model="createForm.description" class="form-input" placeholder="例如：3 天体验卡">
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-gray-500">类型</label>
+              <select v-model="createForm.type" class="form-input" style="width: 100%;">
+                <option value="time">
+                  加时卡
+                </option>
+                <option value="quota">
+                  额度卡
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-gray-500">生成数量</label>
+              <input v-model.number="createForm.count" type="number" min="1" max="200" class="form-input">
+            </div>
+            <template v-if="createForm.type === 'time'">
+              <div>
+                <label class="mb-1 block text-xs text-gray-500">时长</label>
+                <input
+                  v-model.number="createForm.durationValue"
+                  type="number"
+                  min="1"
+                  class="form-input"
+                  :disabled="isPermanentUnit"
+                >
+              </div>
+              <div>
+                <label class="mb-1 block text-xs text-gray-500">单位</label>
+                <select v-model="createForm.durationUnit" class="form-input" style="width: 100%;">
+                  <option value="hour">
+                    小时
+                  </option>
+                  <option value="day">
+                    天
+                  </option>
+                  <option value="week">
+                    周
+                  </option>
+                  <option value="month">
+                    月
+                  </option>
+                  <option value="year">
+                    年
+                  </option>
+                  <option value="permanent">
+                    永久
+                  </option>
+                </select>
+              </div>
+            </template>
+            <template v-else>
+              <div>
+                <label class="mb-1 block text-xs text-gray-500">额度数量</label>
+                <input v-model.number="createForm.value" type="number" min="1" class="form-input">
+              </div>
+            </template>
+          </div>
+
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <button class="btn-ghost" @click="closeCreateModal">
+              取消
+            </button>
+            <button class="btn-primary-sm" :disabled="creating" @click="submitCreate">
+              {{ creating ? '生成中…' : '生成' }}
+            </button>
+          </div>
+
+          <div v-if="lastBatch.length" class="mt-4 border rounded-xl p-3" style="border-color: var(--surface-border);">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs text-gray-500">本次生成 {{ lastBatch.length }} 张</span>
+              <div class="flex items-center gap-3">
+                <button class="text-primary text-xs hover:underline" @click="copyCodes(lastBatch)">
+                  复制全部
+                </button>
+                <button class="text-primary text-xs hover:underline" @click="exportBatchTxt(lastBatch)">
+                  批量导出（txt）
+                </button>
+              </div>
+            </div>
+            <div class="custom-scrollbar max-h-28 overflow-auto text-[11px] leading-relaxed font-mono">
+              <div v-for="card in lastBatch" :key="card.code">
+                {{ card.code }} · {{ formatCardValue(card) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -442,6 +525,8 @@ defineExpose({ load })
   color: var(--theme-text);
 }
 .btn-primary-sm {
+  display: inline-flex;
+  align-items: center;
   border-radius: 10px;
   background: var(--theme-gradient);
   padding: 7px 16px;

@@ -136,6 +136,14 @@ export function formatCardValue(card: Partial<Card> | null | undefined): string 
     return `+${card.value ?? 0} 额度`
   if (card.isPermanent)
     return '永久'
+  // 周/月/年卡按生成时的单位直观展示（durationMs 是折算后的毫秒数）
+  const unitValue = Number(card.durationValue ?? 0)
+  if (unitValue > 0 && card.durationUnit === 'week')
+    return `${unitValue} 周`
+  if (unitValue > 0 && card.durationUnit === 'month')
+    return `${unitValue} 个月`
+  if (unitValue > 0 && card.durationUnit === 'year')
+    return `${unitValue} 年`
   if (Number(card.durationMs) > 0)
     return formatDurationMs(Number(card.durationMs))
   const value = Number(card.durationValue ?? card.days ?? 0)
