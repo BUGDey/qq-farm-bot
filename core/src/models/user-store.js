@@ -132,6 +132,7 @@ function normalizeDuration(input = {}) {
   const raw = input && typeof input === 'object' ? input : {};
   const isPermanent =
     raw.isPermanent === true
+    || raw.durationUnit === 'permanent'
     || Number(raw.durationValue) === -1
     || Number(raw.days) === -1;
 
@@ -145,10 +146,18 @@ function normalizeDuration(input = {}) {
     };
   }
 
+  // 单位换算：周/月/年按固定毫秒折算（月=30天、年=365天），供顺延计算使用
+  const UNIT_MS = {
+    hour: HOUR_MS,
+    day: DAY_MS,
+    week: 7 * DAY_MS,
+    month: 30 * DAY_MS,
+    year: 365 * DAY_MS,
+  };
   const durationMs = Number(raw.durationMs);
   if (Number.isFinite(durationMs) && durationMs > 0) {
-    const unit = raw.durationUnit === 'hour' ? 'hour' : 'day';
-    const divisor = unit === 'hour' ? HOUR_MS : DAY_MS;
+    const unit = UNIT_MS[raw.durationUnit] ? raw.durationUnit : 'day';
+    const divisor = UNIT_MS[unit];
     return {
       isPermanent: false,
       durationMs,
@@ -158,10 +167,10 @@ function normalizeDuration(input = {}) {
     };
   }
 
-  const unit = raw.durationUnit === 'hour' ? 'hour' : 'day';
+  const unit = UNIT_MS[raw.durationUnit] ? raw.durationUnit : 'day';
   const rawValue = raw.durationValue !== undefined ? raw.durationValue : raw.days;
   const value = toPositiveInt(rawValue, 1);
-  const ms = unit === 'hour' ? value * HOUR_MS : value * DAY_MS;
+  const ms = value * UNIT_MS[unit];
   return {
     isPermanent: false,
     durationMs: ms,

@@ -121,9 +121,6 @@ onMounted(() => {
           <div class="i-carbon-user-admin text-lg" style="color: var(--theme-primary);" />
           管理后台
         </h1>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-          当前登录：{{ userStore.username }} · {{ userStore.isSuperAdmin ? '超级管理员' : '管理员' }}
-        </p>
       </div>
     </div>
 
