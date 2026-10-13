@@ -19,20 +19,20 @@ const emit = defineEmits<{
 
 const componentTag = computed(() => {
   if (props.to)
-    return RouterLink
+    return props.disabled || props.loading ? 'a' : RouterLink
   if (props.href)
     return 'a'
   return 'button'
 })
 
-const baseClasses = 'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98]'
+const baseClasses = 'inline-flex items-center justify-center rounded-lg font-medium base-button transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98]'
 
 const variantClasses = computed(() => {
   switch (props.variant) {
     case 'primary':
-      return 'text-white shadow-sm hover:-translate-y-0.5 hover:brightness-105 focus:ring-[var(--theme-primary)]'
+      return 'text-white shadow-sm hover:brightness-105 focus:ring-[var(--theme-primary)]'
     case 'secondary':
-      return 'border border-gray-200 bg-white/70 text-gray-700 shadow-sm hover:-translate-y-0.5 hover:bg-gray-50 focus:ring-gray-400 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-200 dark:hover:bg-gray-700'
+      return 'border border-gray-200 bg-white/70 text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-gray-400 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-200 dark:hover:bg-gray-700'
     case 'success':
       return 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 shadow-sm dark:bg-green-600 dark:hover:bg-green-500'
     case 'danger':
@@ -40,7 +40,7 @@ const variantClasses = computed(() => {
     case 'ghost':
       return 'text-gray-600 hover:bg-gray-100/80 dark:text-gray-400 dark:hover:bg-gray-800/80'
     case 'outline':
-      return 'border border-gray-200 bg-transparent text-gray-700 hover:-translate-y-0.5 hover:bg-gray-50 focus:ring-gray-400 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'
+      return 'border border-gray-200 bg-transparent text-gray-700 hover:bg-gray-50 focus:ring-gray-400 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'
     case 'text':
       return 'hover:underline p-0 bg-transparent shadow-none hover:bg-transparent'
     default:
@@ -66,7 +66,7 @@ const widthClasses = computed(() => props.block ? 'w-full' : '')
 
 const buttonStyle = computed(() => {
   if (props.variant === 'primary' || (!props.variant && props.variant !== 'secondary' && props.variant !== 'danger' && props.variant !== 'success' && props.variant !== 'ghost' && props.variant !== 'outline' && props.variant !== 'text')) {
-    return { background: 'var(--theme-gradient)', boxShadow: '0 10px 24px color-mix(in srgb, var(--theme-primary) 22%, transparent)' }
+    return { background: 'var(--theme-primary)' }
   }
   if (props.variant === 'text') {
     return { color: 'var(--theme-primary)' }
@@ -79,13 +79,16 @@ const buttonStyle = computed(() => {
   <component
     :is="componentTag"
     :to="to"
-    :href="href"
+    :href="disabled || loading ? undefined : href"
+    :tabindex="disabled || loading ? -1 : undefined"
     :type="!to && !href ? (type || 'button') : undefined"
-    :disabled="disabled || loading"
+    :disabled="!to && !href ? disabled || loading : undefined"
+    :aria-disabled="disabled || loading || undefined"
+    :aria-busy="loading || undefined"
     :class="[baseClasses, variantClasses, sizeClasses, widthClasses]"
     :style="buttonStyle"
     v-bind="$attrs"
-    @click="!disabled && !loading && emit('click', $event)"
+    @click="disabled || loading ? $event.preventDefault() : emit('click', $event)"
   >
     <div v-if="loading" class="i-svg-spinners-ring-resize mr-2 animate-spin" />
     <slot />

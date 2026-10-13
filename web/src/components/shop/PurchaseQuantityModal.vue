@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, useId } from 'vue'
+import { useModalFocus } from '@/composables/useModalFocus'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { formatCurrencyAmountByLabel } from '@/utils/number-format'
 
@@ -87,6 +88,9 @@ function confirm() {
     return
   emit('confirm', normalizedQuantity.value)
 }
+const modalSurface = ref<HTMLElement | null>(null)
+const modalId = useId()
+useModalFocus(() => props.show, modalSurface, closeModal)
 </script>
 
 <template>
@@ -96,13 +100,13 @@ function confirm() {
       class="purchase-modal-overlay"
       @click="closeModal"
     >
-      <div class="purchase-modal" @click.stop>
+      <div ref="modalSurface" role="dialog" aria-modal="true" :aria-labelledby="`${modalId}-title`" tabindex="-1" class="purchase-modal" @click.stop>
         <div class="purchase-modal-icon">
           <div class="i-carbon-shopping-cart" />
         </div>
 
         <div class="mt-4">
-          <h3 class="text-xl text-emerald-700 font-bold dark:text-emerald-300">
+          <h3 :id="`${modalId}-title`" class="text-xl text-emerald-700 font-bold dark:text-emerald-300">
             {{ title }}
           </h3>
           <div class="mt-2 text-sm text-gray-600 dark:text-gray-300">
@@ -132,7 +136,7 @@ function confirm() {
 
           <div>
             <div class="mb-2 flex items-center justify-between">
-              <label class="text-sm text-gray-700 font-medium dark:text-gray-300">
+              <label :for="`${modalId}-quantity`" class="text-sm text-gray-700 font-medium dark:text-gray-300">
                 {{ L.quantity }}
               </label>
               <span class="text-xs text-gray-500 dark:text-gray-400">{{ L.max }} {{ maxBuyCount }}</span>
@@ -140,6 +144,7 @@ function confirm() {
             <div class="qty-control-row">
               <button
                 type="button"
+                aria-label="减少购买数量"
                 class="qty-icon-button"
                 :disabled="loading || normalizedQuantity <= 1"
                 @click="setQuantity(normalizedQuantity - 1)"
@@ -147,6 +152,7 @@ function confirm() {
                 <div class="i-carbon-subtract" />
               </button>
               <input
+                :id="`${modalId}-quantity`"
                 :value="normalizedQuantity"
                 type="number"
                 min="1"
@@ -157,6 +163,7 @@ function confirm() {
               >
               <button
                 type="button"
+                aria-label="增加购买数量"
                 class="qty-icon-button"
                 :disabled="loading || normalizedQuantity >= maxBuyCount"
                 @click="setQuantity(normalizedQuantity + 1)"

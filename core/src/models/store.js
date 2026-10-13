@@ -726,7 +726,7 @@ const DEFAULT_LOGIN_LINKS = {
 };
 
 const DEFAULT_CAPTURE_CONFIG = {
-    enabled: false,
+    enabled: true,
     embedded: true,
     apiBase: 'http://127.0.0.1:8450',
     apiToken: '',
@@ -1082,7 +1082,7 @@ function loadGlobalConfig() {
         // Code/GID 抓取服务配置
         if (data.captureConfig && typeof data.captureConfig === 'object') {
             globalConfig.captureConfig = {
-                enabled: data.captureConfig.enabled === true,
+                enabled: data.captureConfig.enabled === undefined ? DEFAULT_CAPTURE_CONFIG.enabled : data.captureConfig.enabled === true,
                 embedded: data.captureConfig.embedded !== false,
                 apiBase: String(data.captureConfig.apiBase || DEFAULT_CAPTURE_CONFIG.apiBase).trim(),
                 apiToken: String(data.captureConfig.apiToken || '').trim(),

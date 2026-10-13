@@ -391,7 +391,7 @@ onMounted(load)
               <strong class="block text-sm text-gray-900 font-medium dark:text-gray-100">启用资本模式</strong>
               <small class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">根据成熟时间自动安排守护</small>
             </span>
-            <BaseSwitch v-model="draft.enabled" :disabled="saving" />
+            <BaseSwitch aria-label="启用宠物自动化" v-model="draft.enabled" :disabled="saving" />
           </label>
 
           <div class="grid mt-5 gap-4 sm:grid-cols-2">

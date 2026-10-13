@@ -198,14 +198,15 @@ const showThemeDropdown = ref(false)
           <div class="truncate text-[15px] font-bold tracking-tight" style="color: var(--theme-text);">
             {{ loginPageConfig.title || 'QQ农场智能助手' }}
           </div>
-          <div class="truncate text-[11px] font-mono opacity-45" style="color: var(--theme-text);">
+          <div class="truncate text-xs font-mono opacity-70" style="color: var(--theme-text);">
             QQ FARM ASSISTANT
           </div>
         </div>
       </div>
       <!-- Mobile Close Button -->
       <button
-        class="h-8 w-8 flex flex-none items-center justify-center rounded-lg text-gray-500 transition lg:hidden hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+        aria-label="关闭导航"
+        class="h-11 w-11 flex flex-none items-center justify-center rounded-lg text-gray-500 transition lg:hidden hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
         @click="appStore.closeSidebar"
       >
         <div class="i-carbon-close text-xl" />
@@ -259,7 +260,7 @@ const showThemeDropdown = ref(false)
         </button>
       </div>
 
-      <div class="mt-1 flex items-center justify-between text-[11px] font-mono opacity-45" style="color: var(--theme-text);">
+      <div class="mt-1 flex items-center justify-between text-xs font-mono opacity-70" style="color: var(--theme-text);">
         <span>v{{ version }}</span>
         <a
           href="https://github.com/xxxscarlxrd404/qq-farm-bot"
@@ -278,7 +279,7 @@ const showThemeDropdown = ref(false)
         <button
           v-for="(t, theme) in appStore.themes"
           :key="theme"
-          class="group relative flex flex-col items-center justify-center gap-1 rounded-lg p-2 transition-all hover:scale-105"
+          class="group relative flex flex-col items-center justify-center gap-1 rounded-lg p-2 transition-colors"
           :class="{
             'ring-2 ring-offset-1': appStore.currentTheme === theme,
           }"
@@ -291,7 +292,7 @@ const showThemeDropdown = ref(false)
           @click="appStore.applyTheme(theme as any); showThemeDropdown = false"
         >
           <div :class="t.icon" class="text-base text-white" />
-          <span class="text-[10px] text-white font-medium leading-tight">{{ t.name }}</span>
+          <span class="text-xs text-white font-medium leading-tight">{{ t.name }}</span>
           <div
             v-if="appStore.currentTheme === theme"
             class="absolute right-1 top-1 h-3 w-3 flex items-center justify-center rounded-full bg-white shadow"

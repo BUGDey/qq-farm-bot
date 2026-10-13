@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useEventListener, useIntervalFn } from '@vueuse/core'
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch, useId } from 'vue'
+import { useModalFocus } from '@/composables/useModalFocus'
 import api from '@/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
@@ -544,16 +545,21 @@ watch(activeTab, (tab) => {
   if (tab !== 'capture')
     void cancelCaptureSession()
 })
+const helpSurface = ref<HTMLElement | null>(null)
+useModalFocus(() => showCaptureHelp.value, helpSurface, () => { showCaptureHelp.value = false })
+const modalSurface = ref<HTMLElement | null>(null)
+const modalId = useId()
+useModalFocus(() => props.show, modalSurface, close)
 </script>
 
 <template>
   <div v-if="show" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-    <div class="max-h-[90vh] max-w-md w-full overflow-hidden rounded-lg shadow-xl" :style="{ background: 'var(--theme-bg)' }">
+    <div ref="modalSurface" role="dialog" aria-modal="true" :aria-labelledby="`${modalId}-title`" tabindex="-1" class="max-h-[90vh] max-w-md w-full overflow-hidden rounded-lg shadow-xl" :style="{ background: 'var(--theme-bg)' }">
       <div class="flex items-center justify-between border-b p-4" :style="{ borderColor: 'color-mix(in srgb, var(--theme-text) 10%, transparent)' }">
-        <h3 class="text-lg font-semibold" :style="{ color: 'var(--theme-text)' }">
+        <h3 :id="`${modalId}-title`" class="text-lg font-semibold" :style="{ color: 'var(--theme-text)' }">
           {{ editData ? '编辑账号' : '添加账号' }}
         </h3>
-        <BaseButton variant="ghost" class="!p-1" @click="close">
+        <BaseButton variant="ghost" aria-label="关闭弹窗" class="!p-1" @click="close">
           <div class="i-carbon-close text-xl" :style="{ color: 'var(--theme-text)' }" />
         </BaseButton>
       </div>
@@ -937,7 +943,7 @@ watch(activeTab, (tab) => {
       class="fixed inset-0 z-[10001] flex items-end justify-center bg-black/50 md:items-center"
       @click.self="showCaptureHelp = false"
     >
-      <div class="max-h-[78vh] max-w-md w-full flex flex-col overflow-hidden rounded-t-lg shadow-2xl md:rounded-lg" :style="{ background: 'var(--theme-bg)' }">
+      <div ref="helpSurface" role="dialog" aria-modal="true" aria-label="抓包登录使用说明" tabindex="-1" class="max-h-[78vh] max-w-md w-full flex flex-col overflow-hidden rounded-t-lg shadow-2xl md:rounded-lg" :style="{ background: 'var(--theme-bg)' }">
         <div class="h-14 flex flex-none items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
           <h4 class="text-base font-semibold" :style="{ color: 'var(--theme-text)' }">
             抓包登录使用说明

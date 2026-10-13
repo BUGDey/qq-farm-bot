@@ -304,6 +304,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
               </div>
             </div>
             <BaseSwitch
+              :aria-label="`${info.title}自动化`"
               :model-value="moduleEnabled(key as ModuleKey)"
               :disabled="saving"
               @update:model-value="setModuleEnabled(key as ModuleKey, !!$event)"
