@@ -8,8 +8,8 @@ const currentTab = ref<'farm' | 'bag' | 'task'>('farm')
 </script>
 
 <template>
-  <div class="h-full flex flex-col p-4">
-    <div class="mb-4 flex space-x-2">
+  <div class="h-full flex flex-col p-2 pt-1 sm:p-4 sm:pt-1">
+    <div class="mb-1.5 flex space-x-2">
       <button
         class="rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:px-4 sm:text-base"
         :class="currentTab === 'farm'
@@ -51,7 +51,11 @@ const currentTab = ref<'farm' | 'bag' | 'task'>('farm')
       </button>
     </div>
 
-    <div class="flex-1 overflow-hidden overflow-y-auto">
+    <!-- 手机上土地详情卡片向左/右各探出 8px，把留白还给农场场景（PC 保持原样） -->
+    <div
+      class="flex-1 overflow-hidden overflow-y-auto"
+      :class="currentTab === 'farm' ? '-mx-2 sm:mx-0' : ''"
+    >
       <Transition
         mode="out-in"
         enter-active-class="transition duration-200 ease-out"

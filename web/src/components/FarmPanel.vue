@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useIntervalFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import FarmScene from '@/components/FarmScene.vue'
 import { useAccountStore } from '@/stores/account'
@@ -184,18 +184,53 @@ const farmStageStyle = computed(() => farmStageWidth.value
   ? { width: `${farmStageWidth.value}px` }
   : undefined)
 
+// 页面本身不滚动，内容在若干层内部容器里滚动，需要把它们已滚动的距离补回来，
+// 这样无论当前滚到哪里，量出来的都是"滚到顶部时"场景距屏幕顶端的距离。
+function ancestorScrollTop(element: HTMLElement | null) {
+  let offset = 0
+  let node = element?.parentElement
+  while (node) {
+    if (node.scrollTop)
+      offset += node.scrollTop
+    node = node.parentElement
+  }
+  return offset
+}
+
+// 底部悬浮菜单栏会盖住内容，按它实际占用的高度预留，而不是写死一个数字。
+function bottomReserve() {
+  const tabbar = document.querySelector('.mobile-tabbar')
+  if (!tabbar)
+    return 24
+  const top = tabbar.getBoundingClientRect().top
+  if (!top)
+    return 24
+  return Math.max(56, window.innerHeight - top + 8)
+}
+
 function updateFarmStageSize() {
   const viewport = farmViewport.value
-  if (!viewport || window.innerWidth < 640) {
+  if (!viewport) {
     farmStageWidth.value = null
     return
   }
-  const documentTop = viewport.getBoundingClientRect().top + window.scrollY
-  const availableHeight = Math.max(240, window.innerHeight - documentTop - 72)
-  const availableWidth = viewport.parentElement?.clientWidth || FARM_CANVAS_WIDTH
+  const availableWidth = viewport.parentElement?.clientWidth || 0
+  if (availableWidth <= 0) {
+    // 容器还没布局出来（切页动画/隐藏状态），交给 CSS 的 width:100% 兜底。
+    farmStageWidth.value = null
+    return
+  }
+  const documentTop = viewport.getBoundingClientRect().top + window.scrollY + ancestorScrollTop(viewport)
+  const availableHeight = Math.max(240, window.innerHeight - documentTop - bottomReserve())
   // 保持 1200×650 比例并限制在当前一屏内；外层 viewport 同步收窄，不再露出第二层背景。
   farmStageWidth.value = Math.min(availableWidth, FARM_CANVAS_WIDTH, availableHeight * FARM_CANVAS_WIDTH / FARM_CANVAS_HEIGHT)
 }
+
+// 土地数据是异步到的，场景容器出现时机晚于 onMounted，元素挂载后要补算一次尺寸。
+watch(farmViewport, (viewport) => {
+  if (viewport)
+    nextTick(updateFarmStageSize)
+})
 
 watch(currentAccountId, (newId, oldId) => {
   if (oldId !== undefined && newId !== oldId) {
@@ -240,7 +275,7 @@ onUnmounted(() => {
   >
     <div class="rounded-lg bg-white shadow dark:bg-gray-800">
       <!-- Header with Title and Actions -->
-      <div class="flex flex-col items-stretch justify-between gap-3 border-b border-gray-100 p-4 sm:flex-row sm:items-center dark:border-gray-700">
+      <div class="flex flex-col items-stretch justify-between gap-2 border-b border-gray-100 p-2.5 sm:flex-row sm:items-center sm:p-3 dark:border-gray-700">
         <h3 class="flex items-center gap-2 text-lg font-bold">
           <div class="i-carbon-grid text-xl" />
           土地详情
@@ -249,7 +284,7 @@ onUnmounted(() => {
           <button
             v-for="op in operations"
             :key="op.type"
-            class="flex items-center justify-center gap-1 rounded px-2 py-2 text-xs text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:text-sm"
+            class="flex items-center justify-center gap-1 rounded px-2 py-1.5 text-xs text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
             :class="op.color"
             :disabled="operating"
             @click="handleOperate(op.type)"
@@ -259,7 +294,7 @@ onUnmounted(() => {
             <span class="sm:hidden">{{ op.type === 'clear' ? '务农' : op.label.replace('一键', '') }}</span>
           </button>
           <button
-            class="flex items-center justify-center gap-1 rounded bg-red-600 px-2 py-2 text-xs text-white transition disabled:cursor-not-allowed hover:bg-red-700 disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:text-sm"
+            class="flex items-center justify-center gap-1 rounded bg-red-600 px-2 py-1.5 text-xs text-white transition disabled:cursor-not-allowed hover:bg-red-700 disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
             :disabled="operating"
             @click="handleRemoveAllPlants"
           >
@@ -290,7 +325,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Summary -->
-      <div class="grid grid-cols-4 gap-2 border-b border-gray-100 bg-gray-50 p-3 text-xs sm:flex sm:flex-wrap sm:gap-4 dark:border-gray-700 dark:bg-gray-900/50 sm:p-4 sm:text-sm">
+      <div class="grid grid-cols-4 gap-2 border-b border-gray-100 bg-gray-50 px-3 py-2 text-xs sm:flex sm:flex-wrap sm:gap-4 dark:border-gray-700 dark:bg-gray-900/50 sm:px-4 sm:py-3 sm:text-sm">
         <div class="flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
           <div class="i-carbon-clean" />
           <span class="font-medium">可收: {{ summary?.harvestable || 0 }}</span>
@@ -310,7 +345,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Grid -->
-      <div class="p-2 sm:p-4">
+      <div class="p-1 sm:p-3">
         <div v-if="showInitialLoading" class="flex justify-center py-12">
           <div class="i-svg-spinners-90-ring-with-bg text-4xl text-blue-500" />
         </div>

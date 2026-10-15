@@ -185,7 +185,7 @@ const resourceCards = computed(() => [
     key: 'gold',
     label: '金币',
     icon: '/game-config/resource-icons/gold.png',
-    amount: `${formatGoldAmount(status.value?.status?.gold || 0)}万`,
+    amount: formatGoldAmount(status.value?.status?.gold || 0),
   },
   {
     key: 'coupon',

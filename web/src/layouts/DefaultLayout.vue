@@ -120,7 +120,7 @@ function onSearchBlur() {
 
     <main class="relative h-full min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
       <!-- 顶栏：右侧搜索 / 主题 / 通知 / 账号 -->
-      <header class="relative z-30 flex shrink-0 items-center justify-end gap-4 px-4 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+      <header class="relative z-30 flex shrink-0 items-center justify-end gap-4 px-3 pt-2 sm:px-6 sm:pt-3 lg:px-8 lg:pt-4">
         <div class="flex items-center gap-4">
           <div class="search-box relative hidden lg:flex">
             <div class="search-icon i-carbon-search" />
@@ -163,15 +163,13 @@ function onSearchBlur() {
       </header>
 
       <!-- Main Content Area -->
-      <div class="custom-scrollbar min-h-0 flex flex-1 flex-col overflow-y-auto p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:p-4 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:p-7 lg:pt-4 lg:pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
+      <div class="custom-scrollbar min-h-0 flex flex-1 flex-col overflow-y-auto p-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-3 sm:pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:p-5 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:p-6 lg:pt-2 lg:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
         <MysteryMerchantBanner />
-        <div class="custom-scrollbar min-h-0 flex flex-1 flex-col overflow-y-auto p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-6 sm:p-4 md:pb-6 sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          <RouterView v-slot="{ Component, route }">
-            <Transition name="slide-fade" mode="out-in">
-              <component :is="Component" :key="route.path" />
-            </Transition>
-          </RouterView>
-        </div>
+        <RouterView v-slot="{ Component, route }">
+          <Transition name="slide-fade" mode="out-in">
+            <component :is="Component" :key="route.path" />
+          </Transition>
+        </RouterView>
       </div>
     </main>
 
