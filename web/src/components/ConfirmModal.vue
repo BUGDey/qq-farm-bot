@@ -135,6 +135,7 @@ function confirm() {
 .confirm-modal-overlay {
   position: fixed;
   inset: 0;
+  /* 保持在底层浮动菜单(z-50)与 Toast 之上 */
   z-index: 10050;
   display: flex;
   align-items: center;

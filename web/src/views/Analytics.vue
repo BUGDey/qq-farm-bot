@@ -333,7 +333,7 @@ function formatGrowTime(seconds: any) {
         class="border-b-2 px-4 py-2 text-sm font-medium transition-colors"
         :class="activeTab === 'crops'
           ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+          : 'border-transparent text-slate-800 hover:text-slate-950 dark:text-gray-400 dark:hover:text-gray-300'"
         @click="activeTab = 'crops'"
       >
         <div class="flex items-center space-x-2">
@@ -348,7 +348,7 @@ function formatGrowTime(seconds: any) {
         class="border-b-2 px-4 py-2 text-sm font-medium transition-colors"
         :class="activeTab === 'blacklist'
           ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+          : 'border-transparent text-slate-800 hover:text-slate-950 dark:text-gray-400 dark:hover:text-gray-300'"
         @click="activeTab = 'blacklist'"
       >
         <div class="flex items-center space-x-2">
@@ -363,7 +363,7 @@ function formatGrowTime(seconds: any) {
         class="border-b-2 px-4 py-2 text-sm font-medium transition-colors"
         :class="activeTab === 'strategy'
           ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+          : 'border-transparent text-slate-800 hover:text-slate-950 dark:text-gray-400 dark:hover:text-gray-300'"
         @click="activeTab = 'strategy'"
       >
         <div class="flex items-center space-x-2">
@@ -391,10 +391,10 @@ function formatGrowTime(seconds: any) {
           <div class="flex items-center gap-3">
             <div class="i-carbon-sprout text-xl text-green-500" />
             <div>
-              <h3 class="text-gray-700 font-semibold dark:text-gray-300">
+              <h3 class="text-gray-900 font-semibold dark:text-gray-100">
                 全部作物信息
               </h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
+              <p class="text-xs font-medium text-gray-800 dark:text-gray-200">
                 共 {{ list.length }} 种作物
               </p>
             </div>
@@ -409,10 +409,10 @@ function formatGrowTime(seconds: any) {
                 class="w-full border border-gray-300 rounded-lg bg-white py-2 pl-10 pr-4 text-sm sm:w-64 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
             </div>
-            <div v-if="list.length" class="text-sm text-gray-500">
+            <div v-if="list.length" class="text-sm font-semibold text-gray-900 dark:text-gray-100">
               {{ sortedList.length }}/{{ list.length }}
             </div>
-            <label class="whitespace-nowrap text-sm font-medium">排序:</label>
+            <label class="whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100">排序:</label>
             <BaseSelect
               v-model="sortKey"
               :options="sortOptions"
@@ -428,7 +428,7 @@ function formatGrowTime(seconds: any) {
 
         <div class="p-4 space-y-4">
           <div class="block sm:hidden space-y-4">
-            <div v-for="(item, idx) in sortedList" :key="idx" class="border border-gray-200 rounded-lg bg-white p-4 shadow dark:border-gray-700 dark:bg-gray-800">
+            <div v-for="(item, idx) in sortedList" :key="idx" class="rounded-lg border border-white/60 bg-white/55 p-4 shadow-lg backdrop-blur-md dark:border-gray-700 dark:bg-gray-800">
               <div class="mb-3 flex items-start gap-3">
                 <div class="relative h-12 w-12 flex shrink-0 items-center justify-center overflow-hidden border border-gray-200 rounded-lg bg-gray-100 dark:border-gray-600 dark:bg-gray-700">
                   <img
@@ -451,31 +451,31 @@ function formatGrowTime(seconds: any) {
                     </div>
                   </div>
                   <div class="mt-1 flex items-center gap-2">
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 font-medium dark:bg-gray-700">Lv{{ formatLv(item.level) }}</span>
-                    <span class="text-xs text-gray-400">{{ item.seasons }}季</span>
+                    <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700 font-medium dark:bg-gray-700">Lv{{ formatLv(item.level) }}</span>
+                    <span class="text-xs font-medium text-gray-700 dark:text-gray-200">{{ item.seasons }}季</span>
                   </div>
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <div class="flex flex-col">
-                  <span class="text-xs text-gray-500">时间</span>
-                  <span class="text-gray-700 font-medium dark:text-gray-300">{{ formatGrowTime(item.growTime) }}</span>
+                  <span class="text-xs font-medium text-gray-800 dark:text-gray-200">时间</span>
+                  <span class="text-gray-900 font-bold dark:text-gray-100">{{ formatGrowTime(item.growTime) }}</span>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-xs text-gray-500">经验/时</span>
+                  <span class="text-xs font-medium text-gray-800 dark:text-gray-200">经验/时</span>
                   <span class="text-purple-600 font-bold dark:text-purple-400">{{ item.expPerHour }}</span>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-xs text-gray-500">净利润/时</span>
+                  <span class="text-xs font-medium text-gray-800 dark:text-gray-200">净利润/时</span>
                   <span class="text-amber-500 font-bold">{{ item.profitPerHour ?? '-' }}</span>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-xs text-gray-500">普肥经验/时</span>
+                  <span class="text-xs font-medium text-gray-800 dark:text-gray-200">普肥经验/时</span>
                   <span class="text-blue-600 font-bold dark:text-blue-400">{{ item.normalFertilizerExpPerHour ?? '-' }}</span>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-xs text-gray-500">普肥利润/时</span>
+                  <span class="text-xs font-medium text-gray-800 dark:text-gray-200">普肥利润/时</span>
                   <span class="text-green-500 font-bold">{{ item.normalFertilizerProfitPerHour ?? '-' }}</span>
                 </div>
               </div>
@@ -485,7 +485,7 @@ function formatGrowTime(seconds: any) {
                   class="w-full rounded px-3 py-2 text-sm transition"
                   :class="blacklist.includes(item.seedId)
                     ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
+                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'"
                   @click="handleToggleBlacklist(item)"
                 >
                   {{ blacklist.includes(item.seedId) ? '移出偷菜黑名单' : '加入偷菜黑名单' }}
@@ -494,10 +494,10 @@ function formatGrowTime(seconds: any) {
             </div>
           </div>
 
-          <div class="hidden overflow-hidden border border-gray-200 rounded-lg bg-white shadow sm:block dark:border-gray-700 dark:bg-gray-800">
+          <div class="hidden overflow-hidden rounded-lg border border-white/60 bg-white/60 shadow-lg backdrop-blur-md sm:block dark:border-gray-700 dark:bg-gray-800">
             <div class="overflow-x-auto">
               <table class="w-full whitespace-nowrap text-left text-sm">
-                <thead class="border-b bg-gray-50 text-xs text-gray-500 uppercase dark:border-gray-700 dark:bg-gray-700/50 dark:text-gray-400">
+                <thead class="border-b bg-white/40 text-xs text-gray-800 uppercase dark:border-gray-700 dark:bg-gray-700/50 dark:text-gray-400">
                   <tr>
                     <th class="sticky left-0 z-10 bg-gray-50 px-4 py-3 font-medium shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:bg-gray-800 dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
                       作物 (Lv)
@@ -548,11 +548,11 @@ function formatGrowTime(seconds: any) {
                         </div>
                       </div>
                     </td>
-                    <td class="px-4 py-2 text-gray-600 dark:text-gray-300">
+                    <td class="px-4 py-2 text-gray-900 dark:text-gray-200">
                       <div class="font-medium">
                         {{ formatGrowTime(item.growTime) }}
                       </div>
-                      <div class="text-xs text-gray-400">
+                      <div class="text-xs font-medium text-gray-700 dark:text-gray-200">
                         {{ item.seasons }}季
                       </div>
                     </td>
@@ -581,7 +581,7 @@ function formatGrowTime(seconds: any) {
                         class="rounded px-3 py-1.5 text-xs transition"
                         :class="blacklist.includes(item.seedId)
                           ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'"
                         @click="handleToggleBlacklist(item)"
                       >
                         {{ blacklist.includes(item.seedId) ? '移出黑名单' : '加入黑名单' }}
@@ -595,16 +595,16 @@ function formatGrowTime(seconds: any) {
         </div>
       </div>
 
-      <div v-if="activeTab === 'blacklist'" class="overflow-hidden border border-gray-200 rounded-lg bg-white shadow dark:border-gray-700 dark:bg-gray-800">
+      <div v-if="activeTab === 'blacklist'" class="overflow-hidden rounded-lg border border-white/60 bg-white/60 shadow-lg backdrop-blur-md dark:border-gray-700 dark:bg-gray-800">
         <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-700/50">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="i-carbon-subtract-alt text-xl text-red-500" />
               <div>
-                <h3 class="text-gray-700 font-semibold dark:text-gray-300">
+                <h3 class="text-gray-900 font-semibold dark:text-gray-100">
                   偷菜黑名单
                 </h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
+                <p class="text-xs font-medium text-gray-800 dark:text-gray-200">
                   加入黑名单的蔬菜在自动偷菜时会被跳过，但不会影响自己种植
                 </p>
               </div>
@@ -656,7 +656,7 @@ function formatGrowTime(seconds: any) {
                   <div class="text-sm text-gray-900 font-medium dark:text-white">
                     {{ getSeedNameById(seedId) }}
                   </div>
-                  <div class="text-xs text-gray-400">
+                  <div class="text-xs font-medium text-gray-700 dark:text-gray-200">
                     ID: {{ seedId }}
                   </div>
                 </div>
@@ -672,16 +672,16 @@ function formatGrowTime(seconds: any) {
         </div>
       </div>
 
-      <div v-if="activeTab === 'strategy'" class="overflow-hidden border border-gray-200 rounded-lg bg-white shadow dark:border-gray-700 dark:bg-gray-800">
+      <div v-if="activeTab === 'strategy'" class="overflow-hidden rounded-lg border border-white/60 bg-white/60 shadow-lg backdrop-blur-md dark:border-gray-700 dark:bg-gray-800">
         <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-700/50">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="i-carbon-calculation text-xl text-blue-500" />
               <div>
-                <h3 class="text-gray-700 font-semibold dark:text-gray-300">
+                <h3 class="text-gray-900 font-semibold dark:text-gray-100">
                   策略推荐
                 </h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
+                <p class="text-xs font-medium text-gray-800 dark:text-gray-200">
                   根据等级推荐最优种植策略
                 </p>
               </div>
@@ -745,14 +745,14 @@ function formatGrowTime(seconds: any) {
                   </div>
                   <div class="rounded-md bg-gray-50 px-2 py-1.5 dark:bg-gray-900/50">
                     <div class="flex items-baseline justify-between">
-                      <span class="text-xs text-gray-500">{{ strategy.unit }}/时</span>
+                      <span class="text-xs font-medium text-gray-800 dark:text-gray-200">{{ strategy.unit }}/时</span>
                       <span class="text-base font-bold" :class="getColorClass(strategy.color, 'text')">
                         {{ getStrategyBestPlant(strategy.key)?.[strategy.metric] }}
                       </span>
                     </div>
                   </div>
                 </div>
-                <div v-else class="py-3 text-center text-xs text-gray-400">
+                <div v-else class="py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-200">
                   暂无可种植作物
                 </div>
               </div>

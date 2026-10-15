@@ -3,6 +3,7 @@ import { useEventListener, useIntervalFn } from '@vueuse/core'
 import { computed, reactive, ref, watch, useId } from 'vue'
 import { useModalFocus } from '@/composables/useModalFocus'
 import api from '@/api'
+import { DEFAULT_YYB_PARAMS, getCodeFromYYB } from '@/api/yyb'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseTextarea from '@/components/ui/BaseTextarea.vue'
@@ -44,7 +45,7 @@ interface CaptureFlowState {
   }
 }
 
-const activeTab = ref<'wx' | 'qq' | 'capture' | 'manual'>('manual')
+const activeTab = ref<'wx' | 'qq' | 'capture' | 'manual' | 'yyb'>('manual')
 const loading = ref(false)
 const wxChecking = ref(false)
 const errorMessage = ref('')
@@ -75,6 +76,12 @@ const form = reactive({
   code: '',
   platform: 'qq' as 'qq' | 'wx',
 })
+
+// YYB 获取相关状态
+const yybLoading = ref(false)
+const yybError = ref('')
+const yybAccountName = ref('kwoky')
+const yybCode = ref('')
 
 const captureHelpSteps = computed(() => captureHelpMode.value === 'first'
   ? [
@@ -475,6 +482,40 @@ async function submitManual() {
   await addAccount(payload)
 }
 
+/**
+ * YYB 获取 Code 功能
+ * 从YYB系统获取微信登录Code并自动添加账号
+ */
+async function getYYBCode() {
+  yybError.value = ''
+  yybLoading.value = true
+
+  try {
+    // 调用YYB API获取code
+    const code = await getCodeFromYYB(DEFAULT_YYB_PARAMS)
+
+    // 只填充code到输入框，让用户手动点击确定按钮提交
+    form.code = code
+    yybCode.value = code
+  }
+  catch (error: any) {
+    yybError.value = error.message || 'YYB获取失败'
+  }
+  finally {
+    yybLoading.value = false
+  }
+}
+
+/**
+ * 重置YYB状态
+ */
+function resetYYBState() {
+  yybLoading.value = false
+  yybError.value = ''
+  yybAccountName.value = 'kwoky'
+  yybCode.value = ''
+}
+
 const wxQrImageSrc = computed(() => {
   if (!wxLoginStore.qrCode)
     return ''
@@ -491,6 +532,7 @@ function close() {
   stopCaptureCheck()
   void cancelCaptureSession()
   wxLoginStore.resetState()
+  resetYYBState()
   showCaptureHelp.value = false
   emit('close')
 }
@@ -554,7 +596,7 @@ useModalFocus(() => props.show, modalSurface, close)
 
 <template>
   <div v-if="show" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-    <div ref="modalSurface" role="dialog" aria-modal="true" :aria-labelledby="`${modalId}-title`" tabindex="-1" class="max-h-[90vh] max-w-md w-full overflow-hidden rounded-lg shadow-xl" :style="{ background: 'var(--theme-bg)' }">
+    <div ref="modalSurface" role="dialog" aria-modal="true" :aria-labelledby="`${modalId}-title`" tabindex="-1" class="modal-glass max-h-[90vh] max-w-md w-full overflow-hidden rounded-lg shadow-xl">
       <div class="flex items-center justify-between border-b p-4" :style="{ borderColor: 'color-mix(in srgb, var(--theme-text) 10%, transparent)' }">
         <h3 :id="`${modalId}-title`" class="text-lg font-semibold" :style="{ color: 'var(--theme-text)' }">
           {{ editData ? '编辑账号' : '添加账号' }}
@@ -589,6 +631,17 @@ useModalFocus(() => props.show, modalSurface, close)
             @click="activeTab = 'manual'"
           >
             手动填码
+          </button>
+          <button
+            class="flex-1 py-2 text-center text-sm font-medium transition-colors"
+            :class="activeTab === 'yyb' ? 'border-b-2' : 'opacity-60'"
+            :style="{
+              color: activeTab === 'yyb' ? 'var(--theme-primary)' : 'var(--theme-text)',
+              borderColor: 'var(--theme-primary)',
+            }"
+            @click="activeTab = 'yyb'"
+          >
+            YYB获取
           </button>
           <button
             class="flex-1 py-2 text-center text-sm font-medium transition-colors"
@@ -864,7 +917,7 @@ useModalFocus(() => props.show, modalSurface, close)
               </div>
             </div>
 
-            <div class="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 border-t border-gray-200 px-4 py-3 -mx-4 dark:border-gray-700" :style="{ background: 'var(--theme-bg)' }">
+            <div class="modal-glass sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 border-t border-gray-200 px-4 py-3 -mx-4 dark:border-gray-700">
               <BaseButton
                 variant="secondary"
                 size="sm"
@@ -935,6 +988,45 @@ useModalFocus(() => props.show, modalSurface, close)
             </BaseButton>
           </div>
         </div>
+
+        <div v-if="activeTab === 'yyb'" class="space-y-4">
+          <BaseInput
+            v-model="form.name"
+            label="账号备注（可选）"
+            placeholder="默认：kwoky"
+          />
+
+          <BaseTextarea
+            v-model="form.code"
+            label="Code"
+            placeholder="点击下方按钮获取Code"
+            :rows="3"
+          />
+
+          <div v-if="errorMessage" class="text-sm text-red-600">
+            {{ errorMessage }}
+          </div>
+
+          <div class="flex justify-end gap-2 pt-4">
+            <BaseButton variant="outline" @click="close">
+              取消
+            </BaseButton>
+            <BaseButton
+              variant="outline"
+              :loading="yybLoading"
+              @click="getYYBCode"
+            >
+              获取Code
+            </BaseButton>
+            <BaseButton
+              variant="primary"
+              :loading="loading"
+              @click="submitManual"
+            >
+              保存
+            </BaseButton>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -943,7 +1035,7 @@ useModalFocus(() => props.show, modalSurface, close)
       class="fixed inset-0 z-[10001] flex items-end justify-center bg-black/50 md:items-center"
       @click.self="showCaptureHelp = false"
     >
-      <div ref="helpSurface" role="dialog" aria-modal="true" aria-label="抓包登录使用说明" tabindex="-1" class="max-h-[78vh] max-w-md w-full flex flex-col overflow-hidden rounded-t-lg shadow-2xl md:rounded-lg" :style="{ background: 'var(--theme-bg)' }">
+      <div ref="helpSurface" role="dialog" aria-modal="true" aria-label="抓包登录使用说明" tabindex="-1" class="modal-glass max-h-[78vh] max-w-md w-full flex flex-col overflow-hidden rounded-t-lg shadow-2xl md:rounded-lg">
         <div class="h-14 flex flex-none items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
           <h4 class="text-base font-semibold" :style="{ color: 'var(--theme-text)' }">
             抓包登录使用说明
