@@ -628,7 +628,8 @@ watch(pet, (value) => {
  * 中间隔着块级容器，flex 链断开 → 高度塌成 0 → 容器查询单位全部失效，
  * 只剩 <nav> 这种有固有高度的普通 flex 项可见（即「只显示四个功能栏」）。
  * 因此改为面板自己声明确定高度，不再依赖父级 flex 上下文。
- * 128px = header 64 + mt-4 16 + 滚动容器 p-6 上下 48。
+ * 188px = header 60 + 滚动容器 pt 16 + 底部浮动菜单预留 104 + 8 余量，
+ * 保证面板底部功能按钮（pet-tabs）不被浮动菜单遮挡。
  */
 .pet-diary.pet-diary {
   --pet-ink: #805439;
@@ -637,7 +638,7 @@ watch(pet, (value) => {
   --pet-border: #e8cd9b;
   position: relative;
   display: flex;
-  height: max(520px, calc(100dvh - 128px));
+  height: max(520px, calc(100dvh - 188px));
   flex-direction: column;
   width: 100%;
   max-width: none;
@@ -2995,8 +2996,8 @@ watch(pet, (value) => {
 }
 @media (max-width: 1023px) {
   .pet-diary.pet-diary {
-    /* 移动端 header 仍 64，但 mt-2 8 + 滚动容器 p-3 上下 24，并留出底部安全区 */
-    height: max(480px, calc(100dvh - 96px - env(safe-area-inset-bottom)));
+    /* 移动端：header 56 + 滚动容器 pt 12 + 底部浮动菜单预留 104 + 安全区 + 余量 */
+    height: max(480px, calc(100dvh - 180px - env(safe-area-inset-bottom)));
     border-radius: 15px;
   }
 }

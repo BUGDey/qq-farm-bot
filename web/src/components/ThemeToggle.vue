@@ -14,11 +14,11 @@ function selectTheme(theme: Theme) {
   <div class="relative">
     <!-- 主题切换按钮 -->
     <button
-      class="icon-btn mx-2 !outline-none"
+      class="icon-btn !outline-none"
       title="主题设置"
       @click="appStore.toggleThemePanel()"
     >
-      <div i-carbon-color-palette />
+      <div class="i-carbon-color-palette text-lg text-gray-500" />
     </button>
 
     <!-- 使用 Teleport 将面板渲染到 body，避免被父容器裁剪 -->
@@ -81,3 +81,22 @@ function selectTheme(theme: Theme) {
     </teleport>
   </div>
 </template>
+
+<style scoped>
+.icon-btn {
+  display: flex;
+  height: 40px;
+  width: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: #fff;
+}
+</style>

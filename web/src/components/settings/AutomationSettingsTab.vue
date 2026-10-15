@@ -202,7 +202,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
       </div>
 
       <Transition name="fade">
-        <div v-if="mysteryShopSettingsVisible" class="fixed inset-0 z-50 grid place-items-center bg-gray-950/45 p-4 backdrop-blur-[2px]" @click.self="mysteryShopSettingsVisible = false">
+        <div v-if="mysteryShopSettingsVisible" class="fixed inset-0 z-[200] grid place-items-center bg-gray-950/45 p-4 backdrop-blur-[2px]" @click.self="mysteryShopSettingsVisible = false">
           <div class="max-w-lg w-full overflow-hidden border border-gray-200 rounded-2xl bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
             <div class="flex items-start justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-700">
               <div>

@@ -13,6 +13,11 @@ interface DeviceProtocolConfig {
   imei: string
 }
 
+interface YYBConfig {
+  url: string
+  token: string
+}
+
 type AlertType = 'primary' | 'danger'
 
 const DEFAULT_DEVICE_PROTOCOL: DeviceProtocolConfig = {
@@ -103,6 +108,8 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
   const offlineTesting = ref(false)
   const deviceProtocolLoading = ref(false)
   const deviceProtocolSaving = ref(false)
+  const yybConfigLoading = ref(false)
+  const yybConfigSaving = ref(false)
 
   const deviceProtocolPresetOptions = computed(() =>
     DEVICE_PROTOCOL_PRESETS.map(item => ({ label: item.label, value: item.value })),
@@ -110,6 +117,7 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
 
   const selectedDevicePreset = ref('')
   const deviceProtocolForm = ref<DeviceProtocolConfig>({ ...DEFAULT_DEVICE_PROTOCOL })
+  const yybConfig = ref<YYBConfig>({ url: '', token: '' })
 
   const localOffline = ref({
     channel: 'smtp',
@@ -332,14 +340,66 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
     }
   }
 
+  async function fetchYYBConfig() {
+    yybConfigLoading.value = true
+    try {
+      const { data } = await api.get('/api/user/yyb-config')
+      if (data?.ok && data.config) {
+        yybConfig.value = {
+          url: data.config.url || '',
+          token: data.config.token || '',
+        }
+      }
+    }
+    catch (e) {
+      console.error('加载YYB配置失败', e)
+    }
+    finally {
+      yybConfigLoading.value = false
+    }
+  }
+
+  async function handleSaveYYBConfig() {
+    yybConfigSaving.value = true
+    try {
+      const payload = {
+        url: String(yybConfig.value.url || '').trim(),
+        token: String(yybConfig.value.token || '').trim(),
+      }
+      const { data } = await api.post('/api/user/yyb-config', payload)
+      if (data?.ok) {
+        if (data.config) {
+          yybConfig.value = {
+            url: data.config.url || '',
+            token: data.config.token || '',
+          }
+        }
+        showAlert('YY-GO配置已保存', 'primary')
+      }
+      else {
+        showAlert(`保存失败: ${data?.error || '未知错误'}`, 'danger')
+      }
+    }
+    catch (e: any) {
+      const msg = e?.response?.data?.error || e?.message || '请求失败'
+      showAlert(`保存失败: ${msg}`, 'danger')
+    }
+    finally {
+      yybConfigSaving.value = false
+    }
+  }
+
   return {
     offlineSaving,
     offlineTesting,
     deviceProtocolLoading,
     deviceProtocolSaving,
+    yybConfigLoading,
+    yybConfigSaving,
     deviceProtocolPresetOptions,
     selectedDevicePreset,
     deviceProtocolForm,
+    yybConfig,
     localOffline,
     channelOptions,
     reloginUrlModeOptions,
@@ -350,8 +410,10 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
     fillRandomImei,
     applyDevicePreset,
     fetchDeviceProtocol,
+    fetchYYBConfig,
     syncLocalOfflineSettings,
     handleSaveDeviceProtocol,
+    handleSaveYYBConfig,
     handleSaveOffline,
     handleTestOffline,
   }

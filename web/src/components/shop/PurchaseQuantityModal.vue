@@ -196,7 +196,8 @@ function confirm() {
 .purchase-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  /* 高于底部浮动菜单(z-50)，避免手机端弹窗被菜单遮挡 */
+  z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;

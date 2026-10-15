@@ -43,6 +43,11 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/login',
+      name: 'Login',
+      component: () => import('@/views/Login.vue'),
+    },
+    {
       path: '/',
       component: () => import('@/layouts/DefaultLayout.vue'),
       children: menuRoutes.map(route => ({
@@ -52,15 +57,24 @@ const router = createRouter({
       })),
     },
     { path: '/admin', redirect: '/settings?tab=system' },
-    { path: '/login', redirect: '/' },
     { path: '/renewal', redirect: '/' },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
 
-router.beforeEach(async () => {
+router.beforeEach(async (to) => {
   NProgress.start()
-  await ensureAdminSession()
+  
+  // 登录页面无需验证
+  if (to.path === '/login')
+    return true
+  
+  // 其他页面需要验证登录状态
+  const hasSession = await ensureAdminSession()
+  if (!hasSession && !adminToken.value) {
+    return '/login'
+  }
+  
   return true
 })
 

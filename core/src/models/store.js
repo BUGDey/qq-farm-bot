@@ -759,7 +759,8 @@ const globalConfig = {
     captureConfig: null,
     deviceProtocol: null,
     userDeviceProtocols: {},
-    antiResaleConfig: null
+    antiResaleConfig: null,
+    yybConfig: null
 };
 
 function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
@@ -1079,6 +1080,14 @@ function loadGlobalConfig() {
             };
         }
 
+        // YYB配置
+        if (data.yybConfig && typeof data.yybConfig === 'object') {
+            globalConfig.yybConfig = {
+                url: String(data.yybConfig.url || '').trim(),
+                token: String(data.yybConfig.token || '').trim()
+            };
+        }
+
         // Code/GID 抓取服务配置
         if (data.captureConfig && typeof data.captureConfig === 'object') {
             globalConfig.captureConfig = {
@@ -1154,6 +1163,17 @@ function sanitizeGlobalConfigBeforeSave() {
         cleanConfigs[id] = normalizeAccountConfig(val, DEFAULT_ACCOUNT_CONFIG);
     }
     globalConfig.accountConfigs = cleanConfigs;
+
+    // Ensure yybConfig exists and preserve its values
+    if (!globalConfig.yybConfig || typeof globalConfig.yybConfig !== 'object') {
+        globalConfig.yybConfig = { url: '', token: '' };
+    } else {
+        // Preserve existing values but ensure structure is correct
+        globalConfig.yybConfig = {
+            url: String(globalConfig.yybConfig.url || '').trim(),
+            token: String(globalConfig.yybConfig.token || '').trim()
+        };
+    }
 
     const rawPlans = globalConfig.userDefaultAccountPlans && typeof globalConfig.userDefaultAccountPlans === 'object'
         ? globalConfig.userDefaultAccountPlans : {};
@@ -1715,6 +1735,27 @@ function deleteUserConfig(username) {
     }
 }
 
+function getYYBConfig() {
+    const cfg = globalConfig.yybConfig;
+    if (!cfg || typeof cfg !== 'object') {
+        return { url: '', token: '' };
+    }
+    return {
+        url: String(cfg.url || '').trim(),
+        token: String(cfg.token || '').trim()
+    };
+}
+
+function setYYBConfig(config) {
+    const input = config && typeof config === 'object' ? config : {};
+    globalConfig.yybConfig = {
+        url: String(input.url || '').trim(),
+        token: String(input.token || '').trim()
+    };
+    saveGlobalConfig();
+    return getYYBConfig();
+}
+
 function getUserDefaultAccountPlan(username) {
     const key = String(username || '').trim();
     const saved = key ? globalConfig.userDefaultAccountPlans[key] : null;
@@ -2104,6 +2145,8 @@ module.exports = {
     getAntiResaleConfig,
     setAntiResaleConfig,
     DEFAULT_ANTI_RESALE_CONFIG,
+    getYYBConfig,
+    setYYBConfig,
     persistInactiveActivityAutomation
 };
 

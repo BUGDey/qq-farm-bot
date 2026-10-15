@@ -31,13 +31,13 @@ const searchKeyword = defineModel<string>('searchKeyword', { required: true })
           class="w-full border border-gray-300 rounded-lg bg-white py-2 pl-10 pr-4 text-sm sm:w-64 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
       </div>
-      <div v-if="activeTab === 'friends' && friendsCount" class="text-sm text-gray-500">
+      <div v-if="activeTab === 'friends' && friendsCount" class="text-sm font-medium text-gray-900 dark:text-gray-100">
         共 {{ filteredFriendsCount }}/{{ friendsCount }} 名好友
       </div>
-      <div v-if="activeTab === 'blacklist'" class="text-sm text-gray-500">
+      <div v-if="activeTab === 'blacklist'" class="text-sm font-medium text-gray-900 dark:text-gray-100">
         共 {{ blacklistCount }} 人
       </div>
-      <div v-if="activeTab === 'visitors' && interactRecordsCount" class="text-sm text-gray-500">
+      <div v-if="activeTab === 'visitors' && interactRecordsCount" class="text-sm font-medium text-gray-900 dark:text-gray-100">
         共 {{ filteredInteractRecordsCount }}/{{ interactRecordsCount }} 条记录
       </div>
     </div>
