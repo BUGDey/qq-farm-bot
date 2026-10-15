@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const fetch = require("node-fetch");
+const { syncGatewayClientVersion } = require("./admin-account-routes");
 
 const CAPTURE_REQUEST_TIMEOUT_MS = 15_000;
 const CAPTURE_FLOW_TTL_MS = 15 * 60 * 1000;
@@ -219,6 +220,9 @@ function addCapturedValues(flow, snapshot) {
   const gidEntry = entries.find((item) => String(item?.gid || "").trim());
   const openIdEntry = entries.find((item) => String(item?.openid || item?.open_id || "").trim());
   if (!flow.code && codeEntry) flow.code = String(codeEntry.code).trim();
+  const versionEntry = entries.find(item => String(item?.code || "").trim() === flow.code
+    && /^\d+(?:\.\d+){2,4}_\d{8}$/.test(String(item?.clientVersion || "")));
+  if (versionEntry) flow.clientVersion = versionEntry.clientVersion;
   if (!flow.accountGid && gidEntry) flow.accountGid = String(gidEntry.gid).trim();
   if (!flow.openId && openIdEntry) {
     flow.openId = String(openIdEntry.openid || openIdEntry.open_id).trim();
@@ -490,6 +494,7 @@ function registerAdminCaptureRoutes({
   resolveAccountReference,
   ensureEmbeddedCaptureService,
   stopEmbeddedCaptureService,
+  updateRuntimeConfig,
 }) {
   const cleanupTimer = setInterval(() => {
     void cleanupExpiredFlows(store).catch((error) => {
@@ -506,8 +511,7 @@ function registerAdminCaptureRoutes({
       res.json({
         ok: true,
         data: {
-          enabled: config.enabled === true
-            && ((embedded && running) || (!embedded && !!config.apiBase && !!config.apiToken)),
+          enabled: config.enabled === true,
           embedded,
           running,
           apiBase: config.apiBase,
@@ -785,6 +789,9 @@ function registerAdminCaptureRoutes({
         : accounts.accounts.at(-1);
       if (!created) throw new Error("账号保存失败");
 
+      if (flow.clientVersion) {
+        syncGatewayClientVersion({ clientVersion: flow.clientVersion }, store, updateRuntimeConfig);
+      }
       flow.completed = true;
       flow.result = {
         accountId: created.id,

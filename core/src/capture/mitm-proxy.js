@@ -371,7 +371,7 @@ function createMitmProxyManager(deps = {}) {
       const parsed = parseHttpHead(headBytes);
       const info = extractLoginInfo({ host, parsedHead: parsed, config });
       if (info.code || info.openId) {
-        sessionStore.addCode(session, { code: info.code, openId: info.openId });
+        sessionStore.addCode(session, { code: info.code, openId: info.openId, clientVersion: info.clientVersion });
         log('info', `已抓到登录 Code: 会话 ${session.id}`, {
           sessionId: session.id,
           host,
@@ -434,7 +434,7 @@ function createMitmProxyManager(deps = {}) {
     const isBypass = bypassHosts.includes(host);
     const info = extractLoginInfo({ host, head, config });
     if (!isBypass && (info.code || info.openId)) {
-      sessionStore.addCode(session, { code: info.code, openId: info.openId });
+      sessionStore.addCode(session, { code: info.code, openId: info.openId, clientVersion: info.clientVersion });
     }
 
     const upstream = net.connect({ host, port });

@@ -9,7 +9,7 @@ services:
 
     ports:
       - "3007:3007"               # 管理面板
-      - "18000:18000"             # 抓包登录 MITM 代理端口（默认关闭，启用后供手机 Wi-Fi 代理连入）
+      - "18000:18000"             # 抓包登录 MITM 代理端口（默认开启，供手机 Wi-Fi 代理连入）
 
     volumes:
       - ../data:/app/core/data
@@ -24,7 +24,7 @@ services:
       NAPCAT_LOGIN_ENABLED: "${NAPCAT_LOGIN_ENABLED:-false}"
       NAPCAT_WEBUI_URL: http://napcat:6099/api
       NAPCAT_OPENAUTH_URL: http://napcat:6099/plugin/qq-miniapp-openauth/api
-      # 抓包服务默认关闭；在面板“系统配置 → Code/GID 抓取服务”开启后才会运行。
+      # 抓包服务默认开启；可在面板“系统配置 → Code/GID 抓取服务”关闭。
       # 代理端口固定使用 18000：
       # CAPTURE_PORTS: "18000"
       # 需要固定对外地址时，在 .env 中设置（局域网 / Tailscale 可同时填写）：

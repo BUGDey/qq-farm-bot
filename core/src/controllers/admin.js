@@ -554,6 +554,7 @@ function startAdminServer(dataProvider) {
     resolveAccountReference,
     ensureEmbeddedCaptureService,
     stopEmbeddedCaptureService,
+    updateRuntimeConfig,
   });
   registerAdminCurrentUserRoutes({
     app,

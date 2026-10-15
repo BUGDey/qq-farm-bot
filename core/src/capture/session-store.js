@@ -97,7 +97,7 @@ function createSessionStore({ config } = {}) {
   }
 
   /** 记录抓到的登录 code / openid */
-  function addCode(session, { code = '', openId = '' } = {}) {
+  function addCode(session, { code = '', openId = '', clientVersion = '' } = {}) {
     let changed = false;
     const cleanCode = String(code || '').trim();
     const cleanOpenId = String(openId || '').trim();
@@ -107,6 +107,10 @@ function createSessionStore({ config } = {}) {
     }
     if (cleanOpenId && !session.openId) {
       session.openId = cleanOpenId;
+      changed = true;
+    }
+    if (code === session.code && /^\d+(?:\.\d+){2,4}_\d{8}$/.test(clientVersion) && !session.clientVersion) {
+      session.clientVersion = clientVersion;
       changed = true;
     }
     if (changed) markUpdated(session);
@@ -131,7 +135,7 @@ function createSessionStore({ config } = {}) {
 
   function getCodesArray(session) {
     if (!session.code && !session.openId) return [];
-    return [{ code: session.code, gid: '', openid: session.openId }];
+    return [{ code: session.code, gid: '', openid: session.openId, ...(session.clientVersion ? { clientVersion: session.clientVersion } : {}) }];
   }
 
   function buildSnapshot(session) {

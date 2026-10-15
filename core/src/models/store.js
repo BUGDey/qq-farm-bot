@@ -740,6 +740,7 @@ const DEFAULT_LOGIN_LINKS = {
 };
 
 const DEFAULT_CAPTURE_CONFIG = {
+    defaultsVersion: 1,
     enabled: true,
     embedded: true,
     apiBase: 'http://127.0.0.1:8450',
@@ -990,6 +991,8 @@ function ensureAccountConfig(accountId, opts = {}) {
 
 // ==================== 全局配置持久化 ====================
 
+let captureDefaultsMigrated = false;
+
 function loadGlobalConfig() {
     ensureDataDir();
     try {
@@ -1098,8 +1101,13 @@ function loadGlobalConfig() {
 
         // Code/GID 抓取服务配置
         if (data.captureConfig && typeof data.captureConfig === 'object') {
+            captureDefaultsMigrated = data.captureConfig.defaultsVersion !== DEFAULT_CAPTURE_CONFIG.defaultsVersion;
             globalConfig.captureConfig = {
-                enabled: data.captureConfig.enabled === undefined ? DEFAULT_CAPTURE_CONFIG.enabled : data.captureConfig.enabled === true,
+                // 旧版默认关闭配置仅迁移一次，后续保留用户手动关闭的选择。
+                defaultsVersion: DEFAULT_CAPTURE_CONFIG.defaultsVersion,
+                enabled: data.captureConfig.defaultsVersion !== DEFAULT_CAPTURE_CONFIG.defaultsVersion
+                    ? true
+                    : data.captureConfig.enabled === undefined ? DEFAULT_CAPTURE_CONFIG.enabled : data.captureConfig.enabled === true,
                 embedded: data.captureConfig.embedded !== false,
                 apiBase: String(data.captureConfig.apiBase || DEFAULT_CAPTURE_CONFIG.apiBase).trim(),
                 apiToken: String(data.captureConfig.apiToken || '').trim(),
@@ -1238,6 +1246,8 @@ function setAdminPasswordHash(hash) {
 }
 
 loadGlobalConfig();
+// 将默认开启迁移结果持久化，避免下次重建容器覆盖用户之后保存的选择。
+if (captureDefaultsMigrated) saveGlobalConfig();
 
 
 // ==================== 便捷访问器 ====================
@@ -1899,6 +1909,7 @@ function setCaptureConfig(config) {
     if (!config || typeof config !== 'object') return null;
     const current = getCaptureConfig();
     globalConfig.captureConfig = {
+        defaultsVersion: DEFAULT_CAPTURE_CONFIG.defaultsVersion,
         enabled: config.enabled === true,
         embedded: config.embedded !== false,
         apiBase: String(config.apiBase || current.apiBase || DEFAULT_CAPTURE_CONFIG.apiBase).trim(),
