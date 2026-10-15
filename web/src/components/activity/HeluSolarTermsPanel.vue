@@ -32,7 +32,7 @@ function formatTime(value?: number) {
   const date = new Date(raw > 1000000000000 ? raw : raw * 1000)
   if (Number.isNaN(date.getTime()))
     return '-'
-  return date.toLocaleDateString()
+  return date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
 }
 
 function rewardName(item: { itemName?: string, name?: string, itemId?: number }) {
@@ -66,7 +66,7 @@ function previewRewards(items?: HeluDrawReward[]) {
             {{ labels.notesTab }}
           </h2>
           <div class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
-            {{ T.currentTerm }} {{ solarTerms?.currentTerm?.title || '-' }}
+            {{ solarTerms?.currentTerm ? `当前节令：${solarTerms.currentTerm.title}` : solarTerms?.nextTerm ? `下一节令：${solarTerms.nextTerm.title}` : '当前暂无开放的节令' }}
           </div>
         </div>
       </div>
@@ -87,7 +87,7 @@ function previewRewards(items?: HeluDrawReward[]) {
       {{ labels.empty }}
     </div>
 
-    <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(156px,1fr))] gap-3 p-4">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 p-4">
       <article
         v-for="term in solarTerms.terms"
         :key="term.id"
@@ -139,7 +139,11 @@ function previewRewards(items?: HeluDrawReward[]) {
             {{ T.reward }}: {{ rewardSummary(term.rewards) }}
           </div>
 
+          <div v-if="!term.claimable" class="mt-auto rounded-lg bg-gray-100 px-3 py-2 text-center text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+            {{ term.statusLabel || T.unavailable }}
+          </div>
           <BaseButton
+            v-else
             class="mt-auto w-full"
             variant="primary"
             :loading="loading"

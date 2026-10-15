@@ -283,6 +283,18 @@ const DEFAULT_AUTOMATION = {
     // 拾物小铺兑换（exchange，需用户指定商品）、锦囊付费刷新（花点券）、
     // markStories（纯 UI 状态无奖励）、skipBattle（是设置项不是任务）。
     pet_diary_adopt: false,
+    milk_tea_share_daily: false,
+    milk_tea_share_rewards: false,
+    milk_tea_fund_rewards: false,
+    milk_tea_cashier: false,
+    milk_tea_wages: false,
+    milk_tea_upgrade: false,
+    milk_tea_craft: false,
+    milk_tea_boost: false,
+    milk_tea_hire: false,
+    milk_tea_hire_duration: 1,
+    milk_tea_hire_talent: 0,
+    milk_tea_seed_buy: false,
     pet_diary_feed: false,
     pet_diary_draw: false,
     pet_diary_story_claim: false,
@@ -295,6 +307,7 @@ const DEFAULT_AUTOMATION = {
     fertilizer_gift: false,
     fertilizer_buy_organic: false,
     fertilizer_buy_normal: false,
+    mall_coupon_gift_buy: false,
     mystery_shop_auto_buy: false,
     mystery_shop_allow_gold: true,
     mystery_shop_allow_coupon: false,
@@ -312,7 +325,6 @@ const DEFAULT_AUTOMATION = {
 // 统一关闭，避免活动入口隐藏后后台任务继续执行。
 const HIDDEN_ACTIVITY_AUTOMATION_KEYS = new Set([
     'star_passport_claim',
-    'star_solar_claim',
     'star_record_claim',
     'qingmei_seed_claim',
     'qingmei_wine_brew',
@@ -353,6 +365,8 @@ const SHARE_REWARD_AUTOMATION_KEYS = ['share_reward_share', 'share_reward_daily'
 // （core 是 CommonJS、web 是 TS，无法共享模块）。改一处必须改另一处，
 // 否则前端会显示后端已强制关闭的开关。
 const TIMED_ACTIVITY_AUTOMATION_GROUPS = [
+    { startTime: 1792029600, endTime: 1794844799, keys: ['mall_coupon_gift_buy', 'milk_tea_cashier', 'milk_tea_wages', 'milk_tea_share_daily', 'milk_tea_share_rewards', 'milk_tea_fund_rewards'] },
+    { startTime: 1792029600, endTime: 1794671998, keys: ['milk_tea_upgrade', 'milk_tea_craft', 'milk_tea_boost', 'milk_tea_hire', 'milk_tea_seed_buy'] },
     { startTime: 1790179200, endTime: 1791388799, keys: WISH_SIGN_AUTOMATION_KEYS },
     { startTime: 1790179200, endTime: 1791820799, keys: SHARE_REWARD_AUTOMATION_KEYS },
     {
@@ -780,6 +794,9 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
                 cfg.automation[key] = Math.max(60, Math.min(7200, Number(value) || 300));
             } else if (key === 'qixi_friend_priority') {
                 cfg.automation[key] = normalizeKnownFriendGids(value, []);
+            } else if (['milk_tea_hire_duration', 'milk_tea_hire_talent'].includes(key)) {
+                const field = { milk_tea_hire_duration: 'durationId', milk_tea_hire_talent: 'talentId' }[key];
+                cfg.automation[key] = require('../services/activity-milk-tea').normalizeHireOptions({ [field]: value })[field];
             } else if (key === 'wish_sign_choice') {
                 const choice = Number(value);
                 cfg.automation[key] = Number.isInteger(choice) && choice >= 1 && choice <= 6 ? choice : 1;
@@ -1279,6 +1296,9 @@ function applyConfigSnapshot(patch = {}, opts = {}) {
                 cfg.automation[key] = Math.max(60, Math.min(7200, Number(value) || 300));
             } else if (key === 'qixi_friend_priority') {
                 cfg.automation[key] = normalizeKnownFriendGids(value, []);
+            } else if (['milk_tea_hire_duration', 'milk_tea_hire_talent'].includes(key)) {
+                const field = { milk_tea_hire_duration: 'durationId', milk_tea_hire_talent: 'talentId' }[key];
+                cfg.automation[key] = require('../services/activity-milk-tea').normalizeHireOptions({ [field]: value })[field];
             } else if (key === 'wish_sign_choice') {
                 const choice = Number(value);
                 cfg.automation[key] = Number.isInteger(choice) && choice >= 1 && choice <= 6 ? choice : 1;

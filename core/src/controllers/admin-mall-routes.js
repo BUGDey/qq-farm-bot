@@ -1,5 +1,5 @@
 const { getItemById, getItemImageById } = require("../config/gameConfig");
-const { parseMallPriceInfo, parseMallLimitInfo, parseMallItemIds } = require("../services/mall");
+const { parseMallPriceInfo, parseMallLimitInfo, parseMallItemIds, parseMallRewardItem } = require("../services/mall");
 const mallImageSupplement = require('../gameConfig/MallImageSupplement.json');
 const mallImageByGoodsId = new Map(mallImageSupplement.entries.map(entry => [entry.goodsId, entry]));
   const { toNum } = require("../utils/utils");
@@ -44,12 +44,14 @@ function isActivityMallGoods(discount) {
 
 function shouldExposeMallGoods(discount) {
   const id = toNum(discount?.goods_id) || 0;
-  return id > 0 && (FEATURED_MALL_GOODS_ORDER.includes(id) || isActivityMallGoods(discount));
+  return id > 0 && (FEATURED_MALL_GOODS_ORDER.includes(id) || isActivityMallGoods(discount) || toNum(discount.type) === 5);
 }
 
 function compareMallGoods(left, right) {
   if (left.isActivity !== right.isActivity) return left.isActivity ? -1 : 1;
   if (left.isActivity) return left.sourceOrder - right.sourceOrder;
+  if (left.type === 5 && right.type === 5) return left.sourceOrder - right.sourceOrder;
+  if (left.type === 5 || right.type === 5) return left.type === 5 ? 1 : -1;
   return FEATURED_MALL_GOODS_ORDER.indexOf(left.goodsId)
     - FEATURED_MALL_GOODS_ORDER.indexOf(right.goodsId);
 }
@@ -132,7 +134,7 @@ function registerAdminMallRoutes({
         const isLimited = !!(limitBytes && (limitBytes.length === undefined || limitBytes.length > 0));
         const endTime = toNum(discount.end_time) || 0;
         const nowSeconds = Math.floor(Date.now() / 1000);
-        if (endTime > 0 && nowSeconds > endTime) continue;
+        if (endTime > 0 && nowSeconds >= endTime) continue;
         const priceInfo = parseMallPriceInfo(discount.price);
         const currencyId = priceInfo.currencyId || (isFree ? 0 : 1002);
         const currencyMeta = getCurrencyMeta(currencyId, status);
@@ -163,6 +165,10 @@ function registerAdminMallRoutes({
           name: meta.name || String(discount.name || `活动商品 #${id}`),
           type: toNum(discount.type) || 0,
           itemIds,
+          rewards: (Array.isArray(discount.item_ids) ? discount.item_ids : [discount.item_ids])
+            .map(parseMallRewardItem).filter(Boolean).map(item => ({
+              ...item, name: getItemById(item.itemId)?.name || `物品 #${item.itemId}`,
+            })),
           price,
           currencyId,
           ...currencyMeta,
@@ -180,7 +186,7 @@ function registerAdminMallRoutes({
             ? [`/game-config/seed_images_named/${encodeURIComponent(imageMeta.file)}`]
             : dynamicImages),
           layout: meta.layout || "single",
-          canBuy: !isSoldOut,
+          canBuy: !isSoldOut && discount.enabled !== false,
         });
       }
 

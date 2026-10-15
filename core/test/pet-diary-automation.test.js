@@ -42,6 +42,9 @@ test('萌宠自动化开关都有默认值且默认关闭', () => {
 test('萌宠开关能通过配置边界的允许名单', () => {
     // ALLOWED_AUTOMATION_KEYS 由 DEFAULT_AUTOMATION 派生，
     // 缺默认值的键会在 normalizeAccountConfig 中被静默丢弃。
+    const realNow = Date.now;
+    Date.now = () => (WINDOW_START + 100) * 1000;
+    try {
     store.applyConfigSnapshot(
         { automation: Object.fromEntries(PET_DIARY_KEYS.map(key => [key, true])) },
         { persist: false },
@@ -50,6 +53,7 @@ test('萌宠开关能通过配置边界的允许名单', () => {
     for (const key of PET_DIARY_KEYS) {
         assert.strictEqual(automation[key], true, `${key} 不应被允许名单丢弃`);
     }
+    } finally { Date.now = realNow; }
 });
 
 test('前后端活动时间窗字面量一致', () => {

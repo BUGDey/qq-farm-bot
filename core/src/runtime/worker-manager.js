@@ -43,6 +43,10 @@ function createWorkerManager(deps) {
     // 按方法名的超时覆盖。萌宠日记单次操作要串行多次 RPC（读组 → 校验 → 操作 → 重读快照），
     // 10 秒默认值会误判超时，取值与上游一致。
     const METHOD_TIMEOUT_MS = {
+        // Milk tea mutations validate and refresh through multiple sequential RPCs.
+        getMilkTea: 90000,
+        operateMilkTea: 180000,
+        milkTeaRecords: 90000,
         getPetDiary: 90000,
         operatePetDiary: 180000,
         getPetDiaryRecords: 30000,

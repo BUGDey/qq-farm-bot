@@ -260,6 +260,7 @@ async function runDailyRoutines(force = false, options = {}) {
         await performDailyShare(force);
         await performDailyMonthCardGift(force);
         await buyFreeGifts(force);
+        await require('../services/mall-gift-auto-buy').autoBuyCouponGifts();
         await performDailyVipGift(force);
     } catch (err) {
         log('系统', `每日任务调度失败: ${  err.message}`, {
@@ -483,6 +484,7 @@ async function runStarActivityAutoClaims() {
     if (!loginReady || friendSyncPaused || starActivityClaimRunning) return;
 
     const automation = getAutomation() || {};
+    const milkTeaEnabled = Object.keys(require('../services/activity-milk-tea').AUTO_ACTIONS).some(key => automation[key] === true);
     const claimPassport = automation.star_passport_claim === true;
     const claimSolarTerms = automation.star_solar_claim === true;
     const claimRecords = automation.star_record_claim === true;
@@ -522,7 +524,7 @@ async function runStarActivityAutoClaims() {
         || petDiaryTreasureEnabled || petDiaryCompensationEnabled || petDiaryCharmEnabled || petDiaryBattleFlag;
     const qixiFriendPriority = Array.isArray(automation.qixi_friend_priority)
         ? automation.qixi_friend_priority.map(Number).filter(gid => gid > 0) : [];
-    if (!claimPassport && !claimSolarTerms && !claimRecords && !claimQingmeiSeedsEnabled && !brewQingmeiWineEnabled
+    if (!milkTeaEnabled && !claimPassport && !claimSolarTerms && !claimRecords && !claimQingmeiSeedsEnabled && !brewQingmeiWineEnabled
         && !useQixiDewEnabled && !buildQixiBridgeEnabled && !giftQixiSachetEnabled
         && !buyRainPoemBottleEnabled && !collectRainPoemWeatherEnabled && !useRainPoemSummonEnabled && !useRainPoemPrankEnabled
         && !unlockRainPoemResearchEnabled && !claimCharityShareEnabled && !donateCharityLoveEnabled
@@ -533,13 +535,14 @@ async function runStarActivityAutoClaims() {
     try {
         const {
             getStarActivity,
+            getSolarTermsInfo,
             claimSeasonPassportRewards,
             claimSolarTermsReward,
             claimStarRecordRewards,
             claimQingmeiSeeds,
             brewAndSellQingmeiWine
         } = require('../services/activity');
-        const needsStarActivity = claimPassport || claimSolarTerms || claimRecords || claimQingmeiSeedsEnabled || brewQingmeiWineEnabled;
+        const needsStarActivity = claimPassport || claimRecords || claimQingmeiSeedsEnabled || brewQingmeiWineEnabled;
         const activity = needsStarActivity ? await getStarActivity() : {};
         if (claimPassport && Number(activity?.passport?.claimableLevels || 0) > 0) {
             try {
@@ -559,10 +562,12 @@ async function runStarActivityAutoClaims() {
             }
         }
 
-        if (claimSolarTerms && Number(activity?.solarTerms?.claimableCount || 0) > 0) {
-            const terms = Array.isArray(activity?.solarTerms?.terms)
-                ? activity.solarTerms.terms.filter(term => term && term.claimable)
-                : [];
+        if (claimSolarTerms) {
+            const solar = await getSolarTermsInfo().catch(error => {
+                log('活动', `节令小札读取失败：${error.message}`, { module: 'activity', event: '节令小札自动检查', result: 'error' });
+                return { terms: [] };
+            });
+            const terms = solar.terms.filter(term => term.claimable);
             for (const term of terms) {
                 try {
                     const result = await claimSolarTermsReward(Number(term.id) || 0);
@@ -746,7 +751,7 @@ async function runStarActivityAutoClaims() {
                     }
                 }
             } catch (err) {
-                log('活动', `秋祈良愿自动操作失败: ${err.message}`, { module: 'activity', event: '秋祈良愿自动操作', result: 'error' });
+                if (!err.activityOperationLogged) log('活动', `秋祈良愿自动操作失败: ${err.message}`, { module: 'activity', event: '秋祈良愿自动操作', result: 'error' });
             }
         }
 
@@ -768,7 +773,7 @@ async function runStarActivityAutoClaims() {
                     }
                 }
             } catch (err) {
-                log('活动', `快乐不独享自动领取失败: ${err.message}`, { module: 'activity', event: '快乐不独享自动领取', result: 'error' });
+                if (!err.activityOperationLogged) log('活动', `快乐不独享自动领取失败: ${err.message}`, { module: 'activity', event: '快乐不独享自动领取', result: 'error' });
             }
         }
 
@@ -888,6 +893,47 @@ async function runStarActivityAutoClaims() {
             } // end if (rainPoem?.active !== false)
         }
 
+        if (milkTeaEnabled) {
+            const { AUTO_ACTIONS, phase } = require('../services/activity-milk-tea');
+            const service = require('../services/activity');
+            for (const [key, action] of Object.entries(AUTO_ACTIONS)) {
+                if (!loginReady || friendSyncPaused || getAutomation()?.[key] !== true) continue;
+                const currentPhase = phase(require('../utils/utils').getServerTimeSec());
+                if (!['business', 'settling'].includes(currentPhase)) break;
+                try {
+                    const state = await service.getMilkTea();
+                    if (!Number(state.summary.shop_open_at) && !['shareDaily', 'shareRewards', 'fundRewards'].includes(action)) continue;
+                    let params = {};
+                    if (action === 'buy') {
+                        const goods = state.goods.find(x => x.category_tag === 'seed' && x.unlocked && x.remaining > 0 && !x.paid && x.affordable);
+                        if (!goods) continue;
+                        params = { goodsId: goods.id, count: 1 };
+                    }
+                    if (action === 'hire') {
+                        const capacity = state.levels.find(x => x.level === Number(state.shop.level))?.employee_slot_count || 0;
+                        const slot = Array.from({ length: capacity }, (_, i) => i).find(i => !state.shop.slots.some(x => Number(x.slot_index) === i && Number(x.end_at) > state.serverTime));
+                        if (slot == null) continue;
+                        const options = getAutomation() || {};
+                        params = { slotIndex: slot, autoSelect: true, ...require('../services/activity-milk-tea').normalizeHireOptions({
+                            durationId: options.milk_tea_hire_duration, talentId: options.milk_tea_hire_talent,
+                        }) };
+                    }
+                    if (action === 'cashier' && !state.shop.pending_rewards.some(x => Number(x.count) > 0)) continue;
+                    if (action === 'craft' && !state.recipes.some(recipe => recipe.unlocked && recipe.fruits?.length)) continue;
+                    if (action === 'boost' && !state.balances.some(item => String(item.id) === String(state.shop.sales_item_id) && Number(item.count) > 0)) continue;
+                    if (action === 'wages' && !state.summary.has_unclaimed_wage) continue;
+                    if (action === 'upgrade' && !state.summary.can_upgrade) continue;
+                    if (currentPhase === 'settling' && !['cashier', 'wages', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) continue;
+                    if (action === 'shareDaily' && state.share?.daily?.daily_reward_claimed) continue;
+                    if (action === 'shareRewards' && !state.share?.milestones?.some(x => Number(x.state) === 2)) continue;
+                    if (action === 'fundRewards' && (!state.fund?.unlocked || !state.fund.tiers.some(x => Number(x.state) === 2))) continue;
+                    await service.operateMilkTea(action, params);
+                } catch (error) {
+                    // Mutation failures are logged by the shared service; retain query failures here.
+                    if (!error.milkTeaLogged) log('活动', `奶茶热销中自动检查失败：${error.message}`, { module: 'activity', event: '奶茶热销中自动检查', result: 'error' });
+                }
+            }
+        }
         if (petDiaryAnyEnabled) {
             await runPetDiaryAutomation({
                 adopt: petDiaryAdoptEnabled,
@@ -1243,7 +1289,7 @@ function applyRuntimeConfig(config, syncStatusAfter = false) {
         if (hasAutomation) {
             const newAuto = getAutomation();
 
-            const starClaimBecameEnabled = (
+            const starClaimBecameEnabled = (!prevAuto?.star_solar_claim && newAuto?.star_solar_claim) || (
                 !prevAuto?.star_passport_claim && newAuto?.star_passport_claim
             ) || (
                 !prevAuto?.star_record_claim && newAuto?.star_record_claim
@@ -1269,6 +1315,7 @@ function applyRuntimeConfig(config, syncStatusAfter = false) {
                 !prevAuto?.rain_poem_research_unlock && newAuto?.rain_poem_research_unlock
             ) || [
                 'pet_diary_adopt',
+                ...Object.keys(require('../services/activity-milk-tea').AUTO_ACTIONS),
                 'pet_diary_feed',
                 'pet_diary_draw',
                 'pet_diary_story_claim',
@@ -1814,8 +1861,8 @@ async function handleApiCall(msg) {
                 break;
             }
             case 'getMallGoods': {
-                const { getMallGoodsList } = require('../services/mall');
-                result = await getMallGoodsList(0);
+                const { getAllMallGoods } = require('../services/mall');
+                result = await getAllMallGoods();
                 break;
             }
             case 'buyMallGoods': {
@@ -1942,12 +1989,16 @@ async function handleApiCall(msg) {
                 result = await getCharityFlowerActivity();
                 break;
             }
+            case 'getSolarTermsInfo':
+            case 'getMilkTea':
             case 'getWishSignActivity':
             case 'getShareRewardActivity': {
                 const activity = require('../services/activity');
                 result = await activity[method]();
                 break;
             }
+            case 'operateMilkTea':
+            case 'milkTeaRecords':
             case 'operateWishSign':
             case 'operateShareReward': {
                 const activity = require('../services/activity');

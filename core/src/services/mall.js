@@ -98,6 +98,7 @@ function bytesToBuffer(value) {
     return Buffer.from(value);
   }
   if (Array.isArray(value)) return Buffer.from(value);
+  if (value.type === 'Buffer' && Array.isArray(value.data)) return Buffer.from(value.data);
   if (typeof value === 'object') {
     const numKeys = Object.keys(value).filter((k) => /^\d+$/.test(k));
     numKeys.sort((a, b) => Number(a) - Number(b));
@@ -105,6 +106,26 @@ function bytesToBuffer(value) {
     return Buffer.from(numKeys.map((k) => value[k]));
   }
   return null;
+}
+
+/** 解析 corepb.Item；管理进程无需初始化账号工作进程的 types。 */
+function parseMallRewardItem(raw) {
+  const buffer = bytesToBuffer(raw);
+  if (!buffer?.length) return null;
+  try {
+    const reader = require('protobufjs').Reader.create(buffer);
+    let itemId = 0;
+    let count = 0;
+    while (reader.pos < reader.len) {
+      const tag = reader.uint32();
+      if (tag === 8) itemId = toNum(reader.int64());
+      else if (tag === 16) count = toNum(reader.int64());
+      else reader.skipType(tag & 7);
+    }
+    return itemId > 0 ? { itemId, count } : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -601,7 +622,12 @@ module.exports = {
   checkAndBuyFertilizerBoth,
   buyFreeGifts,
   getMallGoodsList,
+  getAllMallGoods: async () => {
+    const lists = await Promise.all([getMallGoodsList(1), getMallGoodsList(5)]);
+    return [...new Map(lists.flat().map(goods => [Number(goods.goods_id), goods])).values()];
+  },
   purchaseMallGoods,
+  parseMallRewardItem,
   parseMallPriceValue,
   parseMallPriceInfo,
   parseMallLimitInfo,
