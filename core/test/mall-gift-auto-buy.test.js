@@ -71,3 +71,44 @@ test('never queries outside milk tea window or buys other coupon packs', async (
     assert.equal(queried, false);
   }
 });
+
+test('uses live coupon balance and retries insufficient funds on the next check', async () => {
+  const { getCouponGiftBalance } = require('../src/services/mall-gift-auto-buy');
+  const state = { coupon: 49 };
+  let time = 1792029600000;
+  const purchases = [];
+  const reports = [];
+  const buyer = createCouponGiftBuyer({
+    getAutomation: () => ({ mall_coupon_gift_buy: true }),
+    getBalance: () => getCouponGiftBalance(state), getGoods: async () => [goods],
+    purchase: async (...args) => purchases.push(args),
+    report: (...args) => reports.push(args), now: () => time,
+  });
+  await buyer();
+  assert.equal(purchases.length, 0);
+  assert.equal(reports[0][1], 'skip');
+  assert.match(reports[0][0], /50.*49/);
+  state.coupon = 50;
+  time += 600000;
+  await buyer();
+  assert.deepEqual(purchases, [[1061, 2]]);
+  assert.equal(getCouponGiftBalance({ ticket: 100 }), 0);
+});
+
+test('save-triggered check bypasses cooldown while preserving concurrency and switch checks', async () => {
+  let purchases = 0;
+  let enabled = true;
+  const buyer = createCouponGiftBuyer({
+    getAutomation: () => ({ mall_coupon_gift_buy: enabled }), getBalance: () => 100,
+    getGoods: async () => [goods], purchase: async () => { purchases++; },
+    report: () => {}, now: () => 1792029600000,
+  });
+  await buyer();
+  await buyer();
+  assert.equal(purchases, 1);
+  await Promise.all([buyer(true), buyer(true)]);
+  assert.equal(purchases, 2);
+  enabled = false;
+  await buyer(true);
+  assert.equal(purchases, 2);
+});

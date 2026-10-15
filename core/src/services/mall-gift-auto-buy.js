@@ -17,9 +17,9 @@ function getCouponGiftPurchase(goods, balance, now = Date.now() / 1000) {
 function createCouponGiftBuyer({ getAutomation, getBalance, getGoods, purchase, report, now = Date.now }) {
   let busy = false;
   let lastCheck = -Infinity;
-  return async function autoBuyCouponGifts() {
+  return async function autoBuyCouponGifts(force = false) {
     if (now() < 1792029600000 || now() > 1794844799000) return 0;
-    if (busy || getAutomation().mall_coupon_gift_buy !== true || now() - lastCheck < 600000) return 0;
+    if (busy || getAutomation().mall_coupon_gift_buy !== true || (!force && now() - lastCheck < 600000)) return 0;
     busy = true;
     lastCheck = now();
     let bought = 0;
@@ -29,7 +29,11 @@ function createCouponGiftBuyer({ getAutomation, getBalance, getGoods, purchase, 
       for (const item of goods) {
         if (getAutomation().mall_coupon_gift_buy !== true) break;
         const count = getCouponGiftPurchase(item, balance, now() / 1000);
-        if (!count) continue;
+        if (!count) {
+          const requiredCount = getCouponGiftPurchase(item, Number.MAX_SAFE_INTEGER, now() / 1000);
+          if (requiredCount > 0) report(`点券礼包购买已跳过：需要 ${mall.parseMallPriceInfo(item.price).price * requiredCount} 点券，当前 ${balance}`, 'skip');
+          continue;
+        }
         await purchase(Number(item.goods_id), count);
         balance -= mall.parseMallPriceInfo(item.price).price * count;
         bought += count;
@@ -44,11 +48,15 @@ function createCouponGiftBuyer({ getAutomation, getBalance, getGoods, purchase, 
   };
 }
 
+function getCouponGiftBalance(state) {
+  return Math.max(0, toNum(state?.coupon));
+}
+
 const autoBuyCouponGifts = createCouponGiftBuyer({
   getAutomation,
-  getBalance: () => Math.max(0, toNum(getUserState()?.ticket)),
+  getBalance: () => getCouponGiftBalance(getUserState()),
   getGoods: () => mall.getMallGoodsList(5),
   purchase: mall.purchaseMallGoods,
   report: (message, result) => log('商城', message, { module: 'shop', event: '点券限时礼包自动购买', result }),
 });
-module.exports = { getCouponGiftPurchase, createCouponGiftBuyer, autoBuyCouponGifts };
+module.exports = { getCouponGiftBalance, getCouponGiftPurchase, createCouponGiftBuyer, autoBuyCouponGifts };

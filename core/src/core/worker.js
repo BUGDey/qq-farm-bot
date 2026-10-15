@@ -288,6 +288,7 @@ function startDailyRoutineTimer() {
             // 分享资格在服务端日切后可能延迟刷新；服务内部有 10 分钟冷却，
             // 持续检查可避免零点单次未命中后必须重连才能领取。
             performDailyShare(false).catch(() => null);
+            if (!friendSyncPaused) require('../services/mall-gift-auto-buy').autoBuyCouponGifts().catch(() => null);
             return;
         }
         lastDailyRunDate = today;
@@ -1341,6 +1342,13 @@ function applyRuntimeConfig(config, syncStatusAfter = false) {
             if (newAuto?.mystery_shop_auto_buy && mysteryShopConfigChanged) {
                 workerScheduler.setTimeoutTask('mystery_shop_auto_buy_after_save', 2000, () => {
                     runMysteryShopAutoBuy().catch(() => null);
+                });
+            }
+
+            if (!prevAuto?.mall_coupon_gift_buy && newAuto?.mall_coupon_gift_buy) {
+                workerScheduler.setTimeoutTask('mall_coupon_gift_buy_after_save', 2000, () => {
+                    if (!loginReady || friendSyncPaused) return;
+                    require('../services/mall-gift-auto-buy').autoBuyCouponGifts(true).catch(() => null);
                 });
             }
 
