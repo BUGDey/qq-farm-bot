@@ -173,6 +173,11 @@ function extractLoginInfo({ host, head, parsedHead, body, config = {} }) {
     info.code = code;
   }
 
+  const clientVersion = String(params.get('ver') || '').trim();
+  if (gatewayHost && info.code && /^\d+(?:\.\d+){2,4}_\d{8}$/.test(clientVersion)) {
+    info.clientVersion = clientVersion;
+  }
+
   const openId = params.get('openID') || params.get('openid') || '';
   if (openId) info.openId = openId;
 

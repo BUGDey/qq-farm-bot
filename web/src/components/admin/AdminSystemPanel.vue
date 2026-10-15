@@ -199,7 +199,7 @@ const localCaptureConfig = defineModel<CaptureConfig>('localCaptureConfig', { re
               label="允许使用抓包登录添加账号"
             />
             <div v-if="localCaptureConfig.embedded" class="mt-1 text-xs opacity-70" style="color: var(--theme-text);">
-              默认关闭且不运行；开启后才会启动嵌入服务，手机 Wi-Fi 代理端口固定为 18000
+              默认开启并随应用启动嵌入服务；关闭后停止服务，手机 Wi-Fi 代理端口固定为 18000
             </div>
           </div>
           <template v-if="!localCaptureConfig.embedded">
