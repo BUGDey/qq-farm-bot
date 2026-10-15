@@ -1644,5 +1644,177 @@
     "5": "/game-config/plant_images/Plant_1128004/5.png",
     "6": "/game-config/plant_images/Plant_1128004/6.png",
     "7": "/game-config/plant_images/Plant_1128004/7.png"
+  },
+  "Crop_1435": {
+    "2": "/game-config/plant_images/Crop_1435/2.png",
+    "3": "/game-config/plant_images/Crop_1435/3.png",
+    "4": "/game-config/plant_images/Crop_1435/4.png",
+    "5": "/game-config/plant_images/Crop_1435/5.png",
+    "6": "/game-config/plant_images/Crop_1435/6.png"
+  },
+  "Crop_165": {
+    "2": "/game-config/plant_images/Crop_165/2.png",
+    "3": "/game-config/plant_images/Crop_165/3.png",
+    "4": "/game-config/plant_images/Crop_165/4.png",
+    "5": "/game-config/plant_images/Crop_165/5.png",
+    "6": "/game-config/plant_images/Crop_165/6.png"
+  },
+  "Crop_21": {
+    "2": "/game-config/plant_images/Crop_21/2.png",
+    "3": "/game-config/plant_images/Crop_21/3.png",
+    "4": "/game-config/plant_images/Crop_21/4.png",
+    "5": "/game-config/plant_images/Crop_21/5.png",
+    "6": "/game-config/plant_images/Crop_21/6.png"
+  },
+  "Crop_2254": {
+    "2": "/game-config/plant_images/Crop_2254/2.png",
+    "3": "/game-config/plant_images/Crop_2254/3.png",
+    "4": "/game-config/plant_images/Crop_2254/4.png",
+    "5": "/game-config/plant_images/Crop_2254/5.png",
+    "6": "/game-config/plant_images/Crop_2254/6.png"
+  },
+  "Crop_435": {
+    "2": "/game-config/plant_images/Crop_435/2.png",
+    "3": "/game-config/plant_images/Crop_435/3.png",
+    "4": "/game-config/plant_images/Crop_435/4.png",
+    "5": "/game-config/plant_images/Crop_435/5.png",
+    "6": "/game-config/plant_images/Crop_435/6.png"
+  },
+  "Crop_525": {
+    "2": "/game-config/plant_images/Crop_525/2.png",
+    "3": "/game-config/plant_images/Crop_525/3.png",
+    "4": "/game-config/plant_images/Crop_525/4.png",
+    "5": "/game-config/plant_images/Crop_525/5.png",
+    "6": "/game-config/plant_images/Crop_525/6.png"
+  },
+  "Crop_526": {
+    "2": "/game-config/plant_images/Crop_526/2.png",
+    "3": "/game-config/plant_images/Crop_526/3.png",
+    "4": "/game-config/plant_images/Crop_526/4.png",
+    "5": "/game-config/plant_images/Crop_526/5.png",
+    "6": "/game-config/plant_images/Crop_526/6.png"
+  },
+  "Crop_527": {
+    "2": "/game-config/plant_images/Crop_527/2.png",
+    "3": "/game-config/plant_images/Crop_527/3.png",
+    "4": "/game-config/plant_images/Crop_527/4.png",
+    "5": "/game-config/plant_images/Crop_527/5.png",
+    "6": "/game-config/plant_images/Crop_527/6.png"
+  },
+  "Crop_528": {
+    "2": "/game-config/plant_images/Crop_528/2.png",
+    "3": "/game-config/plant_images/Crop_528/3.png",
+    "4": "/game-config/plant_images/Crop_528/4.png",
+    "5": "/game-config/plant_images/Crop_528/5.png",
+    "6": "/game-config/plant_images/Crop_528/6.png"
+  },
+  "Crop_529": {
+    "2": "/game-config/plant_images/Crop_529/2.png",
+    "3": "/game-config/plant_images/Crop_529/3.png",
+    "4": "/game-config/plant_images/Crop_529/4.png",
+    "5": "/game-config/plant_images/Crop_529/5.png",
+    "6": "/game-config/plant_images/Crop_529/6.png"
+  },
+  "gold/Crop_1435": {
+    "2": "/game-config/plant_images/gold/Crop_1435/2.png",
+    "3": "/game-config/plant_images/gold/Crop_1435/3.png",
+    "4": "/game-config/plant_images/gold/Crop_1435/4.png",
+    "5": "/game-config/plant_images/gold/Crop_1435/5.png",
+    "6": "/game-config/plant_images/gold/Crop_1435/6.png"
+  },
+  "gold/Crop_165": {
+    "2": "/game-config/plant_images/gold/Crop_165/2.png",
+    "3": "/game-config/plant_images/gold/Crop_165/3.png",
+    "4": "/game-config/plant_images/gold/Crop_165/4.png",
+    "5": "/game-config/plant_images/gold/Crop_165/5.png",
+    "6": "/game-config/plant_images/gold/Crop_165/6.png"
+  },
+  "gold/Crop_21": {
+    "2": "/game-config/plant_images/gold/Crop_21/2.png",
+    "3": "/game-config/plant_images/gold/Crop_21/3.png",
+    "4": "/game-config/plant_images/gold/Crop_21/4.png",
+    "5": "/game-config/plant_images/gold/Crop_21/5.png",
+    "6": "/game-config/plant_images/gold/Crop_21/6.png"
+  },
+  "gold/Crop_2254": {
+    "2": "/game-config/plant_images/gold/Crop_2254/2.png",
+    "3": "/game-config/plant_images/gold/Crop_2254/3.png",
+    "4": "/game-config/plant_images/gold/Crop_2254/4.png",
+    "5": "/game-config/plant_images/gold/Crop_2254/5.png",
+    "6": "/game-config/plant_images/gold/Crop_2254/6.png"
+  },
+  "gold/Crop_435": {
+    "2": "/game-config/plant_images/gold/Crop_435/2.png",
+    "3": "/game-config/plant_images/gold/Crop_435/3.png",
+    "4": "/game-config/plant_images/gold/Crop_435/4.png",
+    "5": "/game-config/plant_images/gold/Crop_435/5.png",
+    "6": "/game-config/plant_images/gold/Crop_435/6.png"
+  },
+  "gold/Crop_525": {
+    "2": "/game-config/plant_images/gold/Crop_525/2.png",
+    "3": "/game-config/plant_images/gold/Crop_525/3.png",
+    "4": "/game-config/plant_images/gold/Crop_525/4.png",
+    "5": "/game-config/plant_images/gold/Crop_525/5.png",
+    "6": "/game-config/plant_images/gold/Crop_525/6.png"
+  },
+  "gold/Crop_526": {
+    "2": "/game-config/plant_images/gold/Crop_526/2.png",
+    "3": "/game-config/plant_images/gold/Crop_526/3.png",
+    "4": "/game-config/plant_images/gold/Crop_526/4.png",
+    "5": "/game-config/plant_images/gold/Crop_526/5.png",
+    "6": "/game-config/plant_images/gold/Crop_526/6.png"
+  },
+  "gold/Crop_527": {
+    "2": "/game-config/plant_images/gold/Crop_527/2.png",
+    "3": "/game-config/plant_images/gold/Crop_527/3.png",
+    "4": "/game-config/plant_images/gold/Crop_527/4.png",
+    "5": "/game-config/plant_images/gold/Crop_527/5.png",
+    "6": "/game-config/plant_images/gold/Crop_527/6.png"
+  },
+  "gold/Crop_528": {
+    "2": "/game-config/plant_images/gold/Crop_528/2.png",
+    "3": "/game-config/plant_images/gold/Crop_528/3.png",
+    "4": "/game-config/plant_images/gold/Crop_528/4.png",
+    "5": "/game-config/plant_images/gold/Crop_528/5.png",
+    "6": "/game-config/plant_images/gold/Crop_528/6.png"
+  },
+  "gold/Crop_529": {
+    "2": "/game-config/plant_images/gold/Crop_529/2.png",
+    "3": "/game-config/plant_images/gold/Crop_529/3.png",
+    "4": "/game-config/plant_images/gold/Crop_529/4.png",
+    "5": "/game-config/plant_images/gold/Crop_529/5.png",
+    "6": "/game-config/plant_images/gold/Crop_529/6.png"
+  },
+  "Crop_9005": {
+    "2": "/game-config/plant_images/Crop_9005/2.png",
+    "3": "/game-config/plant_images/Crop_9005/3.png",
+    "4": "/game-config/plant_images/Crop_9005/4.png",
+    "5": "/game-config/plant_images/Crop_9005/5.png",
+    "6": "/game-config/plant_images/Crop_9005/6.png",
+    "7": "/game-config/plant_images/Crop_9005/7.png"
+  },
+  "Plant_1028005": {
+    "2": "/game-config/plant_images/Crop_9005/2.png",
+    "3": "/game-config/plant_images/Crop_9005/3.png",
+    "4": "/game-config/plant_images/Crop_9005/4.png",
+    "5": "/game-config/plant_images/Crop_9005/5.png",
+    "6": "/game-config/plant_images/Plant_1028005/6.png",
+    "7": "/game-config/plant_images/Plant_1028005/7.png"
+  },
+  "Plant_1129005": {
+    "2": "/game-config/plant_images/Plant_1129005/2.png",
+    "3": "/game-config/plant_images/Plant_1129005/3.png",
+    "4": "/game-config/plant_images/Plant_1129005/4.png",
+    "5": "/game-config/plant_images/Plant_1129005/5.png",
+    "6": "/game-config/plant_images/Plant_1129005/6.png",
+    "7": "/game-config/plant_images/Plant_1129005/7.png"
+  },
+  "Plant_1128005": {
+    "2": "/game-config/plant_images/Plant_1129005/2.png",
+    "3": "/game-config/plant_images/Plant_1129005/3.png",
+    "4": "/game-config/plant_images/Plant_1129005/4.png",
+    "5": "/game-config/plant_images/Plant_1129005/5.png",
+    "6": "/game-config/plant_images/Plant_1128005/6.png",
+    "7": "/game-config/plant_images/Plant_1128005/7.png"
   }
 }

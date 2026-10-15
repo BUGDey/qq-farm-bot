@@ -475,23 +475,23 @@ useIntervalFn(loadBag, 60000)
             #{{ item.id }}
           </div>
 
-          <div class="absolute right-1 top-1 flex gap-1">
+          <div class="mt-5 w-full flex flex-wrap justify-end gap-2 order-last">
             <template v-if="!batchMode">
               <button
                 v-if="canSell(item)"
-                class="rounded bg-red-500 px-1.5 py-0.5 text-[10px] text-white opacity-70 transition dark:bg-red-600 hover:opacity-100"
+                class="rounded bg-red-500 min-h-11 px-2 py-2 text-xs text-white transition-colors dark:bg-red-600 hover:opacity-100"
                 title="出售全部"
                 @click.stop="handleSellClick(item)"
               >
-                售
+                出售全部
               </button>
               <button
                 v-if="canUse(item)"
-                class="rounded bg-green-500 px-1.5 py-0.5 text-[10px] text-white opacity-70 transition dark:bg-green-600 hover:opacity-100"
+                class="rounded bg-green-500 min-h-11 px-2 py-2 text-xs text-white transition-colors dark:bg-green-600 hover:opacity-100"
                 :title="Number(item.id) === 6001 ? '使用一枚' : '使用全部'"
                 @click.stop="handleUseClick(item)"
               >
-                用
+                {{ Number(item.id) === 6001 ? '使用一枚' : '使用全部' }}
               </button>
             </template>
             <div

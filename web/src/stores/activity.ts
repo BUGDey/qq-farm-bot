@@ -95,6 +95,7 @@ export interface HeluSolarTerms {
   nowTime?: number
   terms: HeluSolarTerm[]
   claimableCount: number
+  nextTerm?: HeluSolarTerm | null
   currentTerm?: HeluSolarTerm | null
   tipsText?: string
   warning?: string

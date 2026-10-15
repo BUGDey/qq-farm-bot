@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, useId } from 'vue'
+import { useModalFocus } from '@/composables/useModalFocus'
 import BaseButton from '@/components/ui/BaseButton.vue'
 
 type ModalType = 'primary' | 'danger' | 'success' | 'secondary'
@@ -30,6 +31,10 @@ const emit = defineEmits<{
   (e: 'cancel'): void
   (e: 'close'): void
 }>()
+
+const surface = ref<HTMLElement | null>(null)
+const dialogId = useId()
+useModalFocus(() => props.show, surface, closeModal)
 
 const confirmDisabled = computed(() => {
   if (props.loading)
@@ -68,60 +73,69 @@ function confirm() {
 </script>
 
 <template>
-  <Transition name="confirm-modal">
-    <div
-      v-if="show"
-      class="confirm-modal-overlay"
-      @click="closeModal"
-    >
+  <Teleport to="body">
+    <Transition name="confirm-modal">
       <div
-        class="confirm-modal"
-        :data-tone="modalTone"
-        @click.stop
+        v-if="show"
+        class="confirm-modal-overlay"
+        @click="closeModal"
       >
-        <div class="confirm-modal-icon">
-          <div :class="iconClass" />
-        </div>
+        <div
+          ref="surface"
+          class="confirm-modal"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="`${dialogId}-title`"
+          :aria-describedby="`${dialogId}-message`"
+          :aria-busy="loading"
+          tabindex="-1"
+          :data-tone="modalTone"
+          @click.stop
+        >
+          <div class="confirm-modal-icon">
+            <div :class="iconClass" />
+          </div>
 
-        <div class="confirm-modal-content">
-          <h3 class="confirm-modal-title">
-            {{ title }}
-          </h3>
-          <p class="confirm-modal-message">
-            {{ message }}
-          </p>
-        </div>
+          <div class="confirm-modal-content">
+            <h3 :id="`${dialogId}-title`" class="confirm-modal-title">
+              {{ title }}
+            </h3>
+            <p :id="`${dialogId}-message`" class="confirm-modal-message">
+              {{ message }}
+            </p>
+          </div>
 
-        <div class="confirm-modal-actions" :class="{ 'is-alert': isAlert }">
-          <BaseButton
-            v-if="!isAlert"
-            class="confirm-modal-button"
-            variant="secondary"
-            :disabled="loading"
-            @click="cancel"
-          >
-            {{ cancelText }}
-          </BaseButton>
-          <BaseButton
-            class="confirm-modal-button"
-            :variant="confirmVariant"
-            :loading="loading"
-            :disabled="confirmDisabled"
-            @click="confirm"
-          >
-            {{ confirmText }}
-          </BaseButton>
+          <div class="confirm-modal-actions" :class="{ 'is-alert': isAlert }">
+            <BaseButton
+              v-if="!isAlert"
+              class="confirm-modal-button"
+              variant="secondary"
+              :disabled="loading"
+              @click="cancel"
+            >
+              {{ cancelText }}
+            </BaseButton>
+            <BaseButton
+              class="confirm-modal-button"
+              :variant="confirmVariant"
+              :loading="loading"
+              :disabled="confirmDisabled"
+              @click="confirm"
+            >
+              {{ confirmText }}
+            </BaseButton>
+          </div>
         </div>
       </div>
-    </div>
-  </Transition>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
 .confirm-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 10050;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,7 +148,7 @@ function confirm() {
   width: min(100%, 430px);
   border: 1px solid rgba(102, 187, 106, 0.22);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.97);
+  background: var(--surface-1);
   box-shadow:
     0 18px 56px rgba(46, 125, 50, 0.14),
     0 8px 28px rgba(15, 23, 42, 0.14);
@@ -170,7 +184,7 @@ function confirm() {
 .confirm-modal[data-tone='success'] .confirm-modal-icon {
   border-color: #66bb6a;
   background: #e8f5e9;
-  color: #2e7d32;
+  color: var(--theme-text);
 }
 
 .confirm-modal-content {
@@ -179,7 +193,7 @@ function confirm() {
 
 .confirm-modal-title {
   margin: 0;
-  color: #2e7d32;
+  color: var(--theme-text);
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.25;
@@ -192,7 +206,7 @@ function confirm() {
 .confirm-modal-message {
   margin: 12px 0 0;
   white-space: pre-line;
-  color: #546e5a;
+  color: var(--muted-text);
   font-size: 0.92rem;
   line-height: 1.65;
 }

@@ -46,11 +46,16 @@ async function loadProto() {
         getResourcePath('proto', 'dogpb.proto'),
         getResourcePath('proto', 'activitypb.proto'),
         getResourcePath('proto', 'pet-diary.proto'),
+        getResourcePath('proto', 'milk-tea.proto'),
         getResourcePath('proto', 'mysteryshoppb.proto'),
         getResourcePath('proto', 'acepb.proto'),
         getResourcePath('proto', 'careerpb.proto'),
         getResourcePath('proto', 'paypb.proto'),
     ], { keepCase: true });
+
+    for (const name of ['MilkTeaOperateRequest', 'MilkTeaOperateReply', 'MilkTeaGetGroupReply']) {
+        types[name] = root.lookupType(`gamepb.activitypb.${name}`);
+    }
 
     // 网关
     types.GateMessage = root.lookupType('gatepb.Message');

@@ -41,6 +41,26 @@ const staticItemInfoMap = new Map([
     [100003, { id: 100003, name: '化肥礼包' }],
 ]);
 const staticItemImageMap = new Map([
+    [210041, '/activity/milk-tea/icon_wuding05.png'],
+    [210042, '/activity/milk-tea/icon_men05.png'],
+    [210043, '/activity/milk-tea/icon_chuang05.png'],
+    [210044, '/activity/milk-tea/icon_qiangmian05.png'],
+    [210045, '/activity/milk-tea/icon_diban05.png'],
+    [210046, '/activity/milk-tea/icon_zhuoyi05.png'],
+    [210047, '/activity/milk-tea/icon_zhuangshi05.png'],
+    [210048, '/activity/milk-tea/icon_zhuangshi06.png'],
+
+    [20525, '/activity/milk-tea/Crop_525_Seed.png'],
+    [20526, '/activity/milk-tea/Crop_526_Seed.png'],
+    [20527, '/activity/milk-tea/Crop_527_Seed.png'],
+    [20528, '/activity/milk-tea/Crop_528_Seed.png'],
+    [20021, '/activity/milk-tea/Crop_21_Seed.png'],
+    [21435, '/activity/milk-tea/Crop_1435_Seed.png'],
+    [20529, '/activity/milk-tea/Crop_529_Seed.png'],
+    [29005, '/activity/milk-tea/Crop_9005_Seed.png'],
+
+    [1041, '/activity/milk-tea/icon_s4_ticket.png'],
+    [1042, '/activity/milk-tea/icon_s4_boost.png'],
     [6001, '/activity/wish-sign/firework.png'],
     [26030, '/activity/wish-sign/moon-beauty-seed.png'],
     [80002, '/activity/wish-sign/fertilizer-4h.png'],

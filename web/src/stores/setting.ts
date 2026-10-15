@@ -35,6 +35,18 @@ export interface AutomationConfig {
   share_reward_daily?: boolean
   share_reward_milestones?: boolean
   pet_diary_adopt?: boolean
+  milk_tea_share_daily?: boolean
+  milk_tea_share_rewards?: boolean
+  milk_tea_fund_rewards?: boolean
+  milk_tea_cashier?: boolean
+  milk_tea_wages?: boolean
+  milk_tea_upgrade?: boolean
+  milk_tea_craft?: boolean
+  milk_tea_boost?: boolean
+  milk_tea_hire?: boolean
+  milk_tea_hire_duration?: number
+  milk_tea_hire_talent?: number
+  milk_tea_seed_buy?: boolean
   pet_diary_feed?: boolean
   pet_diary_draw?: boolean
   pet_diary_story_claim?: boolean
@@ -48,6 +60,7 @@ export interface AutomationConfig {
   fertilizer_gift?: boolean
   fertilizer_buy_organic?: boolean
   fertilizer_buy_normal?: boolean
+  mall_coupon_gift_buy?: boolean
   mystery_shop_auto_buy?: boolean
   mystery_shop_allow_gold?: boolean
   mystery_shop_allow_coupon?: boolean

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Account } from '@/stores/account'
 import { storeToRefs } from 'pinia'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, useTemplateRef } from 'vue'
 import api from '@/api'
 import AccountCareerModal from '@/components/AccountCareerModal.vue'
 import AccountModal from '@/components/AccountModal.vue'
@@ -25,8 +25,10 @@ const careerProfile = ref<Record<string, any>>({})
 const accountToEdit = ref<any>(null)
 const failedAvatars = ref(new Set<string>())
 
+const dropdownId = useId()
+const menuSurface = ref<HTMLElement | null>(null)
 const triggerRef = useTemplateRef<HTMLElement>('trigger')
-const dropdownPos = ref({ top: 0, left: 0, width: 320 })
+const dropdownPos = ref({ top: 0, left: 0, width: 320, maxHeight: 420 })
 
 function onScroll() {
   if (showAccountDropdown.value) {
@@ -154,8 +156,7 @@ async function loadCareer() {
   }
 }
 
-function openCareer(event: MouseEvent) {
-  event.stopPropagation()
+function openCareer() {
   if (!currentAccount.value)
     return
   closeDropdown()
@@ -172,10 +173,12 @@ async function openDropdown() {
   showAccountDropdown.value = true
   await nextTick()
   updateDropdownPos()
+  menuSurface.value?.querySelector<HTMLElement>('button')?.focus()
 }
 
 function closeDropdown() {
   showAccountDropdown.value = false
+  triggerRef.value?.focus()
 }
 
 function toggleDropdown() {
@@ -199,11 +202,19 @@ function updateDropdownPos() {
     window.innerWidth - width - viewportGap,
   )
 
+  const top = Math.min(rect.bottom + viewportGap, Math.max(viewportGap, window.innerHeight - 160))
   dropdownPos.value = {
-    top: rect.bottom + viewportGap,
+    top,
+    maxHeight: Math.max(0, window.innerHeight - top - viewportGap),
     left,
     width,
   }
+}
+
+function onMenuFocusout(event: FocusEvent) {
+  const next = event.relatedTarget as Node | null
+  if (!menuSurface.value?.contains(next) && !triggerRef.value?.contains(next))
+    showAccountDropdown.value = false
 }
 
 function selectAccount(acc: any) {
@@ -235,10 +246,15 @@ async function handleAccountSaved() {
   <div class="relative">
     <button
       ref="trigger"
+      type="button"
+      :aria-expanded="showAccountDropdown"
+      :aria-controls="dropdownId"
+      aria-label="选择和管理账号"
+      @keydown.escape="closeDropdown"
       class="max-w-[min(76vw,280px)] flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-gray-100/70 dark:hover:bg-gray-700/50"
       @click="toggleDropdown"
     >
-      <div class="h-9 w-9 flex shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-gray-100 ring-1 ring-gray-200 transition dark:bg-gray-700 hover:ring-2 dark:ring-gray-600 hover:ring-[var(--theme-primary)]" title="查看角色生涯" @click="openCareer">
+      <div class="h-9 w-9 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 ring-1 ring-gray-200 transition dark:bg-gray-700 hover:ring-2 dark:ring-gray-600 hover:ring-[var(--theme-primary)]">
         <img
           v-if="shouldShowAvatar(currentAccount)"
           :src="currentAvatarSrc"
@@ -254,10 +270,10 @@ async function handleAccountSaved() {
         <span class="truncate text-sm text-gray-900 font-semibold dark:text-gray-100">
           {{ displayName }}
         </span>
-        <span class="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
+        <span class="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-300">
           <span
             v-if="platform"
-            class="rounded px-1 py-0.2 text-[10px] font-medium leading-tight"
+            class="rounded px-1 py-0.2 text-xs font-medium leading-tight"
             :class="getPlatformClass(currentAccount?.platform)"
           >
             {{ platform }}
@@ -280,46 +296,55 @@ async function handleAccountSaved() {
 
       <div
         v-if="showAccountDropdown"
-        class="fixed z-[9999] overflow-hidden border border-gray-200/70 rounded-xl bg-white/95 py-1 shadow-xl backdrop-blur-sm dark:border-gray-700/70 dark:bg-gray-900/95"
-        :style="{ top: `${dropdownPos.top}px`, left: `${dropdownPos.left}px`, width: `${dropdownPos.width}px` }"
+        :id="dropdownId"
+        ref="menuSurface"
+        role="region"
+        aria-label="账号列表与管理"
+        @keydown.escape.stop.prevent="closeDropdown"
+        @focusout="onMenuFocusout"
+        class="account-menu-surface fixed z-[9999] overflow-y-auto border border-gray-200/70 rounded-xl bg-white/95 py-1 shadow-xl backdrop-blur-sm dark:border-gray-700/70 dark:bg-gray-900/95"
+        :style="{ top: `${dropdownPos.top}px`, left: `${dropdownPos.left}px`, width: `${dropdownPos.width}px`, maxHeight: `${dropdownPos.maxHeight}px` }"
       >
         <div class="custom-scrollbar max-h-72 overflow-y-auto">
           <template v-if="accounts.length > 0">
-            <button
+            <div
               v-for="acc in accounts"
               :key="acc.id || acc.uin"
               class="w-full flex items-center gap-3 px-4 py-2 transition-colors hover:bg-gray-100/60 dark:hover:bg-gray-700/50"
               :style="{ backgroundColor: currentAccount?.id === acc.id ? 'color-mix(in srgb, var(--theme-primary) 10%, transparent)' : undefined }"
-              @click="selectAccount(acc)"
             >
-              <div class="h-7 w-7 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
-                <img
-                  v-if="shouldShowAvatar(acc)"
-                  :src="avatarSource(acc)"
-                  :alt="accountDisplayName(acc)"
-                  class="h-full w-full object-cover"
-                  @error="markAvatarFailed(acc)"
-                >
-                <span v-else class="text-xs text-gray-500 font-semibold dark:text-gray-300">
-                  {{ avatarInitial(acc) }}
-                </span>
-              </div>
-              <div class="min-w-0 flex flex-1 flex-col items-start">
-                <span class="w-full truncate text-left text-sm font-medium">
-                  {{ accountDisplayName(acc) }}
-                </span>
-                <div class="flex items-center gap-1.5">
-                  <span
-                    v-if="getPlatformLabel(acc.platform)"
-                    class="rounded px-1 py-0.2 text-[10px] font-medium leading-tight"
-                    :class="getPlatformClass(acc.platform)"
+              <button type="button" class="min-w-0 flex flex-1 items-center gap-3 text-left" :aria-label="`选择账号 ${accountDisplayName(acc)}`" :aria-pressed="currentAccount?.id === acc.id" @click="selectAccount(acc)">
+                <div class="h-7 w-7 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
+                  <img
+                    v-if="shouldShowAvatar(acc)"
+                    :src="avatarSource(acc)"
+                    :alt="accountDisplayName(acc)"
+                    class="h-full w-full object-cover"
+                    @error="markAvatarFailed(acc)"
                   >
-                    {{ getPlatformLabel(acc.platform) }}
+                  <span v-else class="text-xs text-gray-500 font-semibold dark:text-gray-300">
+                    {{ avatarInitial(acc) }}
                   </span>
-                  <span v-if="accountSubtitle(acc)" class="text-xs text-gray-400">{{ accountSubtitle(acc) }}</span>
                 </div>
-              </div>
+                <div class="min-w-0 flex flex-1 flex-col items-start">
+                  <span class="w-full truncate text-left text-sm font-medium">
+                    {{ accountDisplayName(acc) }}
+                  </span>
+                  <div class="flex items-center gap-1.5">
+                    <span
+                      v-if="getPlatformLabel(acc.platform)"
+                      class="rounded px-1 py-0.2 text-xs font-medium leading-tight"
+                      :class="getPlatformClass(acc.platform)"
+                    >
+                      {{ getPlatformLabel(acc.platform) }}
+                    </span>
+                    <span v-if="accountSubtitle(acc)" class="text-xs text-gray-500 dark:text-gray-300">{{ accountSubtitle(acc) }}</span>
+                  </div>
+                </div>
+              </button>
               <button
+                type="button"
+                :aria-label="`修改 ${accountDisplayName(acc)} 的备注`"
                 class="rounded-full p-1 text-gray-400 transition-colors hover:bg-blue-50/50 hover:text-blue-500 dark:hover:bg-blue-900/20"
                 title="修改备注"
                 @click.stop="openRemarkModal(acc)"
@@ -327,12 +352,16 @@ async function handleAccountSaved() {
                 <div class="i-carbon-edit" />
               </button>
               <div v-if="currentAccount?.id === acc.id" class="i-carbon-checkmark shrink-0" :style="{ color: 'var(--theme-primary)' }" />
-            </button>
+            </div>
           </template>
           <div v-else class="px-4 py-3 text-center text-sm text-gray-400">
             暂无账号
           </div>
         </div>
+        <button v-if="currentAccount" type="button" class="min-h-11 w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700" @click="openCareer">
+          <span class="i-carbon-user-profile" aria-hidden="true" />
+          查看角色生涯
+        </button>
         <div class="mt-1 border-t border-gray-100 pt-1 dark:border-gray-700">
           <button
             class="w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-gray-100/50 dark:hover:bg-gray-700/50"

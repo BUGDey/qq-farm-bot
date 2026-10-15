@@ -533,7 +533,8 @@ async function sellAllFruits() {
     for (const item of items) {
       const id = toNum(item.id);
       const count = toNum(item.count);
-      if (isFruitItemId(id) && count > 0) {
+      const reservedForTea = require('./activity-milk-tea').reserveMilkTeaFruit(id, isAutomationOn('milk_tea_craft'), getServerTimeSec());
+      if (isFruitItemId(id) && count > 0 && !reservedForTea) {
         fruits.push(item);
       }
     }

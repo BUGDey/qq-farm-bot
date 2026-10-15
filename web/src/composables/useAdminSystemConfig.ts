@@ -39,7 +39,7 @@ const defaultSystemConfigValues: SystemConfig = {
 }
 
 const defaultCaptureConfig: CaptureConfig = {
-  enabled: false,
+  enabled: true,
   embedded: true,
   running: false,
   apiBase: 'http://127.0.0.1:8450',
