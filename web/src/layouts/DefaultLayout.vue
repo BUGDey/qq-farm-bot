@@ -1,74 +1,271 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { onMounted, onUnmounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useIntervalFn } from '@vueuse/core'
+import api from '@/api'
+import MobileTabBar from '@/components/game/MobileTabBar.vue'
 import MysteryMerchantBanner from '@/components/shop/MysteryMerchantBanner.vue'
-import Sidebar from '@/components/Sidebar.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import TopAccountMenu from '@/components/TopAccountMenu.vue'
+import { menuRoutes } from '@/router/menu'
+import { useAccountStore } from '@/stores/account'
 import { useAppStore } from '@/stores/app'
+import { useStatusStore } from '@/stores/status'
+import { useUserStore } from '@/stores/user'
 
 const appStore = useAppStore()
-const { loginPageConfig, sidebarOpen } = storeToRefs(appStore)
+const router = useRouter()
+
+const accountStore = useAccountStore()
+const statusStore = useStatusStore()
+const userStore = useUserStore()
+const { currentAccount } = storeToRefs(accountStore)
+const { status, realtimeConnected } = storeToRefs(statusStore)
+
+const searchKeyword = ref('')
+const searchFocused = ref(false)
+
+// 原侧边栏的系统保活逻辑：ping、账号轮询、实时状态连接
+const wsErrorNotifiedAt = ref<Record<string, number>>({})
+
+async function checkConnection() {
+  try {
+    const res = await api.get('/api/ping')
+    if (res.data?.ok) {
+      const accountRef = currentAccount.value?.id || currentAccount.value?.uin
+      if (accountRef)
+        statusStore.connectRealtime(String(accountRef))
+    }
+  }
+  catch {
+    // 网络异常时静默，等待下轮重试
+  }
+}
+
+async function refreshStatusFallback() {
+  if (realtimeConnected.value)
+    return
+  const accountRef = currentAccount.value?.id || currentAccount.value?.uin
+  if (accountRef)
+    await statusStore.fetchStatus(String(accountRef))
+}
 
 onMounted(() => {
   appStore.fetchLoginPageConfig()
+  accountStore.fetchAccounts()
+  checkConnection()
+  userStore.fetchUserInfo()
 })
 
-onUnmounted(() => {
-  // 清理逻辑
+onBeforeUnmount(() => {
+  statusStore.disconnectRealtime()
 })
+
+useIntervalFn(checkConnection, 30000)
+useIntervalFn(() => {
+  refreshStatusFallback()
+  accountStore.fetchAccounts()
+}, 10000)
+
+watch(() => currentAccount.value?.id || currentAccount.value?.uin || '', () => {
+  const accountRef = currentAccount.value?.id || currentAccount.value?.uin
+  statusStore.connectRealtime(String(accountRef || ''))
+  refreshStatusFallback()
+}, { immediate: true })
+
+watch(() => status.value?.wsError, (wsError: any) => {
+  if (!wsError || Number(wsError.code) !== 400 || !currentAccount.value)
+    return
+  const errAt = Number(wsError.at) || 0
+  const accId = String(currentAccount.value.id || currentAccount.value.uin || '')
+  const lastNotified = wsErrorNotifiedAt.value[accId] || 0
+  if (errAt <= lastNotified)
+    return
+  wsErrorNotifiedAt.value[accId] = errAt
+  router.push('/settings')
+}, { deep: true })
+
+const searchResults = computed(() => {
+  const keyword = searchKeyword.value.trim().toLowerCase()
+  if (!keyword)
+    return []
+  return menuRoutes
+    .filter(item => item.label.toLowerCase().includes(keyword) || item.name.toLowerCase().includes(keyword))
+    .map(item => ({
+      path: item.path ? `/${item.path}` : '/',
+      label: item.label,
+      icon: item.icon,
+    }))
+})
+
+function goTo(item: { path: string }) {
+  searchKeyword.value = ''
+  searchFocused.value = false
+  router.push(item.path)
+}
+
+function onSearchBlur() {
+  // 延迟关闭，保证点击结果先触发跳转
+  window.setTimeout(() => {
+    searchFocused.value = false
+  }, 150)
+}
 </script>
 
 <template>
-  <div class="w-screen flex overflow-hidden bg-gray-50 dark:bg-gray-900" style="height: 100dvh;">
-    <!-- Mobile Sidebar Overlay -->
-    <div
-      v-if="sidebarOpen"
-      class="fixed inset-0 z-40 bg-gray-950/55 backdrop-blur-md transition-opacity lg:hidden"
-      @click="appStore.closeSidebar"
-    />
-
-    <Sidebar />
+  <div class="dashboard-layout w-screen flex overflow-hidden" style="height: 100dvh;">
+    <!-- Dashboard Background Image（PC / 移动端分别在 style.css 内切换） -->
+    <div class="dashboard-bg" />
 
     <main class="relative h-full min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
-      <header class="glass-panel relative z-30 mx-2 mt-2 h-16 flex shrink-0 items-center justify-between rounded-lg px-4 md:mx-4 md:mt-4 md:px-5">
-        <div class="min-w-0 flex items-center gap-3">
-          <button
-            aria-label="打开导航"
-            :aria-expanded="sidebarOpen"
-            class="h-11 w-11 flex items-center justify-center rounded-lg text-gray-500 transition lg:hidden hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-            @click="appStore.toggleSidebar"
-          >
-            <div class="i-carbon-menu text-xl" />
-          </button>
-          <div class="h-8 w-8 flex flex-none items-center justify-center overflow-hidden rounded-full ring-1 ring-gray-200 dark:ring-gray-700">
-            <img
-              src="/icon.png"
-              :alt="`${loginPageConfig.title || 'QQ农场智能助手'}图标`"
-              class="h-full w-full object-cover"
+      <!-- 顶栏：右侧搜索 / 主题 / 通知 / 账号 -->
+      <header class="relative z-30 flex shrink-0 items-center justify-end gap-4 px-4 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+        <div class="flex items-center gap-4">
+          <div class="search-box relative hidden lg:flex">
+            <div class="search-icon i-carbon-search" />
+            <input
+              v-model="searchKeyword"
+              type="text"
+              placeholder="搜索功能…"
+              @focus="searchFocused = true"
+              @blur="onSearchBlur"
+              @keydown.enter="searchResults[0] && goTo(searchResults[0])"
             >
+            <div
+              v-if="searchFocused && searchKeyword && searchResults.length"
+              class="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden border border-white/60 rounded-2xl bg-white/95 p-1.5 shadow-xl backdrop-blur-md"
+            >
+              <button
+                v-for="item in searchResults"
+                :key="item.path"
+                class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-emerald-50 hover:text-emerald-600"
+                @mousedown.prevent="goTo(item)"
+              >
+                <div :class="[item.icon]" class="text-base" />
+                <span>{{ item.label }}</span>
+              </button>
+            </div>
           </div>
-          <div class="truncate text-base text-gray-900 font-semibold md:text-lg dark:text-gray-100">
-            {{ loginPageConfig.title || 'QQ农场智能助手' }}
-          </div>
-        </div>
 
-        <TopAccountMenu />
+          <ThemeToggle />
+
+          <button
+            class="icon-btn hidden lg:flex"
+            title="活动"
+            @click="router.push('/activity')"
+          >
+            <div class="i-carbon-notification text-lg text-gray-500" />
+          </button>
+
+          <TopAccountMenu light />
+        </div>
       </header>
 
       <!-- Main Content Area -->
-      <div class="min-h-0 flex flex-1 flex-col overflow-hidden">
+      <div class="custom-scrollbar min-h-0 flex flex-1 flex-col overflow-y-auto p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:p-4 sm:pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:p-7 lg:pt-4 lg:pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
         <MysteryMerchantBanner />
         <div class="custom-scrollbar min-h-0 flex flex-1 flex-col overflow-y-auto p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-6 sm:p-4 md:pb-6 sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <RouterView v-slot="{ Component, route }">
-            <component :is="Component" :key="route.path" />
+            <Transition name="slide-fade" mode="out-in">
+              <component :is="Component" :key="route.path" />
+            </Transition>
           </RouterView>
         </div>
       </div>
     </main>
+
+    <MobileTabBar />
   </div>
 </template>
 
 <style scoped>
+/* Dashboard Layout */
+.dashboard-layout {
+  position: relative;
+}
+
+/* PC 搜索框 */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 300px;
+  border-radius: 999px;
+  padding: 9px 18px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px rgba(31, 38, 80, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+
+.search-box:focus-within {
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(31, 38, 80, 0.16);
+}
+
+.search-icon {
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+.search-box input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: #333;
+}
+
+.search-box input::placeholder {
+  color: rgba(0, 0, 0, 0.32);
+}
+
+.icon-btn {
+  display: flex;
+  height: 40px;
+  width: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: #fff;
+}
+
+/* 移动端隐藏搜索框与通知按钮（scoped display 会覆盖 hidden 工具类，需显式隐藏） */
+@media (max-width: 1023px) {
+  .search-box,
+  .icon-btn {
+    display: none;
+  }
+}
+
+/* Slide Fade Transition */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.2s ease-out;
+}
+
+.slide-fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -77,11 +274,11 @@ onUnmounted(() => {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.3);
+  background-color: rgba(255, 255, 255, 0.15);
   border-radius: 3px;
 }
 .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.5);
+  background-color: rgba(255, 255, 255, 0.25);
 }
 
 .custom-scrollbar {

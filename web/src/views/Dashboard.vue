@@ -180,6 +180,78 @@ const timeToLevel = computed(() => {
 const fertilizerNormal = computed(() => dashboardItems.value.find((item: any) => Number(item.id) === 1011))
 const fertilizerOrganic = computed(() => dashboardItems.value.find((item: any) => Number(item.id) === 1012))
 
+const resourceCards = computed(() => [
+  {
+    key: 'gold',
+    label: '金币',
+    icon: '/game-config/resource-icons/gold.png',
+    amount: `${formatGoldAmount(status.value?.status?.gold || 0)}万`,
+  },
+  {
+    key: 'coupon',
+    label: '点券',
+    icon: '/game-config/resource-icons/coupon.png',
+    amount: formatCouponAmount(status.value?.status?.coupon || 0),
+  },
+  {
+    key: 'diamond',
+    label: '钻石',
+    icon: '/game-config/resource-icons/diamond.png',
+    amount: formatCouponAmount(status.value?.status?.diamond || 0),
+  },
+  {
+    key: 'bean',
+    label: '金豆',
+    icon: '/game-config/resource-icons/gold-bean.png',
+    amount: formatGoldBeanAmount(status.value?.status?.goldBean || 0),
+  },
+])
+
+const featureCards = computed(() => [
+  {
+    key: 'crop',
+    title: '作物图鉴',
+    subtitle: `Lv.${illustratedLevels.value.crop}`,
+    icon: '/dashboard/icon-crop.png',
+    to: '/illustrated',
+  },
+  {
+    key: 'pet',
+    title: '宠物',
+    subtitle: `Lv.${illustratedLevels.value.mutant}`,
+    icon: '/dashboard/icon-pet.png',
+    to: '/pet',
+  },
+  {
+    key: 'book',
+    title: '图鉴',
+    subtitle: '收集进度',
+    icon: '/dashboard/icon-book.png',
+    to: '/illustrated',
+  },
+  {
+    key: 'shop',
+    title: '商城',
+    subtitle: '道具 / 装扮',
+    icon: '/dashboard/icon-shop.png',
+    to: '/shop',
+  },
+  {
+    key: 'gift',
+    title: '活动',
+    subtitle: '精彩活动',
+    icon: '/dashboard/icon-gift.png',
+    to: '/activity',
+  },
+  {
+    key: 'chart',
+    title: '分析',
+    subtitle: '数据统计',
+    icon: '/dashboard/icon-chart.png',
+    to: '/analytics',
+  },
+])
+
 const nextFarmCheck = ref('--:--:--')
 const nextHelpCheck = ref('--:--:--')
 const nextStealCheck = ref('--:--:--')
@@ -601,353 +673,474 @@ useIntervalFn(updateCountdowns, 1000)
 </script>
 
 <template>
-  <div class="flex flex-col gap-5 pt-1 md:h-full md:min-h-0 md:overflow-hidden md:pt-2">
-    <div class="grid grid-cols-1 shrink-0 gap-4 lg:grid-cols-3 sm:grid-cols-2">
-      <div class="ui-card metric-card min-h-[168px] flex flex-col rounded-lg p-5">
-        <div class="mb-2 flex items-start justify-between">
-          <div class="flex items-center gap-1.5 text-sm text-gray-500">
-            <div class="i-fas-user-circle" />
-            账号
-          </div>
-          <div class="rounded-lg bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-            Lv.{{ status?.status?.level || 0 }}
-          </div>
-        </div>
-        <div class="mb-1 truncate text-xl font-bold" :title="displayName">
-          {{ displayName }}
-        </div>
-        <div class="mt-auto">
-          <div class="mb-1 flex justify-between text-xs text-gray-500">
-            <div class="flex items-center gap-1">
-              <div class="i-fas-bolt text-blue-400" />
-              <span>EXP</span>
+  <div class="dashboard-container">
+    <div class="game-home">
+      <!-- 用户信息卡片 -->
+      <div class="game-card user-card">
+        <div class="user-info-row">
+          <img :src="currentAccount?.avatar || '/default-avatar.png'" alt="用户头像" class="user-avatar-large">
+          <div class="user-details">
+            <div class="user-name-row">
+              <span class="user-name">{{ displayName }}</span>
+              <span class="user-level">Lv.{{ status?.status?.level || 0 }}</span>
             </div>
-            <span>{{ status?.levelProgress?.current || 0 }} / {{ status?.levelProgress?.needed || '?' }}</span>
-          </div>
-          <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
-            <div
-              class="h-full rounded-full bg-blue-500 transition-all duration-500"
-              :style="{ width: `${getExpPercent(status?.levelProgress)}%` }"
-            />
-          </div>
-          <div class="mt-2 flex justify-between text-xs text-gray-400">
-            <span>效率: {{ expRate }}</span>
-            <span>{{ timeToLevel }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="ui-card metric-card min-h-[168px] flex flex-col justify-between rounded-lg p-5">
-        <div class="grid grid-cols-4 gap-3">
-          <div class="min-w-0">
-            <div class="flex items-center gap-1.5 text-xs text-gray-500">
-              <img src="/game-config/resource-icons/gold.png" alt="金币" class="h-5 w-5 shrink-0 object-contain">
-              金币
+            <div class="exp-bar-row">
+              <div class="exp-progress-bar">
+                <div class="exp-progress-fill" :style="{ width: `${getExpPercent(status?.levelProgress)}%` }" />
+              </div>
+              <span class="exp-total">{{ status?.levelProgress?.current || 0 }} / {{ status?.levelProgress?.needed || 0 }}</span>
             </div>
-            <div class="text-2xl text-yellow-600 font-bold dark:text-yellow-500">
-              {{ formatGoldAmount(status?.status?.gold || 0) }}
-            </div>
-            <div
-              v-if="(status?.sessionGoldGained || 0) !== 0"
-              class="text-[10px]"
-              :class="(status?.sessionGoldGained || 0) > 0 ? 'text-green-500' : 'text-red-500'"
-            >
-              {{ (status?.sessionGoldGained || 0) > 0 ? '+' : '' }}{{ formatGoldAmount(status?.sessionGoldGained || 0) }}
-            </div>
-          </div>
-          <div class="min-w-0 text-center">
-            <div class="flex items-center justify-center gap-1.5 text-xs text-gray-500">
-              <img src="/game-config/resource-icons/coupon.png" alt="点券" class="h-5 w-5 shrink-0 object-contain">
-              点券
-            </div>
-            <div class="text-2xl text-emerald-500 font-bold dark:text-emerald-400">
-              {{ formatCouponAmount(status?.status?.coupon || 0) }}
-            </div>
-            <div
-              v-if="(status?.sessionCouponGained || 0) !== 0"
-              class="text-[10px]"
-              :class="(status?.sessionCouponGained || 0) > 0 ? 'text-green-500' : 'text-red-500'"
-            >
-              {{ (status?.sessionCouponGained || 0) > 0 ? '+' : '' }}{{ formatCouponAmount(status?.sessionCouponGained || 0) }}
-            </div>
-          </div>
-          <div class="min-w-0 text-center">
-            <div class="flex items-center justify-center gap-1.5 text-xs text-gray-500">
-              <img src="/game-config/resource-icons/diamond.png" alt="钻石" class="h-5 w-5 shrink-0 object-contain">
-              钻石
-            </div>
-            <div class="text-2xl text-cyan-600 font-bold dark:text-cyan-400">
-              {{ formatCouponAmount(status?.status?.diamond || 0) }}
-            </div>
-          </div>
-          <div class="min-w-0 text-right">
-            <div class="flex items-center justify-end gap-1.5 text-xs text-gray-500">
-              <img src="/game-config/resource-icons/gold-bean.png" alt="金豆豆" class="h-5 w-5 shrink-0 object-contain">
-              金豆
-            </div>
-            <div class="text-2xl text-amber-500 font-bold dark:text-amber-400">
-              {{ formatGoldBeanAmount(status?.status?.goldBean || 0) }}
-            </div>
-          </div>
-        </div>
-        <div class="mt-4 border-t border-gray-100/80 pt-3 dark:border-gray-700/80">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="h-2.5 w-2.5 rounded-full" :class="status?.connection?.connected ? 'bg-green-500' : currentStatusReady ? 'bg-red-500' : 'bg-gray-300'" />
-              <span class="text-xs font-bold">{{ status?.connection?.connected ? '在线' : currentStatusReady ? '离线' : '检查中' }}</span>
-            </div>
-            <div class="flex items-center gap-1.5 text-xs text-gray-400">
-              <div class="i-fas-clock text-purple-400" />
-              {{ formatDuration(localUptime) }}
+            <div class="exp-meta">
+              <span class="exp-rate">
+                <span class="exp-bolt i-fas-bolt" />
+                EXP 效率：{{ expRate }}
+              </span>
+              <span v-if="timeToLevel" class="level-up-time">
+                <span class="i-carbon-arrow-up" />
+                {{ timeToLevel }}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="ui-card metric-card min-h-[168px] flex flex-col justify-between rounded-lg p-5">
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <div class="flex items-center gap-1 text-xs text-gray-400">
-              <img src="/game-config/resource-icons/fertilizer-normal.png" alt="普通化肥" class="h-5 w-5 shrink-0 object-contain">
-              普通
+      <!-- 资源卡片网格（毛玻璃面板） -->
+      <div class="glass-panel">
+        <div class="resource-cards">
+          <div
+            v-for="res in resourceCards"
+            :key="res.key"
+            class="game-card resource-card"
+            :class="`res-${res.key}`"
+          >
+            <div class="resource-head">
+              <img :src="res.icon" :alt="res.label" class="resource-mini-icon">
+              <span class="resource-label">{{ res.label }}</span>
+              <span class="card-arrow i-carbon-chevron-right" />
             </div>
-            <div class="font-bold">
-              {{ formatBucketTime(fertilizerNormal) }}
+            <div class="resource-amount">
+              {{ res.amount }}
             </div>
+            <img :src="res.icon" :alt="res.label" class="resource-big-icon">
           </div>
-          <div>
-            <div class="flex items-center gap-1 text-xs text-gray-400">
-              <img src="/game-config/resource-icons/fertilizer-organic.png" alt="有机化肥" class="h-5 w-5 shrink-0 object-contain">
-              有机
+        </div>
+      </div>
+
+      <!-- 农场状态卡片 -->
+      <RouterLink to="/personal" class="game-card farm-status-card">
+        <div class="farm-status-left">
+          <div class="farm-status-header">
+            <div class="status-indicator">
+              <span class="status-dot" :class="status?.connection?.connected ? 'online' : 'offline'" />
+              <span class="status-text">{{ status?.connection?.connected ? '在线' : '离线' }}</span>
             </div>
-            <div class="font-bold">
-              {{ formatBucketTime(fertilizerOrganic) }}
+            <span class="farm-status-label">农场运行中</span>
+          </div>
+          <div class="farm-preview">
+            <span class="farm-clock">
+              <span class="i-carbon-time" />
+            </span>
+            <div class="farm-preview-text">
+              <span class="farm-time">{{ formatDuration(localUptime) }}</span>
+              <span class="farm-progress-label">已运行</span>
             </div>
           </div>
         </div>
-        <div class="my-3 border-t border-gray-100/80 dark:border-gray-700/80" />
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <div class="flex items-center gap-1 text-xs text-gray-400">
-              <img src="/game-config/resource-icons/illustrated-crop.png" alt="作物图鉴" class="h-6 w-6 shrink-0 object-contain">
-              作物图鉴
-            </div>
-            <div class="font-bold">
-              Lv.{{ illustratedLevels.crop }}
-            </div>
-          </div>
-          <div>
-            <div class="flex items-center gap-1 text-xs text-gray-400">
-              <img src="/game-config/resource-icons/illustrated-mutant.png" alt="超变图鉴" class="h-6 w-6 shrink-0 object-contain">
-              超变图鉴
-            </div>
-            <div class="font-bold">
-              Lv.{{ illustratedLevels.mutant }}
-            </div>
-          </div>
+        <div class="farm-scene">
+          <img src="/dashboard/farm-scene.png" alt="农场">
+          <span class="farm-scene-arrow">
+            <span class="i-carbon-chevron-right" />
+          </span>
         </div>
+      </RouterLink>
+
+      <!-- 功能网格（毛玻璃面板） -->
+      <div class="glass-panel">
+        <div class="feature-grid">
+          <RouterLink
+            v-for="feature in featureCards"
+            :key="feature.key"
+            :to="feature.to"
+            class="game-card feature-card"
+            :class="`feat-${feature.key}`"
+          >
+            <img :src="feature.icon" :alt="feature.title" class="feature-icon">
+            <div class="feature-info">
+              <div class="feature-title">
+                {{ feature.title }}
+              </div>
+              <div class="feature-subtitle">
+                {{ feature.subtitle }}
+              </div>
+            </div>
+            <span class="card-arrow i-carbon-chevron-right" />
+          </RouterLink>
+        </div>
+      </div>
+
+      <!-- 每日签到横幅 -->
+      <div class="daily-checkin-banner">
+        <img src="/dashboard/cow.png" alt="奶牛" class="banner-cow">
+        <div class="banner-text">
+          <h3>每日签到</h3>
+          <p>领取丰厚奖励</p>
+        </div>
+        <RouterLink to="/activity" class="checkin-btn">
+          立即前往
+          <span class="i-carbon-chevron-right" />
+        </RouterLink>
       </div>
     </div>
 
-    <div class="flex flex-1 flex-col items-stretch gap-5 md:min-h-0 md:flex-row">
-      <div class="flex flex-1 flex-col gap-5 md:min-h-0 md:w-3/4">
-        <div class="ui-card-elevated flex flex-1 flex-col rounded-lg p-3 md:min-h-0 md:overflow-hidden sm:p-5">
-          <div class="mb-4 flex flex-col gap-3">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <h3 class="flex items-center gap-2 text-lg font-medium">
-                <div class="i-carbon-document" />
-                <span>运行日志</span>
-                <span class="text-xs text-gray-400 font-normal">{{ visibleLogs.length }} 条</span>
-              </h3>
+    <!-- 原有的统计和日志区域 -->
+    <div class="legacy-section">
+      <div class="grid grid-cols-1 shrink-0 gap-4 lg:grid-cols-3 sm:grid-cols-2">
+        <div class="ui-card metric-card min-h-[168px] flex flex-col rounded-lg p-5">
+          <div class="mb-2 flex items-start justify-between">
+            <div class="flex items-center gap-1.5 text-sm text-gray-500">
+              <div class="i-fas-user-circle" />
+              账号
             </div>
-
-            <div class="flex flex-wrap items-center gap-2 text-sm">
-              <BaseInput
-                v-model="filter.keyword"
-                placeholder="搜索日志内容"
-                class="min-w-48 flex-1 sm:max-w-72"
-                clearable
-                @keyup.enter="onLogSearchTrigger"
-                @clear="onLogSearchTrigger"
-              />
-
-              <BaseSelect
-                v-model="filter.module"
-                :options="modules"
-                class="w-36"
-                @change="onLogFilterChange"
-              />
-
-              <BaseSelect
-                v-model="filter.event"
-                :options="events"
-                class="w-36"
-                @change="onLogFilterChange"
-              />
-
-              <BaseButton
-                v-if="hasActiveLogFilter"
-                variant="ghost"
-                size="sm"
-                @click="Object.assign(filter, { module: '', event: '', keyword: '' }); onLogFilterChange()"
-              >
-                <div class="i-carbon-filter-remove mr-1" />
-                重置
-              </BaseButton>
-
-              <BaseButton
-                variant="secondary"
-                size="sm"
-                :loading="refreshingLogs"
-                @click="refreshRuntimeLogs"
-              >
-                <div class="i-carbon-renew mr-1" />
-                刷新
-              </BaseButton>
-
-              <BaseButton
-                variant="secondary"
-                size="sm"
-                :loading="clearingLogs"
-                @click="clearLogs"
-              >
-                <div class="i-carbon-trash-can mr-1" />
-                清空
-              </BaseButton>
+            <div class="rounded-lg bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+              Lv.{{ status?.status?.level || 0 }}
             </div>
           </div>
-
-          <div ref="logContainer" class="ui-subtle-panel relative max-h-[50vh] min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-lg p-1.5 text-sm md:max-h-none sm:p-2" @scroll="onLogScroll">
-            <div v-if="!visibleLogs.length" class="py-8 text-center text-gray-400">
-              <div class="i-carbon-document-blank mx-auto mb-3 text-3xl text-gray-300" />
-              <div class="text-sm text-gray-500 dark:text-gray-400">
-                {{ hasActiveLogFilter ? '没有符合条件的日志' : '暂无日志' }}
+          <div class="mb-1 truncate text-xl font-bold" :title="displayName">
+            {{ displayName }}
+          </div>
+          <div class="mt-auto">
+            <div class="mb-1 flex justify-between text-xs text-gray-500">
+              <div class="flex items-center gap-1">
+                <div class="i-fas-bolt text-blue-400" />
+                <span>EXP</span>
               </div>
-              <div class="mt-1 text-xs text-gray-400">
-                {{ hasActiveLogFilter ? '可以调整或重置筛选条件。' : '运行账号后，这里会持续追加巡查、种植、任务和出售记录。' }}
+              <span>{{ status?.levelProgress?.current || 0 }} / {{ status?.levelProgress?.needed || '?' }}</span>
+            </div>
+            <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+              <div
+                class="h-full rounded-full bg-blue-500 transition-all duration-500"
+                :style="{ width: `${getExpPercent(status?.levelProgress)}%` }"
+              />
+            </div>
+            <div class="mt-2 flex justify-between text-xs text-gray-400">
+              <span>效率: {{ expRate }}</span>
+              <span>{{ timeToLevel }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ui-card metric-card min-h-[168px] flex flex-col justify-between rounded-lg p-5">
+          <div class="grid grid-cols-4 gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                <img src="/game-config/resource-icons/gold.png" alt="金币" class="h-5 w-5 shrink-0 object-contain">
+                金币
+              </div>
+              <div class="text-2xl text-yellow-600 font-bold dark:text-yellow-500">
+                {{ formatGoldAmount(status?.status?.gold || 0) }}
+              </div>
+              <div
+                v-if="(status?.sessionGoldGained || 0) !== 0"
+                class="text-[10px]"
+                :class="(status?.sessionGoldGained || 0) > 0 ? 'text-green-500' : 'text-red-500'"
+              >
+                {{ (status?.sessionGoldGained || 0) > 0 ? '+' : '' }}{{ formatGoldAmount(status?.sessionGoldGained || 0) }}
               </div>
             </div>
-            <div
-              v-for="log in visibleLogs"
-              :key="log.id"
-              class="grid grid-cols-1 mb-0.5 gap-x-2 gap-y-1 border rounded-md px-2.5 py-1.5 transition-colors sm:grid-cols-[auto_1fr] sm:gap-y-0"
-              :class="getLogRowClass(log)"
-            >
-              <span class="select-none whitespace-nowrap pt-0.5 text-xs text-gray-400 font-mono">{{ formatLogTimeRange(log) }}</span>
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-start gap-1">
-                  <span class="shrink-0 rounded px-1.5 py-0.5 text-xs font-bold" :class="getLogTagClass(log.tag)">{{ log.tag }}</span>
-                  <span v-if="log.event && log.source !== 'account'" class="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-500 dark:bg-blue-900/20 dark:text-blue-400">{{ getEventLabel(log.event) }}</span>
-                  <span class="min-w-0 break-words leading-5" :class="getLogMsgClass(log.tag)">{{ log.msg }}</span>
-                  <span v-if="(log.repeatCount || 1) > 1" class="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600 font-medium dark:bg-gray-700 dark:text-gray-300">×{{ log.repeatCount }}</span>
-                </div>
+            <div class="min-w-0 text-center">
+              <div class="flex items-center justify-center gap-1.5 text-xs text-gray-500">
+                <img src="/game-config/resource-icons/coupon.png" alt="点券" class="h-5 w-5 shrink-0 object-contain">
+                点券
+              </div>
+              <div class="text-2xl text-emerald-500 font-bold dark:text-emerald-400">
+                {{ formatCouponAmount(status?.status?.coupon || 0) }}
+              </div>
+              <div
+                v-if="(status?.sessionCouponGained || 0) !== 0"
+                class="text-[10px]"
+                :class="(status?.sessionCouponGained || 0) > 0 ? 'text-green-500' : 'text-red-500'"
+              >
+                {{ (status?.sessionCouponGained || 0) > 0 ? '+' : '' }}{{ formatCouponAmount(status?.sessionCouponGained || 0) }}
               </div>
             </div>
+            <div class="min-w-0 text-center">
+              <div class="flex items-center justify-center gap-1.5 text-xs text-gray-500">
+                <img src="/game-config/resource-icons/diamond.png" alt="钻石" class="h-5 w-5 shrink-0 object-contain">
+                钻石
+              </div>
+              <div class="text-2xl text-cyan-600 font-bold dark:text-cyan-400">
+                {{ formatCouponAmount(status?.status?.diamond || 0) }}
+              </div>
+            </div>
+            <div class="min-w-0 text-right">
+              <div class="flex items-center justify-end gap-1.5 text-xs text-gray-500">
+                <img src="/game-config/resource-icons/gold-bean.png" alt="金豆豆" class="h-5 w-5 shrink-0 object-contain">
+                金豆
+              </div>
+              <div class="text-2xl text-amber-500 font-bold dark:text-amber-400">
+                {{ formatGoldBeanAmount(status?.status?.goldBean || 0) }}
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 border-t border-gray-100/80 pt-3 dark:border-gray-700/80">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="h-2.5 w-2.5 rounded-full" :class="status?.connection?.connected ? 'bg-green-500' : currentStatusReady ? 'bg-red-500' : 'bg-gray-300'" />
+                <span class="text-xs font-bold">{{ status?.connection?.connected ? '在线' : currentStatusReady ? '离线' : '检查中' }}</span>
+              </div>
+              <div class="flex items-center gap-1.5 text-xs text-gray-400">
+                <div class="i-fas-clock text-purple-400" />
+                {{ formatDuration(localUptime) }}
+              </div>
+            </div>
+          </div>
+        </div>
 
-            <button
-              v-if="pendingLogCount"
-              class="sticky bottom-2 left-1/2 z-10 flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-white shadow-lg -translate-x-1/2"
-              style="background: var(--theme-primary)"
-              @click="scrollToBottom"
-            >
-              <div class="i-carbon-arrow-down" />
-              {{ pendingLogCount }} 条新日志
-            </button>
+        <div class="ui-card metric-card min-h-[168px] flex flex-col justify-between rounded-lg p-5">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <div class="flex items-center gap-1 text-xs text-gray-400">
+                <img src="/game-config/resource-icons/fertilizer-normal.png" alt="普通化肥" class="h-5 w-5 shrink-0 object-contain">
+                普通
+              </div>
+              <div class="font-bold">
+                {{ formatBucketTime(fertilizerNormal) }}
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center gap-1 text-xs text-gray-400">
+                <img src="/game-config/resource-icons/fertilizer-organic.png" alt="有机化肥" class="h-5 w-5 shrink-0 object-contain">
+                有机
+              </div>
+              <div class="font-bold">
+                {{ formatBucketTime(fertilizerOrganic) }}
+              </div>
+            </div>
+          </div>
+          <div class="my-3 border-t border-gray-100/80 dark:border-gray-700/80" />
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <div class="flex items-center gap-1 text-xs text-gray-400">
+                <img src="/game-config/resource-icons/illustrated-crop.png" alt="作物图鉴" class="h-6 w-6 shrink-0 object-contain">
+                作物图鉴
+              </div>
+              <div class="font-bold">
+                Lv.{{ illustratedLevels.crop }}
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center gap-1 text-xs text-gray-400">
+                <img src="/game-config/resource-icons/illustrated-mutant.png" alt="超变图鉴" class="h-6 w-6 shrink-0 object-contain">
+                超变图鉴
+              </div>
+              <div class="font-bold">
+                Lv.{{ illustratedLevels.mutant }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="flex flex-col gap-4 md:min-h-0 md:w-1/4 md:overflow-hidden">
-        <div class="ui-card flex shrink-0 flex-col rounded-lg p-3.5">
-          <h3 class="mb-3 flex items-center gap-2 text-base font-medium 2xl:text-lg">
-            <div class="i-carbon-hourglass" />
-            <span>下次检查倒计时</span>
-          </h3>
-          <div class="grid grid-cols-3 gap-2">
-            <div class="min-w-0 flex flex-col items-center text-center">
-              <div
-                class="h-18 w-18 flex items-center justify-center rounded-full p-1"
-                :style="getCountdownRingStyle(localNextFarmRemainSec, farmCountdownTotal, '#22c55e')"
-              >
-                <div class="h-full w-full flex flex-col items-center justify-center rounded-full bg-white dark:bg-gray-800">
-                  <div class="i-carbon-sprout text-xl text-green-500" />
-                  <span class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">农场</span>
-                </div>
+      <div class="flex flex-1 flex-col items-stretch gap-5 md:min-h-0 md:flex-row">
+        <div class="flex flex-1 flex-col gap-5 md:min-h-0 md:w-3/4">
+          <div class="ui-card-elevated flex flex-1 flex-col rounded-lg p-3 md:min-h-0 md:overflow-hidden sm:p-5">
+            <div class="mb-4 flex flex-col gap-3">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <h3 class="flex items-center gap-2 text-lg font-medium">
+                  <div class="i-carbon-document" />
+                  <span>运行日志</span>
+                  <span class="text-xs text-gray-400 font-normal">{{ visibleLogs.length }} 条</span>
+                </h3>
               </div>
-              <div class="mt-1.5 w-full truncate text-sm font-bold font-mono 2xl:text-base" :title="nextFarmCheck">
-                {{ nextFarmCheck }}
+
+              <div class="flex flex-wrap items-center gap-2 text-sm">
+                <BaseInput
+                  v-model="filter.keyword"
+                  placeholder="搜索日志内容"
+                  class="min-w-48 flex-1 sm:max-w-72"
+                  clearable
+                  @keyup.enter="onLogSearchTrigger"
+                  @clear="onLogSearchTrigger"
+                />
+
+                <BaseSelect
+                  v-model="filter.module"
+                  :options="modules"
+                  class="w-36"
+                  @change="onLogFilterChange"
+                />
+
+                <BaseSelect
+                  v-model="filter.event"
+                  :options="events"
+                  class="w-36"
+                  @change="onLogFilterChange"
+                />
+
+                <BaseButton
+                  v-if="hasActiveLogFilter"
+                  variant="ghost"
+                  size="sm"
+                  @click="Object.assign(filter, { module: '', event: '', keyword: '' }); onLogFilterChange()"
+                >
+                  <div class="i-carbon-filter-remove mr-1" />
+                  重置
+                </BaseButton>
+
+                <BaseButton
+                  variant="secondary"
+                  size="sm"
+                  :loading="refreshingLogs"
+                  @click="refreshRuntimeLogs"
+                >
+                  <div class="i-carbon-renew mr-1" />
+                  刷新
+                </BaseButton>
+
+                <BaseButton
+                  variant="secondary"
+                  size="sm"
+                  :loading="clearingLogs"
+                  @click="clearLogs"
+                >
+                  <div class="i-carbon-trash-can mr-1" />
+                  清空
+                </BaseButton>
               </div>
             </div>
-            <div class="min-w-0 flex flex-col items-center text-center">
-              <div
-                class="h-18 w-18 flex items-center justify-center rounded-full p-1"
-                :style="getCountdownRingStyle(localNextHelpRemainSec, helpCountdownTotal, '#3b82f6')"
-              >
-                <div class="h-full w-full flex flex-col items-center justify-center rounded-full bg-white dark:bg-gray-800">
-                  <div class="i-carbon-user-multiple text-xl text-blue-500" />
-                  <span class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">帮助</span>
+
+            <div ref="logContainer" class="ui-subtle-panel relative max-h-[50vh] min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-lg p-1.5 text-sm md:max-h-none sm:p-2" @scroll="onLogScroll">
+              <div v-if="!visibleLogs.length" class="py-8 text-center text-gray-400">
+                <div class="i-carbon-document-blank mx-auto mb-3 text-3xl text-gray-300" />
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ hasActiveLogFilter ? '没有符合条件的日志' : '暂无日志' }}
+                </div>
+                <div class="mt-1 text-xs text-gray-400">
+                  {{ hasActiveLogFilter ? '可以调整或重置筛选条件。' : '运行账号后，这里会持续追加巡查、种植、任务和出售记录。' }}
                 </div>
               </div>
-              <div class="mt-1.5 w-full truncate text-sm font-bold font-mono 2xl:text-base" :title="nextHelpCheck">
-                {{ nextHelpCheck }}
-              </div>
-            </div>
-            <div class="min-w-0 flex flex-col items-center text-center">
               <div
-                class="h-18 w-18 flex items-center justify-center rounded-full p-1"
-                :style="getCountdownRingStyle(localNextStealRemainSec, stealCountdownTotal, '#f97316')"
+                v-for="log in visibleLogs"
+                :key="log.id"
+                class="grid grid-cols-1 mb-0.5 gap-x-2 gap-y-1 border rounded-md px-2.5 py-1.5 transition-colors sm:grid-cols-[auto_1fr] sm:gap-y-0"
+                :class="getLogRowClass(log)"
               >
-                <div class="h-full w-full flex flex-col items-center justify-center rounded-full bg-white dark:bg-gray-800">
-                  <div class="i-carbon-run text-xl text-orange-500" />
-                  <span class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">偷菜</span>
+                <span class="select-none whitespace-nowrap pt-0.5 text-xs text-gray-400 font-mono">{{ formatLogTimeRange(log) }}</span>
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-start gap-1">
+                    <span class="shrink-0 rounded px-1.5 py-0.5 text-xs font-bold" :class="getLogTagClass(log.tag)">{{ log.tag }}</span>
+                    <span v-if="log.event && log.source !== 'account'" class="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-500 dark:bg-blue-900/20 dark:text-blue-400">{{ getEventLabel(log.event) }}</span>
+                    <span class="min-w-0 break-words leading-5" :class="getLogMsgClass(log.tag)">{{ log.msg }}</span>
+                    <span v-if="(log.repeatCount || 1) > 1" class="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600 font-medium dark:bg-gray-700 dark:text-gray-300">×{{ log.repeatCount }}</span>
+                  </div>
                 </div>
               </div>
-              <div class="mt-1.5 w-full truncate text-sm font-bold font-mono 2xl:text-base" :title="nextStealCheck">
-                {{ nextStealCheck }}
-              </div>
+
+              <button
+                v-if="pendingLogCount"
+                class="sticky bottom-2 left-1/2 z-10 flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-white shadow-lg -translate-x-1/2"
+                style="background: var(--theme-primary)"
+                @click="scrollToBottom"
+              >
+                <div class="i-carbon-arrow-down" />
+                {{ pendingLogCount }} 条新日志
+              </button>
             </div>
           </div>
         </div>
 
-        <div class="ui-card min-h-0 flex flex-1 flex-col overflow-hidden rounded-lg p-4">
-          <h3 class="mb-3 flex items-center gap-2 text-base font-medium 2xl:text-lg">
-            <div class="i-carbon-chart-column" />
-            <span>今日统计</span>
-          </h3>
-          <div v-if="currentAccountDisconnected" class="ui-subtle-panel flex flex-col items-center justify-center gap-3 rounded-lg p-5 text-center text-gray-500">
-            <div class="i-carbon-connection-signal-off text-4xl text-gray-400" />
-            <div class="flex flex-col">
-              <div class="text-lg text-gray-700 font-medium dark:text-gray-300">
-                账号未登录
-              </div>
-              <div class="mt-1 text-sm text-gray-400">
-                请先运行账号或检查网络连接。
-              </div>
-            </div>
-          </div>
-          <div v-else-if="!Object.keys(filteredOperations).length" class="ui-subtle-panel flex flex-col items-center justify-center gap-2 rounded-lg p-5 text-center">
-            <div class="i-carbon-chart-column text-3xl text-gray-300" />
-            <div class="text-sm text-gray-600 font-medium dark:text-gray-300">
-              暂无主动作统计
-            </div>
-            <div class="text-xs text-gray-400">
-              通常是刚启动、刚切换账号，或本轮巡查尚未完成。
-            </div>
-          </div>
-          <div v-else class="grid auto-rows-fr grid-cols-2 min-h-0 flex-1 gap-1.5 2xl:gap-2">
-            <div
-              v-for="(val, key) in filteredOperations"
-              :key="key"
-              class="ui-subtle-panel min-w-0 flex items-center justify-between rounded-lg px-2 py-1.5"
-            >
-              <div class="min-w-0 flex items-center gap-1.5">
-                <div class="text-base 2xl:text-lg" :class="[getOpIcon(key), getOpColor(key)]" />
-                <div class="truncate text-xs text-gray-500 2xl:text-sm" :title="getOpName(key)">
-                  {{ getOpName(key) }}
+        <div class="flex flex-col gap-4 md:min-h-0 md:w-1/4 md:overflow-hidden">
+          <div class="ui-card flex shrink-0 flex-col rounded-lg p-3.5">
+            <h3 class="mb-3 flex items-center gap-2 text-base font-medium 2xl:text-lg">
+              <div class="i-carbon-hourglass" />
+              <span>下次检查倒计时</span>
+            </h3>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="min-w-0 flex flex-col items-center text-center">
+                <div
+                  class="h-18 w-18 flex items-center justify-center rounded-full p-1"
+                  :style="getCountdownRingStyle(localNextFarmRemainSec, farmCountdownTotal, '#22c55e')"
+                >
+                  <div class="h-full w-full flex flex-col items-center justify-center rounded-full bg-white dark:bg-gray-800">
+                    <div class="i-carbon-sprout text-xl text-green-500" />
+                    <span class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">农场</span>
+                  </div>
+                </div>
+                <div class="mt-1.5 w-full truncate text-sm font-bold font-mono 2xl:text-base" :title="nextFarmCheck">
+                  {{ nextFarmCheck }}
                 </div>
               </div>
-              <div class="text-sm font-bold 2xl:text-base">
-                {{ val }}
+              <div class="min-w-0 flex flex-col items-center text-center">
+                <div
+                  class="h-18 w-18 flex items-center justify-center rounded-full p-1"
+                  :style="getCountdownRingStyle(localNextHelpRemainSec, helpCountdownTotal, '#3b82f6')"
+                >
+                  <div class="h-full w-full flex flex-col items-center justify-center rounded-full bg-white dark:bg-gray-800">
+                    <div class="i-carbon-user-multiple text-xl text-blue-500" />
+                    <span class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">帮助</span>
+                  </div>
+                </div>
+                <div class="mt-1.5 w-full truncate text-sm font-bold font-mono 2xl:text-base" :title="nextHelpCheck">
+                  {{ nextHelpCheck }}
+                </div>
+              </div>
+              <div class="min-w-0 flex flex-col items-center text-center">
+                <div
+                  class="h-18 w-18 flex items-center justify-center rounded-full p-1"
+                  :style="getCountdownRingStyle(localNextStealRemainSec, stealCountdownTotal, '#f97316')"
+                >
+                  <div class="h-full w-full flex flex-col items-center justify-center rounded-full bg-white dark:bg-gray-800">
+                    <div class="i-carbon-run text-xl text-orange-500" />
+                    <span class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">偷菜</span>
+                  </div>
+                </div>
+                <div class="mt-1.5 w-full truncate text-sm font-bold font-mono 2xl:text-base" :title="nextStealCheck">
+                  {{ nextStealCheck }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ui-card min-h-0 flex flex-1 flex-col overflow-hidden rounded-lg p-4">
+            <h3 class="mb-3 flex items-center gap-2 text-base font-medium 2xl:text-lg">
+              <div class="i-carbon-chart-column" />
+              <span>今日统计</span>
+            </h3>
+            <div v-if="currentAccountDisconnected" class="ui-subtle-panel flex flex-col items-center justify-center gap-3 rounded-lg p-5 text-center text-gray-500">
+              <div class="i-carbon-connection-signal-off text-4xl text-gray-400" />
+              <div class="flex flex-col">
+                <div class="text-lg text-gray-700 font-medium dark:text-gray-300">
+                  账号未登录
+                </div>
+                <div class="mt-1 text-sm text-gray-400">
+                  请先运行账号或检查网络连接。
+                </div>
+              </div>
+            </div>
+            <div v-else-if="!Object.keys(filteredOperations).length" class="ui-subtle-panel flex flex-col items-center justify-center gap-2 rounded-lg p-5 text-center">
+              <div class="i-carbon-chart-column text-3xl text-gray-300" />
+              <div class="text-sm text-gray-600 font-medium dark:text-gray-300">
+                暂无主动作统计
+              </div>
+              <div class="text-xs text-gray-400">
+                通常是刚启动、刚切换账号，或本轮巡查尚未完成。
+              </div>
+            </div>
+            <div v-else class="grid auto-rows-fr grid-cols-2 min-h-0 flex-1 gap-1.5 2xl:gap-2">
+              <div
+                v-for="(val, key) in filteredOperations"
+                :key="key"
+                class="ui-subtle-panel min-w-0 flex items-center justify-between rounded-lg px-2 py-1.5"
+              >
+                <div class="min-w-0 flex items-center gap-1.5">
+                  <div class="text-base 2xl:text-lg" :class="[getOpIcon(key), getOpColor(key)]" />
+                  <div class="truncate text-xs text-gray-500 2xl:text-sm" :title="getOpName(key)">
+                    {{ getOpName(key) }}
+                  </div>
+                </div>
+                <div class="text-sm font-bold 2xl:text-base">
+                  {{ val }}
+                </div>
               </div>
             </div>
           </div>
@@ -956,3 +1149,740 @@ useIntervalFn(updateCountdowns, 1000)
     </div>
   </div>
 </template>
+
+<style scoped>
+.dashboard-container {
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+}
+
+/* 游戏风格内容列 */
+.game-home {
+  display: flex;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 果冻玻璃卡片基础样式：半透明毛玻璃，透出背景 */
+.game-card {
+  position: relative;
+  border-radius: 20px;
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0.28) 100%);
+  box-shadow:
+    0 10px 28px rgba(31, 38, 80, 0.12),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+}
+
+/* 用户信息卡片 */
+.user-card {
+  padding: 18px 20px;
+}
+
+.user-info-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-avatar-large {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 16px rgba(31, 38, 80, 0.18);
+  flex-shrink: 0;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.user-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-level {
+  background: linear-gradient(135deg, #34d399, #10b981);
+  color: #fff;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.exp-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.exp-progress-bar {
+  flex: 1;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(31, 38, 80, 0.08);
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(31, 38, 80, 0.08);
+}
+
+.exp-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4ade80, #22c55e);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+  transition: width 0.5s ease;
+}
+
+.exp-total {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
+.exp-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.exp-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+}
+
+.exp-bolt {
+  color: #3b82f6;
+}
+
+.level-up-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #16a34a;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 资源卡片网格 */
+.resource-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.resource-card {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 96px;
+  overflow: hidden;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.resource-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 14px 32px rgba(31, 38, 80, 0.16),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95);
+}
+
+/* 各资源的柔和底色（半透明玻璃着色） */
+.res-gold {
+  background: linear-gradient(165deg, rgba(255, 224, 145, 0.6) 0%, rgba(255, 248, 228, 0.24) 100%);
+}
+
+.res-coupon {
+  background: linear-gradient(165deg, rgba(178, 240, 205, 0.6) 0%, rgba(240, 252, 244, 0.24) 100%);
+}
+
+.res-diamond {
+  background: linear-gradient(165deg, rgba(183, 222, 252, 0.6) 0%, rgba(238, 248, 255, 0.24) 100%);
+}
+
+.res-bean {
+  background: linear-gradient(165deg, rgba(255, 216, 160, 0.6) 0%, rgba(255, 246, 232, 0.24) 100%);
+}
+
+/* 资源数值：按资源着色并放大 */
+.res-gold .resource-amount {
+  color: #d97706;
+}
+
+.res-coupon .resource-amount {
+  color: #059669;
+}
+
+.res-diamond .resource-amount {
+  color: #0284c7;
+}
+
+.res-bean .resource-amount {
+  color: #c2620a;
+}
+
+.resource-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.resource-mini-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.resource-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.resource-amount {
+  font-size: 22px;
+  font-weight: 800;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resource-big-icon {
+  position: absolute;
+  right: 6px;
+  bottom: 2px;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(31, 38, 80, 0.2));
+  pointer-events: none;
+}
+
+.card-arrow {
+  margin-left: auto;
+  font-size: 14px;
+  color: rgba(55, 65, 81, 0.35);
+  flex-shrink: 0;
+}
+
+/* 农场状态卡片 */
+.farm-status-card {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  min-height: 128px;
+  overflow: hidden;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.farm-status-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 14px 32px rgba(31, 38, 80, 0.16),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95);
+}
+
+.farm-status-left {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.farm-status-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.online {
+  background: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+}
+
+.status-dot.offline {
+  background: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.status-text {
+  color: #374151;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.farm-status-label {
+  color: #16a34a;
+  border: 1.5px solid rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.08);
+  border-radius: 999px;
+  padding: 2px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.farm-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #333;
+}
+
+.farm-clock {
+  display: flex;
+  height: 40px;
+  width: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #34d399, #10b981);
+  color: #fff;
+  font-size: 20px;
+  box-shadow: 0 5px 12px rgba(16, 185, 129, 0.4);
+  flex-shrink: 0;
+}
+
+.farm-preview-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.farm-time {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: 'DM Mono', 'Courier New', monospace;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
+.farm-progress-label {
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* 农场插画：左侧渐隐融入毛玻璃卡片，贴齐卡片右缘，避免“贴图”感 */
+.farm-scene {
+  position: relative;
+  display: flex;
+  width: 46%;
+  max-width: 320px;
+  flex-shrink: 0;
+  margin: -16px -18px -16px 0;
+  border-radius: 0 18px 18px 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 34%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 34%);
+}
+
+.farm-scene img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.92;
+}
+
+.farm-scene-arrow {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: flex;
+  height: 26px;
+  width: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  color: #4b5563;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(31, 38, 80, 0.18);
+}
+
+/* 功能网格 */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* 毛玻璃分组面板：整组功能卡片的透明衬底 */
+.glass-panel {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 10px 30px rgba(31, 38, 80, 0.1);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  padding: 12px;
+}
+
+/* 功能卡片各自的柔和渐变底色（半透明玻璃着色） */
+.feat-crop {
+  background: linear-gradient(165deg, rgba(196, 242, 214, 0.6) 0%, rgba(245, 253, 247, 0.26) 100%);
+}
+
+.feat-pet {
+  background: linear-gradient(165deg, rgba(255, 228, 196, 0.6) 0%, rgba(255, 250, 240, 0.26) 100%);
+}
+
+.feat-book {
+  background: linear-gradient(165deg, rgba(200, 226, 252, 0.6) 0%, rgba(243, 249, 255, 0.26) 100%);
+}
+
+.feat-shop {
+  background: linear-gradient(165deg, rgba(255, 214, 168, 0.6) 0%, rgba(255, 247, 235, 0.26) 100%);
+}
+
+.feat-gift {
+  background: linear-gradient(165deg, rgba(250, 210, 232, 0.6) 0%, rgba(253, 245, 250, 0.26) 100%);
+}
+
+.feat-chart {
+  background: linear-gradient(165deg, rgba(193, 240, 235, 0.6) 0%, rgba(242, 252, 251, 0.26) 100%);
+}
+
+.feature-card {
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 14px 32px rgba(31, 38, 80, 0.16),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95);
+}
+
+.feature-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex-shrink: 0;
+  filter: drop-shadow(0 3px 6px rgba(31, 38, 80, 0.15));
+}
+
+.feature-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feature-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 每日签到横幅 */
+.daily-checkin-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 20px;
+  padding: 12px 16px 12px 0;
+  min-height: 88px;
+  background:
+    linear-gradient(180deg, rgba(186, 226, 248, 0.35) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(134, 214, 152, 0.4) 100%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.26) 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 10px 28px rgba(31, 38, 80, 0.12),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  overflow: hidden;
+}
+
+.banner-cow {
+  height: 100%;
+  width: 108px;
+  object-fit: cover;
+  object-position: center;
+  flex-shrink: 0;
+  border-radius: 14px 0 0 14px;
+  margin: -12px 0 -12px -16px;
+  margin-left: -1.5px;
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner-text h3 {
+  font-size: 19px;
+  font-weight: 800;
+  color: #166534;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.banner-text p {
+  font-size: 12px;
+  color: #4d7c5f;
+  margin: 3px 0 0;
+}
+
+.checkin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 9px 18px;
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow:
+    0 5px 14px rgba(16, 185, 129, 0.45),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+  transition: all 0.2s ease;
+}
+
+.checkin-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 18px rgba(16, 185, 129, 0.5),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+}
+
+/* 原有区域 */
+.legacy-section {
+  display: none;
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .resource-cards {
+    gap: 8px;
+  }
+
+  .resource-card {
+    padding: 10px;
+    min-height: 84px;
+  }
+
+  .resource-amount {
+    font-size: 16px;
+  }
+
+  .resource-big-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .user-card {
+    padding: 14px 16px;
+  }
+
+  .user-avatar-large {
+    width: 54px;
+    height: 54px;
+  }
+
+  .user-name {
+    font-size: 16px;
+  }
+
+  .farm-time {
+    font-size: 23px;
+  }
+
+  .farm-scene {
+    width: 40%;
+  }
+
+  .banner-cow {
+    width: 88px;
+  }
+
+  .checkin-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 560px) {
+  .glass-panel {
+    padding: 8px;
+  }
+
+  /* 窄屏功能卡改两列，避免标题截断 */
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .resource-cards {
+    gap: 6px;
+  }
+
+  .resource-card {
+    padding: 8px;
+    min-height: 74px;
+    border-radius: 16px;
+  }
+
+  .resource-label {
+    font-size: 11px;
+  }
+
+  .resource-amount {
+    font-size: 13px;
+  }
+
+  .resource-mini-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .resource-big-icon {
+    right: 2px;
+    bottom: 0;
+    width: 34px;
+    height: 34px;
+  }
+
+  .card-arrow {
+    font-size: 11px;
+  }
+
+  .feature-grid {
+    gap: 6px;
+  }
+
+  .feature-card {
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .feature-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .feature-title {
+    font-size: 12px;
+  }
+
+  .feature-subtitle {
+    font-size: 10px;
+  }
+
+  .game-card {
+    border-radius: 16px;
+  }
+
+  .daily-checkin-banner {
+    min-height: 68px;
+    border-radius: 16px;
+  }
+
+  .banner-cow {
+    width: 72px;
+  }
+
+  .banner-text h3 {
+    font-size: 15px;
+  }
+
+  .banner-text p {
+    font-size: 10px;
+  }
+}
+</style>

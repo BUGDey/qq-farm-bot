@@ -249,7 +249,7 @@ onUnmounted(() => {
           <button
             v-for="op in operations"
             :key="op.type"
-            class="flex items-center justify-center gap-1.5 rounded px-3 py-2 text-sm text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex items-center justify-center gap-1 rounded px-2 py-2 text-xs text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:text-sm"
             :class="op.color"
             :disabled="operating"
             @click="handleOperate(op.type)"
@@ -259,7 +259,7 @@ onUnmounted(() => {
             <span class="sm:hidden">{{ op.type === 'clear' ? '务农' : op.label.replace('一键', '') }}</span>
           </button>
           <button
-            class="flex items-center justify-center gap-1.5 rounded bg-red-600 px-3 py-2 text-sm text-white transition disabled:cursor-not-allowed hover:bg-red-700 disabled:opacity-50"
+            class="flex items-center justify-center gap-1 rounded bg-red-600 px-2 py-2 text-xs text-white transition disabled:cursor-not-allowed hover:bg-red-700 disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:text-sm"
             :disabled="operating"
             @click="handleRemoveAllPlants"
           >

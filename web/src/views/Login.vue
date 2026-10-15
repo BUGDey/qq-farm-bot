@@ -173,7 +173,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="relative min-h-screen w-full flex items-center justify-center overflow-hidden p-4">
+  <div class="login-page relative min-h-screen w-full flex items-center justify-center overflow-hidden p-4">
+    <!-- 新版登录页背景图（移动端自动切换竖版） -->
+    <div class="login-bg" />
     <div
       class="pointer-events-none absolute h-96 w-96 rounded-full opacity-40 blur-3xl -left-40 -top-40"
       style="background: radial-gradient(circle, color-mix(in srgb, var(--theme-primary) 55%, transparent), transparent 70%);"
@@ -183,7 +185,7 @@ onMounted(() => {
       style="background: radial-gradient(circle, color-mix(in srgb, var(--theme-primary) 45%, transparent), transparent 70%);"
     />
 
-    <div class="ui-card-elevated relative max-w-md w-full rounded-2xl p-6 md:p-8">
+    <div class="ui-card-elevated relative z-1 max-w-md w-full rounded-2xl p-6 md:p-8">
       <div class="mb-6 flex flex-col items-center gap-2 text-center">
         <div class="h-14 w-14 flex items-center justify-center overflow-hidden rounded-2xl ring-1 ring-gray-200 dark:ring-gray-700">
           <img src="/icon.png" alt="logo" class="h-full w-full object-cover">
@@ -365,3 +367,18 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.login-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: url('/backgrounds/pc-login-bg.jpg') center / cover no-repeat;
+}
+
+@media (max-width: 768px) {
+  .login-bg {
+    background: url('/backgrounds/mobile-login-bg.jpg') center / cover no-repeat;
+  }
+}
+</style>

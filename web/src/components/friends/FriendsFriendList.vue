@@ -67,7 +67,7 @@ function goToPage(page: number) {
             <span v-if="blacklistGidSet.has(Number(friend.gid))" class="rounded bg-gray-200 px-1.5 py-0.5 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-400">已屏蔽</span>
             <span v-if="Number(friend?.dogId) === 90021" class="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-400">护主犬</span>
           </div>
-          <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+          <div class="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-200">
             <span
               v-if="getFriendLevel(friend) > 0"
               class="rounded bg-gray-100 px-1.5 py-0.5 text-gray-500 dark:bg-gray-700 dark:text-gray-300"
@@ -90,7 +90,7 @@ function goToPage(page: number) {
           <div class="text-sm" :class="getFriendStatusText(friend) !== '无操作' ? 'text-green-500 font-medium' : 'text-gray-400'">
             {{ getFriendStatusText(friend) }}
           </div>
-          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <div class="mt-1 text-xs font-medium text-gray-800 dark:text-gray-200">
             {{ getFriendStatusHint(friend) }}
           </div>
         </div>
@@ -131,7 +131,7 @@ function goToPage(page: number) {
           class="rounded px-3 py-2 text-sm transition"
           :class="blacklistGidSet.has(Number(friend.gid))
             ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700/50 dark:text-gray-400 dark:hover:bg-gray-700'"
+            : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700/50 dark:text-gray-200 dark:hover:bg-gray-700'"
           @click="emit('toggleBlacklist', friend, $event)"
         >
           {{ blacklistGidSet.has(Number(friend.gid)) ? '移出黑名单' : '加入黑名单' }}
@@ -205,7 +205,7 @@ function goToPage(page: number) {
     >
       末页
     </button>
-    <span class="text-sm text-gray-500 dark:text-gray-400">
+    <span class="text-sm font-medium text-gray-900 dark:text-gray-100">
       共 {{ totalFriends }} 位好友
     </span>
   </div>

@@ -39,6 +39,7 @@ export default defineConfig({
       collections: {
         carbon: () => import('@iconify-json/carbon/icons.json').then(i => i.default),
         fas: () => import('@iconify-json/fa-solid/icons.json').then(i => i.default),
+        fab: () => import('@iconify-json/fa-brands/icons.json').then(i => i.default),
         'svg-spinners': () => import('@iconify-json/svg-spinners/icons.json').then(i => i.default),
       },
     }),

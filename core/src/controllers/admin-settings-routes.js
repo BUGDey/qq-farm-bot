@@ -390,6 +390,33 @@ function registerAdminSettingsRoutes({
       res.status(500).json({ ok: false, error: error.message });
     }
   });
+
+  app.get("/api/user/yyb-config", async (req, res) => {
+    try {
+      const currentUser = req.currentUser;
+      if (!currentUser) {
+        return res.status(401).json({ ok: false, error: "未登录" });
+      }
+      const config = store.getYYBConfig ? store.getYYBConfig() : {};
+      res.json({ ok: true, config: config || {} });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  app.post("/api/user/yyb-config", async (req, res) => {
+    try {
+      const currentUser = req.currentUser;
+      if (!currentUser) {
+        return res.status(401).json({ ok: false, error: "未登录" });
+      }
+      const body = req.body && typeof req.body === "object" ? req.body : {};
+      const config = store.setYYBConfig ? store.setYYBConfig(body) : {};
+      res.json({ ok: true, config: config || {} });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
 }
 
 module.exports = { registerAdminSettingsRoutes };

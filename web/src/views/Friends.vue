@@ -709,10 +709,10 @@ async function handleBatchAddKnownFriendGids() {
             <button
               v-for="filter in dogFilters"
               :key="filter.key"
-              class="rounded-full px-3 py-1 text-xs transition"
+              class="rounded-full px-3 py-1 text-xs font-medium transition"
               :class="dogFilter === filter.key
                 ? 'text-white'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'"
               :style="dogFilter === filter.key ? { backgroundColor: 'var(--theme-primary)' } : {}"
               @click="dogFilter = filter.key"
             >
@@ -729,7 +729,7 @@ async function handleBatchAddKnownFriendGids() {
             </button>
             <div class="flex-1" />
             <button
-              class="rounded bg-gray-100 px-3 py-1.5 text-sm text-gray-600 transition dark:bg-gray-700 hover:bg-gray-200 dark:text-gray-300 disabled:opacity-50 dark:hover:bg-gray-600"
+              class="rounded bg-gray-100 px-3 py-1.5 text-sm text-gray-900 transition dark:bg-gray-700 hover:bg-gray-200 dark:text-gray-200 disabled:opacity-50 dark:hover:bg-gray-600"
               :disabled="loading"
               @click="handleRefreshFriends"
             >
@@ -837,7 +837,7 @@ async function handleBatchAddKnownFriendGids() {
               </div>
               <div>
                 <span class="font-medium">{{ item.name || `GID:${item.gid}` }}</span>
-                <span class="ml-2 text-sm text-gray-400">({{ item.gid }})</span>
+                <span class="ml-2 text-sm text-gray-600 dark:text-gray-300">({{ item.gid }})</span>
               </div>
             </div>
             <button
@@ -890,10 +890,10 @@ async function handleBatchAddKnownFriendGids() {
           <button
             v-for="item in interactFilters"
             :key="item.key"
-            class="rounded-full px-3 py-1 text-xs transition"
+            class="rounded-full px-3 py-1 text-xs font-medium transition"
             :class="interactFilter === item.key
               ? 'text-white'
-              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'"
             :style="interactFilter === item.key ? { backgroundColor: 'var(--theme-primary)' } : {}"
             @click="interactFilter = item.key"
           >
@@ -988,7 +988,7 @@ async function handleBatchAddKnownFriendGids() {
     <Teleport to="body">
       <div
         v-if="showBatchAddGidModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        class="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
         @click.self="showBatchAddGidModal = false"
       >
         <div class="max-w-lg w-full rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
@@ -1026,7 +1026,7 @@ async function handleBatchAddKnownFriendGids() {
 
       <div
         v-if="showGidListModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        class="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
         @click.self="showGidListModal = false"
       >
         <div class="max-h-[80vh] max-w-2xl w-full flex flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800">

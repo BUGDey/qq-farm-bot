@@ -29,7 +29,7 @@ onMounted(() => {
 /* Global styles */
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  font-family: 'DM Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   line-height: 1.5;
   font-optical-sizing: auto;
   background: var(--app-bg);
@@ -37,40 +37,38 @@ body {
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* Color theme variables */
+/* Color theme variables - Dashboard Theme */
 :root {
-  --theme-bg: #f8fafc;
-  --theme-text: #172033;
-  --theme-primary: #3b82f6;
-  --theme-secondary: #2563eb;
-  --theme-gradient: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  --app-bg: linear-gradient(180deg, #f6f8fb 0%, #eef3f8 100%);
-  --surface-1: color-mix(in srgb, var(--theme-bg) 8%, #ffffff);
-  --surface-2: color-mix(in srgb, var(--theme-bg) 22%, #ffffff);
-  --surface-3: color-mix(in srgb, var(--theme-bg) 40%, #ffffff);
-  --surface-border: rgba(15, 23, 42, 0.09);
-  --surface-border-strong: rgba(15, 23, 42, 0.14);
-  --surface-shadow: 0 16px 45px rgba(15, 23, 42, 0.08);
-  --surface-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
-  --muted-text: #64748b;
-  --input-bg: rgba(255, 255, 255, 0.84);
-  --panel-glow: color-mix(in srgb, var(--theme-primary) 14%, transparent);
+  --theme-bg: transparent;
+  --theme-text: #2C3E50;
+  --theme-primary: #2ECC71;
+  --theme-secondary: #3498DB;
+  --theme-gradient: linear-gradient(135deg, #2ECC71 0%, #3498DB 100%);
+  --app-bg: transparent;
+  --surface-1: rgba(255, 255, 255, 0.75);
+  --surface-2: rgba(255, 255, 255, 0.6);
+  --surface-3: rgba(255, 255, 255, 0.45);
+  --surface-border: rgba(255, 255, 255, 0.5);
+  --surface-border-strong: rgba(255, 255, 255, 0.6);
+  --surface-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --surface-shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --muted-text: #7F8C8D;
+  --input-bg: rgba(255, 255, 255, 0.88);
+  --panel-glow: rgba(46, 204, 113, 0.08);
 }
 
 .dark {
-  --app-bg:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--theme-primary) 16%, transparent) 0, transparent 28rem),
-    linear-gradient(180deg, #0b1020 0%, color-mix(in srgb, var(--theme-bg) 74%, #020617) 100%);
-  --surface-1: color-mix(in srgb, var(--theme-bg) 72%, #ffffff 9%);
-  --surface-2: color-mix(in srgb, var(--theme-bg) 78%, #ffffff 6%);
-  --surface-3: color-mix(in srgb, var(--theme-bg) 84%, #ffffff 4%);
-  --surface-border: rgba(255, 255, 255, 0.09);
-  --surface-border-strong: rgba(255, 255, 255, 0.14);
-  --surface-shadow: 0 18px 55px rgba(0, 0, 0, 0.34);
-  --surface-shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.24);
-  --muted-text: #9ca3af;
-  --input-bg: rgba(15, 23, 42, 0.54);
-  --panel-glow: color-mix(in srgb, var(--theme-primary) 18%, transparent);
+  --app-bg: transparent;
+  --surface-1: rgba(255, 255, 255, 0.08);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-3: rgba(255, 255, 255, 0.04);
+  --surface-border: rgba(255, 255, 255, 0.1);
+  --surface-border-strong: rgba(255, 255, 255, 0.15);
+  --surface-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --surface-shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.2);
+  --muted-text: #95A5A6;
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --panel-glow: rgba(46, 204, 113, 0.06);
 }
 
 .app-root {
@@ -97,25 +95,32 @@ body {
 
 .ui-card {
   border: 1px solid var(--surface-border);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 96%, #ffffff 4%), var(--surface-1));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 90%, rgba(34, 197, 94, 0.04) 10%), var(--surface-1));
   box-shadow: var(--surface-shadow-soft);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .ui-card-elevated {
-  border: 1px solid var(--surface-border);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 92%, #ffffff 8%), var(--surface-1));
+  border: 1px solid var(--surface-border-strong);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 86%, rgba(34, 197, 94, 0.06) 14%), var(--surface-1));
   box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .ui-subtle-panel {
   border: 1px solid var(--surface-border);
-  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .glass-panel {
   border: 1px solid var(--surface-border);
-  background: color-mix(in srgb, var(--surface-1) 78%, transparent);
-  backdrop-filter: blur(20px);
+  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   box-shadow: var(--surface-shadow-soft);
 }
 
@@ -131,7 +136,7 @@ body {
   pointer-events: none;
   background:
     linear-gradient(135deg, var(--panel-glow), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 34%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 34%);
 }
 
 .metric-card > * {
@@ -181,12 +186,40 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--theme-primary) 50%, #94a3b8);
+  background: color-mix(in srgb, var(--theme-primary) 40%, #94a3b8);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--theme-secondary);
   opacity: 0.8;
+}
+
+/* Pastoral decorative floating leaves animation */
+@keyframes float-leaf {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px) rotate(15deg);
+    opacity: 0.8;
+  }
+}
+
+.pastoral-leaf {
+  position: absolute;
+  pointer-events: none;
+  animation: float-leaf 6s ease-in-out infinite;
+}
+
+.pastoral-leaf:nth-child(2) {
+  animation-delay: 2s;
+  animation-duration: 8s;
+}
+
+.pastoral-leaf:nth-child(3) {
+  animation-delay: 4s;
+  animation-duration: 7s;
 }
 </style>

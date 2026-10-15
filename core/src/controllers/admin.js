@@ -29,6 +29,7 @@ const { createModuleLogger } = require("../services/logger");
 const { createScheduler } = require("../services/scheduler");
 const adminScheduler = createScheduler("admin");
 const { registerAdminActivityRoutes } = require("./admin-activity-routes");
+const { registerAdminYYBRoutes } = require("./admin-yyb-routes");
 const {
   registerAdminAccountRuntimeRoutes,
 } = require("./admin-account-runtime-routes");
@@ -634,6 +635,7 @@ function startAdminServer(dataProvider) {
   registerAdminQrLoginRoutes({ app });
   registerAdminNapcatLoginRoutes({ app });
   registerAdminProxyRoutes({ app, logger: adminLogger });
+  registerAdminYYBRoutes({ app, store });
   registerSpaFallback(app, webDist);
 
   const subscribeSocketToAccount = (socket, accountRef = "") => {

@@ -43,6 +43,11 @@ body {
   box-sizing: border-box;
 }
 
+/* 按钮文字默认不折行：避免移动端窄空间下按钮文字被拆成多行 */
+button {
+  white-space: nowrap;
+}
+
 /* NProgress Customization */
 #nprogress .bar {
   background: var(--theme-gradient) !important;
@@ -144,4 +149,86 @@ body {
 :where(h1, h2, h3) {
   line-height: 1.25;
   font-optical-sizing: auto;
+}
+
+/* Dashboard Background */
+.dashboard-container {
+  position: relative;
+}
+
+.dashboard-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #b9e0f5;
+  background-image: url('/backgrounds/pc-dashboard-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Mobile Dashboard Background Override */
+@media (max-width: 768px) {
+  .dashboard-bg {
+    background-image: url('/backgrounds/mobile-dashboard-bg.jpg');
+  }
+}
+
+/* Dark mode: 降低背景亮度，保证前景可读 */
+.dark .dashboard-bg {
+  opacity: 0.35;
+}
+
+/* Glass Card Style for Dashboard */
+.glass-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+}
+
+/*
+ * 全局毛玻璃卡片：所有使用 bg-white 的实底卡片/容器统一改为
+ * 渐变半透明 + 背景模糊，透出页面背景（PC / 移动端一致）。
+ */
+.bg-white {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.34) 100%) !important;
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+}
+
+/* 暗色模式下使用深色半透明玻璃，保持暗色主题一致性 */
+.dark .bg-white {
+  background: linear-gradient(165deg, rgba(31, 41, 55, 0.72) 0%, rgba(31, 41, 55, 0.45) 100%) !important;
+}
+
+/* 例外：表格吸附列必须不透明，否则横向滚动时会透出下层内容 */
+.bg-white.sticky {
+  background: #fff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dark .bg-white.sticky {
+  background: #1f2937 !important;
+}
+
+/*
+ * 弹窗专用毛玻璃：透明度比普通卡片高，保证弹窗内容在
+ * 主题背景为 transparent 时（如田园绿主题）也清晰可读。
+ */
+.modal-glass {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.86) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(28px) saturate(1.3);
+  -webkit-backdrop-filter: blur(28px) saturate(1.3);
+}
+
+.dark .modal-glass {
+  background: linear-gradient(165deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.88) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.12);
 }

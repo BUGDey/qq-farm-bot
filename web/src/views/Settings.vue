@@ -7,8 +7,10 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 import AccountFeatureSettings from '@/components/settings/AccountFeatureSettings.vue'
 import AccountSettingsTab from '@/components/settings/AccountSettingsTab.vue'
 import AutoCodeRefreshCard from '@/components/settings/AutoCodeRefreshCard.vue'
+import ChangePasswordCard from '@/components/settings/ChangePasswordCard.vue'
 import DeviceProtocolCard from '@/components/settings/DeviceProtocolCard.vue'
 import OfflineReminderCard from '@/components/settings/OfflineReminderCard.vue'
+import YYBConfigCard from '@/components/settings/YYBConfigCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAccountSettings } from '@/composables/settings/useAccountSettings'
 import { useAutomationSettings } from '@/composables/settings/useAutomationSettings'
@@ -136,9 +138,11 @@ const {
   offlineTesting,
   deviceProtocolLoading,
   deviceProtocolSaving,
+  yybConfigLoading,
   deviceProtocolPresetOptions,
   selectedDevicePreset,
   deviceProtocolForm,
+  yybConfig,
   localOffline,
   channelOptions,
   currentChannelDocUrl,
@@ -148,6 +152,7 @@ const {
   fillRandomImei,
   applyDevicePreset,
   fetchDeviceProtocol,
+  fetchYYBConfig,
   syncLocalOfflineSettings,
   handleSaveOffline,
   handleTestOffline,
@@ -385,7 +390,7 @@ onMounted(async () => {
   if (isAdminUser.value)
     await Promise.all([loadSystemConfig(), loadCaptureConfig()])
   await fetchAccounts()
-  await fetchDeviceProtocol()
+  await Promise.all([fetchDeviceProtocol(), fetchYYBConfig()])
   selectFirstAccountIfNeeded()
   if (currentAccountId.value) {
     await loadStrategyData()
@@ -522,6 +527,13 @@ onMounted(async () => {
               保存系统配置
             </BaseButton>
           </div>
+
+          <ChangePasswordCard />
+
+          <YYBConfigCard
+            v-model:config="yybConfig"
+            :loading="yybConfigLoading"
+          />
 
           <AdminSystemPanel
             v-model:local-system-config="localSystemConfig"

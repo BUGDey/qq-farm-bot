@@ -9,6 +9,10 @@ import RemarkModal from '@/components/RemarkModal.vue'
 import { getPlatformClass, getPlatformLabel, useAccountStore } from '@/stores/account'
 import { useStatusStore } from '@/stores/status'
 
+withDefaults(defineProps<{
+  /** 浅色变体：用于游戏风格背景上的白色文字 */
+  light?: boolean
+}>(), { light: false })
 const accountStore = useAccountStore()
 const statusStore = useStatusStore()
 const { accounts, currentAccount } = storeToRefs(accountStore)
@@ -251,10 +255,15 @@ async function handleAccountSaved() {
       :aria-controls="dropdownId"
       aria-label="选择和管理账号"
       @keydown.escape="closeDropdown"
-      class="max-w-[min(76vw,280px)] flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-gray-100/70 dark:hover:bg-gray-700/50"
+      class="max-w-[min(76vw,280px)] flex items-center gap-3 rounded-xl px-3 py-2 text-left transition"
+      :class="light ? 'hover:bg-white/15' : 'hover:bg-gray-100/70 dark:hover:bg-gray-700/50'"
       @click="toggleDropdown"
     >
-      <div class="h-9 w-9 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 ring-1 ring-gray-200 transition dark:bg-gray-700 hover:ring-2 dark:ring-gray-600 hover:ring-[var(--theme-primary)]">
+      <!-- 头像不放 openCareer：它会同时冒泡触发外层 toggleDropdown，下拉菜单里已有“角色生涯”入口 -->
+      <div
+        class="h-9 w-9 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 ring-1 transition dark:bg-gray-700 hover:ring-2"
+        :class="light ? 'ring-white/80 hover:ring-white' : 'ring-gray-200 dark:ring-gray-600 hover:ring-[var(--theme-primary)]'"
+      >
         <img
           v-if="shouldShowAvatar(currentAccount)"
           :src="currentAvatarSrc"
@@ -267,10 +276,14 @@ async function handleAccountSaved() {
         </span>
       </div>
       <div class="min-w-0 flex flex-col">
-        <span class="truncate text-sm text-gray-900 font-semibold dark:text-gray-100">
+        <span
+          class="truncate text-sm font-semibold"
+          :class="light ? 'text-white' : 'text-gray-900 dark:text-gray-100'"
+          :style="light ? 'text-shadow: 0 2px 6px rgba(31,38,80,0.35)' : undefined"
+        >
           {{ displayName }}
         </span>
-        <span class="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-300">
+        <span class="mt-0.5 flex items-center gap-1.5 text-xs" :class="light ? 'text-white/80' : 'text-gray-500 dark:text-gray-300'">
           <span
             v-if="platform"
             class="rounded px-1 py-0.2 text-xs font-medium leading-tight"
@@ -282,8 +295,9 @@ async function handleAccountSaved() {
         </span>
       </div>
       <div
-        class="i-carbon-chevron-down shrink-0 text-gray-400 transition-transform duration-200"
-        :class="{ 'rotate-180': showAccountDropdown }"
+        class="i-carbon-chevron-down shrink-0 transition-transform duration-200"
+        :class="light ? 'text-white/80' : 'text-gray-400'"
+        :style="{ transform: showAccountDropdown ? 'rotate(180deg)' : undefined }"
       />
     </button>
 
