@@ -19,6 +19,7 @@ import { useUserSettings } from '@/composables/settings/useUserSettings'
 import { useAdminSystemConfig } from '@/composables/useAdminSystemConfig'
 import { useSettingStore } from '@/stores/setting'
 import { useUserStore } from '@/stores/user'
+import RenewalPanel from '@/views/Renewal.vue'
 
 const settingStore = useSettingStore()
 const userStore = useUserStore()
@@ -27,9 +28,9 @@ const route = useRoute()
 /** 普通用户对账号配置只读，且不加载任何管理员专属接口（避免右上角弹出"需要管理员权限"） */
 const isAdminUser = computed(() => userStore.isAdmin)
 
-type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'system'
+type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'system' | 'my-account'
 
-const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'system']
+const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'system', 'my-account']
 const LEGACY_SETTINGS_TABS: Record<string, SettingsTabKey> = {
   'strategy': 'account-config',
   'automation': 'account-config',
@@ -74,6 +75,7 @@ const tabs = [
   { key: 'account-config', label: '账号设置', icon: 'i-carbon-settings-adjust' },
   { key: 'notification', label: '通知设置', icon: 'i-carbon-notification' },
   { key: 'system', label: '系统配置', icon: 'i-carbon-settings-services' },
+  { key: 'my-account', label: '我的账号', icon: 'i-carbon-user-avatar' },
 ] as const
 
 /** 系统配置 tab 仅管理员可见（其接口均为管理员专属） */
@@ -590,6 +592,9 @@ onMounted(async () => {
             @test-capture="handleTestCaptureConfig"
           />
         </div>
+
+        <!-- 我的账号：有效期 / 卡密续费 / 农场账号 / 核销记录（复用 Renewal 页面） -->
+        <RenewalPanel v-else-if="activeTab === 'my-account'" />
       </div>
     </div>
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { useIntervalFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useIntervalFn } from '@vueuse/core'
 import api from '@/api'
 import MobileTabBar from '@/components/game/MobileTabBar.vue'
 import MysteryMerchantBanner from '@/components/shop/MysteryMerchantBanner.vue'
@@ -120,7 +120,7 @@ function onSearchBlur() {
 
     <main class="relative h-full min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
       <!-- 顶栏：右侧搜索 / 主题 / 通知 / 账号 -->
-      <header class="relative z-30 flex shrink-0 items-center justify-end gap-4 px-3 pt-2 sm:px-6 sm:pt-3 lg:px-8 lg:pt-4">
+      <header class="relative z-30 flex shrink-0 items-center justify-end gap-4 px-3 pt-2 lg:px-8 sm:px-6 lg:pt-4 sm:pt-3">
         <div class="flex items-center gap-4">
           <div class="search-box relative hidden lg:flex">
             <div class="search-icon i-carbon-search" />
@@ -163,7 +163,7 @@ function onSearchBlur() {
       </header>
 
       <!-- Main Content Area -->
-      <div class="custom-scrollbar min-h-0 flex flex-1 flex-col overflow-y-auto p-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-3 sm:pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:p-5 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:p-6 lg:pt-2 lg:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
+      <div class="custom-scrollbar min-h-0 flex flex-1 flex-col overflow-y-auto p-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:p-6 md:p-5 sm:p-3 lg:pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pt-2 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
         <MysteryMerchantBanner />
         <RouterView v-slot="{ Component, route }">
           <Transition name="slide-fade" mode="out-in">
@@ -282,5 +282,12 @@ function onSearchBlur() {
 .custom-scrollbar {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+}
+
+/* 滚动容器的直接子元素（各页面根节点）不允许被压缩：
+   flex 子项默认 flex-shrink:1，内容超高时会被压矮，溢出部分不产生滚动距离，
+   导致手机端"下面还有内容却滑不下去" */
+.custom-scrollbar > * {
+  flex-shrink: 0;
 }
 </style>

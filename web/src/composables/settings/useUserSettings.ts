@@ -16,6 +16,7 @@ interface DeviceProtocolConfig {
 interface YYBConfig {
   url: string
   token: string
+  enabled?: boolean
 }
 
 type AlertType = 'primary' | 'danger'
@@ -117,7 +118,7 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
 
   const selectedDevicePreset = ref('')
   const deviceProtocolForm = ref<DeviceProtocolConfig>({ ...DEFAULT_DEVICE_PROTOCOL })
-  const yybConfig = ref<YYBConfig>({ url: '', token: '' })
+  const yybConfig = ref<YYBConfig>({ url: '', token: '', enabled: false })
 
   const localOffline = ref({
     channel: 'smtp',
@@ -348,6 +349,7 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
         yybConfig.value = {
           url: data.config.url || '',
           token: data.config.token || '',
+          enabled: data.config.enabled === true,
         }
       }
     }
@@ -365,6 +367,7 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
       const payload = {
         url: String(yybConfig.value.url || '').trim(),
         token: String(yybConfig.value.token || '').trim(),
+        enabled: yybConfig.value.enabled === true,
       }
       const { data } = await api.post('/api/user/yyb-config', payload)
       if (data?.ok) {
@@ -372,6 +375,7 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
           yybConfig.value = {
             url: data.config.url || '',
             token: data.config.token || '',
+            enabled: data.config.enabled === true,
           }
         }
         showAlert('YY-GO配置已保存', 'primary')

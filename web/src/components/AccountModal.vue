@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useEventListener, useIntervalFn } from '@vueuse/core'
-import { computed, reactive, ref, watch, useId } from 'vue'
-import { useModalFocus } from '@/composables/useModalFocus'
+import { computed, reactive, ref, useId, watch } from 'vue'
 import api from '@/api'
 import { DEFAULT_YYB_PARAMS, getCodeFromYYB } from '@/api/yyb'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseTextarea from '@/components/ui/BaseTextarea.vue'
+import { useModalFocus } from '@/composables/useModalFocus'
 import { useWxLoginStore } from '@/stores/wx-login'
 import { parseManualLoginInput } from '@/utils/gateway-url'
 
@@ -82,6 +82,8 @@ const yybLoading = ref(false)
 const yybError = ref('')
 const yybAccountName = ref('kwoky')
 const yybCode = ref('')
+// YYB 入口开关：由「系统配置 → YY-GO 配置」里的开关控制，默认关闭不显示
+const yybEnabled = ref(false)
 
 const captureHelpSteps = computed(() => captureHelpMode.value === 'first'
   ? [
@@ -267,6 +269,18 @@ async function startQqLogin(forceRefresh = Boolean(qqQrImage.value)) {
   }
   catch (e: any) { qqError.value = e.response?.data?.error || e.message || '获取 QQ 二维码失败' }
   finally { qqLoading.value = false }
+}
+
+async function loadYybCapability() {
+  try {
+    const { data } = await api.get('/api/user/yyb-config')
+    yybEnabled.value = data?.ok && data.config?.enabled === true
+  }
+  catch {
+    yybEnabled.value = false
+  }
+  if (!yybEnabled.value && activeTab.value === 'yyb')
+    activeTab.value = 'manual'
 }
 
 async function loadCaptureConfig() {
@@ -547,6 +561,7 @@ watch(() => props.show, (newVal) => {
     captureHelpMode.value = localStorage.getItem(CAPTURE_SUCCESS_STORAGE_KEY) === '1' ? 'daily' : 'first'
     void loadCaptureConfig()
     void loadQqCapability()
+    void loadYybCapability()
     if (props.editData) {
       activeTab.value = 'manual'
       form.name = props.editData.name || ''
@@ -578,6 +593,10 @@ watch(activeTab, (tab) => {
     activeTab.value = 'manual'
     return
   }
+  if (tab === 'yyb' && !yybEnabled.value) {
+    activeTab.value = 'manual'
+    return
+  }
   if (tab === 'wx')
     loadWxQRCode()
   if (tab === 'qq' && !qqTaskId.value)
@@ -588,7 +607,9 @@ watch(activeTab, (tab) => {
     void cancelCaptureSession()
 })
 const helpSurface = ref<HTMLElement | null>(null)
-useModalFocus(() => showCaptureHelp.value, helpSurface, () => { showCaptureHelp.value = false })
+useModalFocus(() => showCaptureHelp.value, helpSurface, () => {
+  showCaptureHelp.value = false
+})
 const modalSurface = ref<HTMLElement | null>(null)
 const modalId = useId()
 useModalFocus(() => props.show, modalSurface, close)
@@ -636,6 +657,7 @@ useModalFocus(() => props.show, modalSurface, close)
               手动填码
             </button>
             <button
+              v-if="yybEnabled"
               class="flex-1 py-2 text-center text-sm font-medium transition-colors"
               :class="activeTab === 'yyb' ? 'border-b-2' : 'opacity-60'"
               :style="{

@@ -1115,7 +1115,8 @@ function loadGlobalConfig() {
         if (data.yybConfig && typeof data.yybConfig === 'object') {
             globalConfig.yybConfig = {
                 url: String(data.yybConfig.url || '').trim(),
-                token: String(data.yybConfig.token || '').trim()
+                token: String(data.yybConfig.token || '').trim(),
+                enabled: data.yybConfig.enabled === true
             };
         }
 
@@ -1202,12 +1203,14 @@ function sanitizeGlobalConfigBeforeSave() {
 
     // Ensure yybConfig exists and preserve its values
     if (!globalConfig.yybConfig || typeof globalConfig.yybConfig !== 'object') {
-        globalConfig.yybConfig = { url: '', token: '' };
+        globalConfig.yybConfig = { url: '', token: '', enabled: false };
     } else {
         // Preserve existing values but ensure structure is correct
         globalConfig.yybConfig = {
             url: String(globalConfig.yybConfig.url || '').trim(),
-            token: String(globalConfig.yybConfig.token || '').trim()
+            token: String(globalConfig.yybConfig.token || '').trim(),
+            // 「添加账号」弹窗的 YYB 入口开关，默认关闭
+            enabled: globalConfig.yybConfig.enabled === true
         };
     }
 
@@ -1793,19 +1796,26 @@ function deleteUserConfig(username) {
 function getYYBConfig() {
     const cfg = globalConfig.yybConfig;
     if (!cfg || typeof cfg !== 'object') {
-        return { url: '', token: '' };
+        return { url: '', token: '', enabled: false };
     }
     return {
         url: String(cfg.url || '').trim(),
-        token: String(cfg.token || '').trim()
+        token: String(cfg.token || '').trim(),
+        // 控制「添加账号」弹窗是否显示 YYB 获取 tab，默认关闭
+        enabled: cfg.enabled === true
     };
 }
 
 function setYYBConfig(config) {
     const input = config && typeof config === 'object' ? config : {};
+    const prev = globalConfig.yybConfig && typeof globalConfig.yybConfig === 'object'
+        ? globalConfig.yybConfig
+        : {};
     globalConfig.yybConfig = {
         url: String(input.url || '').trim(),
-        token: String(input.token || '').trim()
+        token: String(input.token || '').trim(),
+        // 未携带 enabled 字段的旧客户端保存时保留原开关状态
+        enabled: input.enabled === undefined ? prev.enabled === true : input.enabled === true
     };
     saveGlobalConfig();
     return getYYBConfig();
