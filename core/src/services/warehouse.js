@@ -530,10 +530,22 @@ async function sellAllFruits() {
     const items = getBagItems(bag);
     const fruits = [];
 
+    // 青梅（41221）是「青酿换万金」活动专属果实：酿造活动进行中跳过普通出售，
+    // 留给活动酿造；活动结束后照常可售。仅当背包里有青梅时才探测活动状态
+    // （结果缓存 10 分钟），避免每次出售都多发一次活动查询。
+    const activityService = require('./activity');
+    const qingmeiWineActive = items.some(item => toNum(item.id) === activityService.QINGMEI_FRUIT_ITEM_ID && toNum(item.count) > 0)
+      ? await activityService.isQingmeiWineActiveCached().catch(() => false)
+      : false;
+
     for (const item of items) {
       const id = toNum(item.id);
       const count = toNum(item.count);
       const reservedForTea = require('./activity-milk-tea').reserveMilkTeaFruit(id, isAutomationOn('milk_tea_craft'), getServerTimeSec());
+      if (activityService.reserveQingmeiFruit(id, qingmeiWineActive)) {
+        log('仓库', '青梅为活动专属果实，酿造活动进行中已跳过普通出售', { module: 'warehouse', event: '跳过活动专属果实', result: 'skip', itemId: id, count });
+        continue;
+      }
       if (isFruitItemId(id) && count > 0 && !reservedForTea) {
         fruits.push(item);
       }

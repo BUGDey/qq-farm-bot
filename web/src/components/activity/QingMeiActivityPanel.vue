@@ -19,7 +19,7 @@ const T = {
   claimed: '今日已领取',
   claimClosed: '领种已结束',
   brewTitle: '精酿售卖',
-  brewHint: '一次性投入全部青梅精酿并售卖，可分享翻倍',
+  brewHint: '自动全选背包中的普通青梅（单次最多 30 堆），一次性精酿并售卖，可分享翻倍',
   brew: '精酿并售卖',
   brewDisabled: '青梅不足',
   brewClosed: '酿造已结束',

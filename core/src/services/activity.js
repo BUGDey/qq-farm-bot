@@ -2178,9 +2178,13 @@ async function getBagItemCount(itemId) {
   }
 }
 
-async function getQingmeiWineMaterialItems() {
-  const bag = await getBag();
-  return (getBagItems(bag) || [])
+// 单次酿造最多提交的青梅堆叠数（参考官方活动实现 dumbneuron/qingmei-activity-source
+// 的 maxStacks=30），超出的堆叠留到下一次酿造。
+const QINGMEI_WINE_MAX_MATERIAL_STACKS = 30;
+
+function selectQingmeiWineMaterialStacks(items, maxStacks = QINGMEI_WINE_MAX_MATERIAL_STACKS) {
+  const limit = Math.max(1, toNum(maxStacks) || QINGMEI_WINE_MAX_MATERIAL_STACKS);
+  return (Array.isArray(items) ? items : [])
     .map(item => ({
       id: toNum(item?.id),
       uid: toNum(item?.uid),
@@ -2196,10 +2200,16 @@ async function getQingmeiWineMaterialItems() {
       if (aOrder !== bOrder) return aOrder - bOrder;
       return a.uid - b.uid;
     })
+    .slice(0, limit)
     .map(item => ({
       id: item.uid,
       count: item.count,
     }));
+}
+
+async function getQingmeiWineMaterialItems() {
+  const bag = await getBag();
+  return selectQingmeiWineMaterialStacks(getBagItems(bag) || []);
 }
 
 function normalizeQingmeiActivity(reply) {
@@ -2294,6 +2304,27 @@ async function getQingmeiActivity() {
     };
   }
 }
+
+// 青梅是「青酿换万金」活动专属果实：酿造活动进行中不走仓库普通出售
+// （参考官方活动实现 dumbneuron/qingmei-activity-source 的 isActivitySellOnlyItemId），
+// 活动结束后恢复可售——官方物品描述亦是「活动结束后可出售获得金币」。
+function reserveQingmeiFruit(itemId, wineActive) {
+  return Number(itemId) === QINGMEI_FRUIT_ITEM_ID && wineActive === true;
+}
+
+const QINGMEI_WINE_ACTIVE_CACHE_TTL_SEC = 600;
+function createQingmeiWineActiveProbe(fetchActivity, ttlSec = QINGMEI_WINE_ACTIVE_CACHE_TTL_SEC) {
+  let cache = { checkedAt: 0, active: false };
+  return async function probe(nowSec = Math.floor(Date.now() / 1000)) {
+    if (cache.checkedAt > 0 && nowSec - cache.checkedAt < ttlSec) return cache.active;
+    try {
+      const activity = await fetchActivity();
+      cache = { checkedAt: nowSec, active: activity?.wineActive === true };
+    } catch { /* 探测失败沿用上次结果，默认不误伤出售 */ }
+    return cache.active;
+  };
+}
+const isQingmeiWineActiveCached = createQingmeiWineActiveProbe(getQingmeiActivity);
 
 async function claimQingmeiSeeds() {
   const beforeCount = await getBagItemCount(QINGMEI_SEED_ITEM_ID);
@@ -3403,6 +3434,11 @@ module.exports = {
   getQingmeiActivity,
   claimQingmeiSeeds,
   brewAndSellQingmeiWine,
+  selectQingmeiWineMaterialStacks,
+  reserveQingmeiFruit,
+  createQingmeiWineActiveProbe,
+  isQingmeiWineActiveCached,
+  QINGMEI_FRUIT_ITEM_ID,
   getQixiActivity,
   buildQixiBridge,
   sendQixiSachet,
