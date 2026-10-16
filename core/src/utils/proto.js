@@ -51,10 +51,17 @@ async function loadProto() {
         getResourcePath('proto', 'acepb.proto'),
         getResourcePath('proto', 'careerpb.proto'),
         getResourcePath('proto', 'paypb.proto'),
+        getResourcePath('proto', 'solartermspb.proto'),
     ], { keepCase: true });
 
     for (const name of ['MilkTeaOperateRequest', 'MilkTeaOperateReply', 'MilkTeaGetGroupReply']) {
         types[name] = root.lookupType(`gamepb.activitypb.${name}`);
+    }
+
+    // 节令日历 V2（SolarTermsV2Service，1.15.0.2_20261001）
+    for (const name of ['GetSolarTermsV2Request', 'GetSolarTermsV2Reply', 'ClaimSolarTermsV2Request', 'ClaimSolarTermsV2Reply',
+        'AnswerSolarTermsRequest', 'AnswerSolarTermsReply', 'ClaimSolarSeasonRequest', 'ClaimSolarSeasonReply']) {
+        types[name] = root.lookupType(`gamepb.solartermspb.${name}`);
     }
 
     // 网关
