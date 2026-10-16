@@ -61,6 +61,12 @@ function goSettings() {
   router.push('/settings')
 }
 
+async function handleLogout() {
+  await userStore.logout()
+  toast.success('已退出登录')
+  router.push('/login')
+}
+
 onMounted(load)
 </script>
 
@@ -78,14 +84,23 @@ onMounted(load)
             {{ userStore.isAdmin ? '管理员（不限额度、永久有效）' : '普通用户' }}
           </p>
         </div>
-        <span
-          class="rounded-full px-3 py-1 text-xs font-medium"
-          :class="userStore.isExpired
-            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'"
-        >
-          {{ userStore.isExpired ? '已过期' : '有效' }}
-        </span>
+        <div class="flex items-center gap-2">
+          <span
+            class="rounded-full px-3 py-1 text-xs font-medium"
+            :class="userStore.isExpired
+              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'"
+          >
+            {{ userStore.isExpired ? '已过期' : '有效' }}
+          </span>
+          <button
+            class="flex items-center gap-1 border border-red-200 rounded-full px-3 py-1 text-xs text-red-600 font-medium transition-colors dark:border-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+            @click="handleLogout"
+          >
+            <div class="i-carbon-logout" />
+            退出账号
+          </button>
+        </div>
       </div>
 
       <div class="grid mt-4 gap-3 sm:grid-cols-3">
