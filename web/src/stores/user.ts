@@ -287,6 +287,16 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  async function claimFreeCard() {
+    try {
+      const res = await api.post('/api/card-claim/claim')
+      return res.data
+    }
+    catch (error: any) {
+      return error?.response?.data || { ok: false, error: '领取失败，请稍后重试' }
+    }
+  }
+
   async function renew(cardCode: string) {
     try {
       const res = await api.post('/api/user/renew', { cardCode })
@@ -551,6 +561,7 @@ export const useUserStore = defineStore('user', () => {
     logout,
     fetchUserInfo,
     peekCard,
+    claimFreeCard,
     renew,
     changePassword,
     verifyResetPassword,

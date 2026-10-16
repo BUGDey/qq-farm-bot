@@ -178,7 +178,7 @@ function registerAdminCardRoutes({
       if (enabled === true && status.availableTimeCards <= 0) {
         return res.status(400).json({
           ok: false,
-          error: '可领取的加时卡库存不足，无法开启',
+          error: '可领取的免费加时卡库存不足（需描述为「免费」的加时卡），无法开启',
           availableTimeCards: status.availableTimeCards,
         });
       }

@@ -281,12 +281,13 @@ function registerAdminAuthRoutes({
     }
   });
 
-  /** 卡密自助领取（发号机） */
+  /** 免费卡密自助领取（仅描述为「免费」的加时卡，仅供注册新账号） */
   app.post('/api/card-claim/claim', (req, res) => {
     try {
       const userAgent = req.headers['user-agent'] || '';
       const username = req.body?.username || null;
-      const claim = userStore.claimCardByUA(userAgent, username);
+      const ip = getClientIp(req);
+      const claim = userStore.claimCardByUA(userAgent, username, ip);
       if (!claim.ok) {
         const payload = { ok: false, error: claim.error };
         if (claim.remainingMs) payload.remainingMs = claim.remainingMs;

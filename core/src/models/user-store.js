@@ -729,6 +729,10 @@ function redeemCard(username, code, { operator = '', allowQuota = true, allowTim
   const card = findCardByCode(cards, cardCode);
   const usable = verifyCardUsable(card, { allowQuota, allowTime });
   if (!usable.ok) return usable;
+  // 免费卡密（描述严格为「免费」的加时卡）只能用于注册新账号，不能加时长/加额度
+  if (isFreeTimeCard(card)) {
+    return { ok: false, error: '免费卡密仅可用于注册新账号，不能用于加时长' };
+  }
 
   const timestamp = now();
   const type = card.type || CARD_TYPES.TIME;
@@ -1431,16 +1435,30 @@ function getCardStats() {
   return stats;
 }
 
-// ==================== 卡密自助领取（发号机） ====================
+// ==================== 卡密自助领取（免费卡密发号机） ====================
 
 const CARD_CLAIM_FILE = getDataFile('card-claim.json');
 const CLAIM_INTERVAL_MS = DAY_MS;
+/** 领取后预约锁定时长：30 分钟内他人领不到这张卡，未注册自动释放回池 */
+const CLAIM_RESERVATION_MS = 30 * 60 * 1000;
+/** 全局发放速度阀：每滚动小时最多放出的免费卡密数（防代理池瞬时抽空库存） */
+const CLAIM_GLOBAL_HOURLY_LIMIT = 10;
+/** 只有描述严格等于该文案的加时卡才能被领取 */
+const FREE_CARD_DESCRIPTION = '免费';
+
+/** 免费卡密 = 描述严格为「免费」的加时卡 */
+function isFreeTimeCard(card) {
+  return !!card
+    && (card.type || CARD_TYPES.TIME) === CARD_TYPES.TIME
+    && String(card.description || '').trim() === FREE_CARD_DESCRIPTION;
+}
 
 function loadClaimRecords() {
-  const doc = loadDoc(CARD_CLAIM_FILE, () => ({ enabled: USER_SYSTEM_CONFIG.cardClaimEnabled, records: [] }));
+  const doc = loadDoc(CARD_CLAIM_FILE, () => ({ enabled: USER_SYSTEM_CONFIG.cardClaimEnabled, records: [], reservations: [] }));
   return {
     enabled: doc.enabled === true,
     records: Array.isArray(doc.records) ? doc.records : [],
+    reservations: Array.isArray(doc.reservations) ? doc.reservations : [],
   };
 }
 
@@ -1451,7 +1469,7 @@ function saveClaimRecords(state) {
 function getCardClaimStatus() {
   const state = loadClaimRecords();
   const available = getAllCards().filter(card =>
-    card.type === CARD_TYPES.TIME && !card.usedBy && card.enabled).length;
+    isFreeTimeCard(card) && !card.usedBy && card.enabled !== false && card.revoked !== true).length;
   return { enabled: state.enabled, availableTimeCards: available };
 }
 
@@ -1462,30 +1480,75 @@ function setCardClaimStatus(enabled) {
   return getCardClaimStatus();
 }
 
-/** 每个 UA 每 24 小时限领一张 */
-function claimCardByUA(userAgent, username = null) {
+/**
+ * 领取免费卡密（描述严格为「免费」的未使用加时卡）
+ *
+ * 防滥用设计：
+ *   1. UA 与 IP 双维度各每 24 小时限领 1 张（UA 可伪造，IP 提高批量成本）
+ *   2. 领取即预约锁定 30 分钟：他人领不到这张，到期未注册自动释放回池
+ *      （防「领而不用」耗尽库存；预约只影响领取池，不绑定注册人）
+ *   3. 全局发放速度阀：每滚动小时最多放出 CLAIM_GLOBAL_HOURLY_LIMIT 张，
+ *      即使代理池绕过单 IP 限制也无法瞬时抽空库存
+ *   4. 领取记录留存 uaHash/ipHash/时间/卡密供管理端审计
+ * options（测试用）：{ intervalMs, reservationMs, globalHourlyLimit }
+ */
+function claimCardByUA(userAgent, username = null, ip = '', options = {}) {
   const state = loadClaimRecords();
-  if (!state.enabled) return { ok: false, error: '卡密领取功能未开启' };
+  if (!state.enabled) return { ok: false, error: '管理员已关闭免费功能' };
 
   const nowTs = now();
+  const intervalMs = Number(options.intervalMs) > 0 ? Number(options.intervalMs) : CLAIM_INTERVAL_MS;
+  const reservationMs = Number(options.reservationMs) > 0 ? Number(options.reservationMs) : CLAIM_RESERVATION_MS;
+  const globalHourlyLimit = Number.isInteger(options.globalHourlyLimit)
+    ? options.globalHourlyLimit
+    : CLAIM_GLOBAL_HOURLY_LIMIT;
+
   const uaHash = crypto.createHash('sha256').update(String(userAgent || '')).digest('hex');
-  const existing = state.records.find(item => item.uaHash === uaHash);
-  if (existing && nowTs - Number(existing.claimTime || 0) < CLAIM_INTERVAL_MS) {
-    const remainingMs = CLAIM_INTERVAL_MS - (nowTs - Number(existing.claimTime || 0));
-    return { ok: false, error: '您已在 24 小时内领取过卡密', remainingMs };
+  const ipHash = crypto.createHash('sha256').update(String(ip || 'unknown')).digest('hex');
+
+  // 清理过期预约
+  state.reservations = state.reservations.filter(item => nowTs < Number(item.expiresAt || 0));
+
+  // UA / IP 双维度 24 小时各限领 1 张
+  const hit = state.records.find(item =>
+    (item.uaHash === uaHash || (item.ipHash && item.ipHash === ipHash))
+    && nowTs - Number(item.claimTime || 0) < intervalMs);
+  if (hit) {
+    const remainingMs = intervalMs - (nowTs - Number(hit.claimTime || 0));
+    return { ok: false, error: '您已在 24 小时内领取过免费卡密', remainingMs };
   }
 
+  // 全局发放速度阀
+  if (globalHourlyLimit >= 0) {
+    const hourAgo = nowTs - 60 * 60 * 1000;
+    const recentCount = state.records.filter(item => Number(item.claimTime || 0) >= hourAgo).length;
+    if (recentCount >= globalHourlyLimit) {
+      return { ok: false, error: '当前领取人数较多，请稍后再试' };
+    }
+  }
+
+  const reservedCodes = new Set(
+    state.reservations.map(item => String(item.cardCode || '').toUpperCase()),
+  );
   const available = loadCards().filter(card =>
-    (card.type || CARD_TYPES.TIME) === CARD_TYPES.TIME
+    isFreeTimeCard(card)
     && !card.usedBy
     && card.enabled !== false
-    && card.revoked !== true);
-  if (available.length === 0) return { ok: false, error: '卡密库存不足，请联系管理员' };
+    && card.revoked !== true
+    && !reservedCodes.has(String(card.code || '').toUpperCase()));
+  if (available.length === 0) return { ok: false, error: '卡密数量不足请联系管理员' };
 
   const picked = normalizeCard(available[Math.floor(Math.random() * available.length)]);
-  state.records = state.records.filter(item => item.uaHash !== uaHash);
+  state.reservations.push({
+    cardCode: picked.code,
+    uaHash,
+    ipHash,
+    claimTime: nowTs,
+    expiresAt: nowTs + reservationMs,
+  });
   state.records.push({
     uaHash,
+    ipHash,
     claimTime: nowTs,
     cardCode: picked.code,
     username: username || null,
@@ -1661,6 +1724,8 @@ module.exports = {
   setCardClaimStatus,
   claimCardByUA,
   getCardClaimRecords,
+  isFreeTimeCard,
+  FREE_CARD_DESCRIPTION,
 
   // 额度
   checkAccountQuota,

@@ -24,6 +24,7 @@ const loginForm = ref({ username: '', password: '' })
 const registerForm = ref({ username: '', password: '', confirm: '', cardCode: '' })
 const cardPreview = ref<{ ok: boolean, error?: string, data?: any } | null>(null)
 const checkingCard = ref(false)
+const claimingCard = ref(false)
 
 // 找回密码
 const resetStep = ref<1 | 2>(1)
@@ -102,6 +103,25 @@ function scheduleCardPreview() {
       checkingCard.value = false
     }
   }, 400)
+}
+
+async function handleClaimFreeCard() {
+  if (claimingCard.value)
+    return
+  claimingCard.value = true
+  try {
+    const result = await userStore.claimFreeCard()
+    if (!result?.ok) {
+      toast.error(result?.error || '领取失败，请稍后重试')
+      return
+    }
+    registerForm.value.cardCode = result.cardCode || ''
+    scheduleCardPreview()
+    toast.success(`已领取免费卡密（${result.valueText || '加时卡'}），已自动填入，请直接注册`)
+  }
+  finally {
+    claimingCard.value = false
+  }
 }
 
 async function handleRegister() {
@@ -281,9 +301,21 @@ onMounted(() => {
             </div>
           </div>
           <div>
-            <label class="mb-1.5 block text-xs text-gray-600 font-medium dark:text-gray-300">
-              卡密（决定账号有效期）
-            </label>
+            <div class="mb-1.5 flex items-center justify-between">
+              <label class="block text-xs text-gray-600 font-medium dark:text-gray-300">
+                卡密（决定账号有效期）
+              </label>
+              <button
+                type="button"
+                class="flex items-center gap-1 text-xs font-medium transition disabled:opacity-50"
+                style="color: var(--theme-primary);"
+                :disabled="claimingCard"
+                @click="handleClaimFreeCard"
+              >
+                <div :class="claimingCard ? 'i-svg-spinners-90-ring-with-bg' : 'i-carbon-gift'" />
+                {{ claimingCard ? '领取中…' : '领取免费卡密' }}
+              </button>
+            </div>
             <input
               v-model="registerForm.cardCode"
               type="text"
