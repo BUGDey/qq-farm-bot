@@ -557,7 +557,9 @@ onUnmounted(() => {
 /* Positions use the full 900 × 1600 game canvas, matching the official portrait view. */
 .milk-game.shop {
   background-size: 128% auto;
-  background-position: center center;
+  /* 背景图 900×1800 放大到 1152×2304，画布高 1600：position-y 每 -1% ≈ 画面上移 7.04px。
+     43.2% ≈ 比居中（50%）整体下移 48px ≈ 画布 3%，让画死的吧台/货架背板随 HTML 元素一起下沉 */
+  background-position: center 43.2%;
   background-repeat: no-repeat;
 }
 .shop-scene {
@@ -642,8 +644,8 @@ onUnmounted(() => {
 }
 .drink-shelf {
   position: absolute;
-  /* 下移到招牌（17.6%+8.2%=25.8%）之下，不再压住招牌底部的营业额一行 */
-  top: 26.6%;
+  /* 招牌（17.6%+8.2%=25.8%）之下再留 3.8% 间距，货架背板随背景图同步下移后仍落在背板内 */
+  top: 29.6%;
   left: 9%;
   /* 右边界让开右侧按钮列（shop-actions 宽 18% + 右 0.5%，左缘在 81.5%），避免饮品格被按钮压住 */
   right: 19.5%;
@@ -700,7 +702,8 @@ onUnmounted(() => {
 }
 .selling {
   position: absolute;
-  top: 35.4%;
+  /* 紧跟货架（29.6%+8.2%=37.8%）下方 */
+  top: 38.4%;
   left: 20%;
   right: 20%;
   font-size: 2.9cqw;
@@ -712,7 +715,8 @@ onUnmounted(() => {
 }
 .cashier {
   position: absolute;
-  top: 43.3%;
+  /* 与吧台（背景图）同步下移 3% */
+  top: 46.3%;
   left: 6%;
   width: 16%;
   display: flex;
@@ -755,7 +759,8 @@ onUnmounted(() => {
 }
 .employees {
   position: absolute;
-  top: 40.9%;
+  /* 与吧台（背景图）同步下移 3% */
+  top: 43.9%;
   left: 25%;
   right: 17%;
   height: 23.8%;
@@ -842,7 +847,8 @@ onUnmounted(() => {
 }
 .shop-actions {
   position: absolute;
-  top: 30.6%;
+  /* 与店铺场景同步下移 3%，保持与货架/水槽画面的相对位置 */
+  top: 33.6%;
   right: 0.5%;
   /* 15% 宽放不下「快乐不独享」5 个字（nowrap），文字会超出画布右缘被裁掉 */
   width: 18%;
@@ -876,8 +882,8 @@ onUnmounted(() => {
 }
 .make.gold-button {
   position: absolute;
-  /* 利用按钮与底部 tab 栏之间的空白带（tabs 从 90% 开始），整体下移给上方店铺区腾位 */
-  top: 73.9%;
+  /* 继续吃掉按钮与底部 tab 栏（90%）之间的空白带：底缘 85.8%，留约 4% 余量 */
+  top: 77.6%;
   left: 33%;
   width: 41%;
   height: 8.2%;
