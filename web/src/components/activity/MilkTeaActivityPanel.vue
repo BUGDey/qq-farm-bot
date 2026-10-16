@@ -644,11 +644,11 @@ onUnmounted(() => {
 }
 .drink-shelf {
   position: absolute;
-  /* 上移到招牌（底缘 25.8%）与背板底缘（约 38.6%）之间的可见背板条带正中，刚好贴合背景画的货架板 */
-  top: 28.1%;
-  left: 9%;
+  /* 贴合背景画的货架板（实测背板约占 26.3%–34.7%、右缘约 83%）：垂直居中、整体略偏右上 */
+  top: 26.4%;
+  left: 10.2%;
   /* 右边界让开右侧按钮列（shop-actions 宽 18% + 右 0.5%，左缘在 81.5%），避免饮品格被按钮压住 */
-  right: 19.5%;
+  right: 18.7%;
   height: 8.2%;
   display: flex;
   gap: 0.8cqw;
@@ -702,8 +702,8 @@ onUnmounted(() => {
 }
 .selling {
   position: absolute;
-  /* 紧跟货架（28.1%+8.2%=36.3%）下方 */
-  top: 36.9%;
+  /* 紧跟货架（26.4%+8.2%=34.6%）下方 */
+  top: 35.2%;
   left: 20%;
   right: 20%;
   font-size: 2.9cqw;
