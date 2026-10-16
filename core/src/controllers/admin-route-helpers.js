@@ -30,8 +30,8 @@ function createAdminRouteHelpers({ store, userStore, logger, getProvider }) {
             user => String(user.username || '').trim() === normalizedTarget,
           )
         : null;
-      if (targetUser && targetUser.role === 'admin')
-        return '普通管理员不能修改或删除其他管理员账号';
+      if (targetUser && targetUser.role === 'super_admin')
+        return '不能修改或删除其他超级管理员账号';
     } catch {}
     return null;
   }
@@ -109,15 +109,12 @@ function createAdminRouteHelpers({ store, userStore, logger, getProvider }) {
     });
   }
 
+  // admin 角色已移除：管理接口统一要求超级管理员
   function requireAdminRole(req, res, next) {
-    if (
-      !req.currentUser
-      || (req.currentUser.role !== 'admin'
-        && req.currentUser.role !== 'super_admin')
-    ) {
+    if (!req.currentUser || req.currentUser.role !== 'super_admin') {
       return res.status(403).json({
         ok: false,
-        error: '需要管理员权限',
+        error: '需要超级管理员权限',
       });
     }
     next();

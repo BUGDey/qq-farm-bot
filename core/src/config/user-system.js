@@ -54,16 +54,7 @@ const USER_SYSTEM_CONFIG = {
   bootstrapAdminUsername: readEnv('FARM_ADMIN_USERNAME', 'admin'),
   bootstrapAdminPassword: readEnv('FARM_ADMIN_PASSWORD', 'admin123'),
 
-  /**
-   * 引导管理员是否拥有超级管理员权限。
-   * 默认开启：否则会出现"没有任何账号能管理管理员"的权限死锁
-   * （super_admin 只能通过环境变量额外配置，不配置就永远没人能改角色/管管理员）。
-   * 已存在的引导管理员会在启动时自动升级为超级管理员。
-   * 设为 false 则引导管理员仅为普通管理员（此时超管必须靠环境变量配置）。
-   */
-  bootstrapAdminAsSuper: readBoolean('FARM_BOOTSTRAP_ADMIN_AS_SUPER', true),
-
-  /** 超级管理员：可选，配置后启用。超级管理员不可被普通管理员修改 */
+  /** 超级管理员：可选，配置后启用（环境变量级超管，独立于 users.json） */
   superAdminUsername: readEnv('FARM_SUPER_ADMIN_USERNAME', ''),
   superAdminPassword: readEnv('FARM_SUPER_ADMIN_PASSWORD', ''),
 
@@ -90,10 +81,9 @@ const USER_SYSTEM_CONFIG = {
   DAY_MS,
 };
 
-/** 角色枚举 */
+/** 角色枚举（已移除普通管理员 admin：管理权限统一为超级管理员） */
 const USER_ROLES = {
   USER: 'user',
-  ADMIN: 'admin',
   SUPER_ADMIN: 'super_admin',
 };
 
@@ -113,9 +103,9 @@ const CARD_STATUS = {
   REVOKED: 'revoked',
 };
 
-/** 拥有管理权限的角色 */
+/** 拥有管理权限的角色（admin 角色已移除，等同于超级管理员） */
 function isElevatedRole(role) {
-  return role === USER_ROLES.ADMIN || role === USER_ROLES.SUPER_ADMIN;
+  return role === USER_ROLES.SUPER_ADMIN;
 }
 
 /** 超级管理员：唯一不受农场账号归属限制的角色 */

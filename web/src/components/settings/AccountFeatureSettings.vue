@@ -360,7 +360,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
               {{ moduleStateLabel(key as ModuleKey) }}
             </span>
             <span v-if="isReadonly" class="text-xs text-gray-400 dark:text-gray-500">
-              只读（仅管理员可修改）
+              只读（仅超级管理员可修改）
             </span>
             <BaseButton v-else variant="secondary" size="sm" @click="openModule(key as ModuleKey)">
               配置

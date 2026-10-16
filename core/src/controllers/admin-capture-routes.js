@@ -14,7 +14,7 @@ const COMPLETE_QQ_FRIEND_SOURCES = new Set([
 const captureFlows = new Map();
 
 function isAdminUser(user) {
-  return user && (user.role === "admin" || user.role === "super_admin");
+  return user && user.role === "super_admin";
 }
 
 function normalizeApiBase(value) {

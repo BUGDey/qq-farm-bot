@@ -86,7 +86,7 @@ onMounted(load)
           </h1>
           <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             {{ userStore.username }} ·
-            {{ userStore.isAdmin ? '管理员（不限额度、永久有效）' : '普通用户' }}
+            {{ userStore.isAdmin ? '超级管理员（不限额度、永久有效）' : '普通用户' }}
           </p>
         </div>
         <div class="flex items-center gap-2">

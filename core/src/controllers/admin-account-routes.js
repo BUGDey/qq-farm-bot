@@ -13,10 +13,6 @@ function createLogQuery(query) {
   };
 }
 
-function isAdminUser(user) {
-  return user && (user.role === "admin" || user.role === "super_admin");
-}
-
 function isSuperAdminUser(user) {
   return user && user.role === "super_admin";
 }
@@ -234,20 +230,17 @@ function registerAdminAccountRoutes({
       delete body.startAfterSave;
       const currentUser = req.currentUser;
       const isUpdate = !!body.id;
-      const isAdmin =
-        currentUser &&
-        (currentUser.role === "admin" || currentUser.role === "super_admin");
       const isSuperAdmin = isSuperAdminUser(currentUser);
 
-      // 更新已有账号需要归属校验：仅超级管理员可绕过，普通管理员也不能改他人账号
+      // 更新已有账号需要归属校验：仅超级管理员可绕过
       if (isUpdate && currentUser && !isSuperAdmin) {
         if (!canAccessAccount(req, resolveAccountReference(body.id))) {
           return res.status(403).json({ ok: false, error: "无权访问此账号" });
         }
       }
 
-      // 新增账号时校验额度：额度卡可提升上限，管理员/超管不受限制（-1 表示不限）
-      if (!isUpdate && currentUser && !isAdmin) {
+      // 新增账号时校验额度：额度卡可提升上限，超级管理员不受限制（-1 表示不限）
+      if (!isUpdate && currentUser && !isSuperAdmin) {
         const accountCount = getAccountsForUser(currentUser.username).length;
         const quota = userStore.checkAccountQuota(currentUser, accountCount);
         if (!quota.ok) {

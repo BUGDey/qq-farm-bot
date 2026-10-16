@@ -60,7 +60,8 @@ router.beforeEach(async (to) => {
   const role = currentRole()
   if (to.meta.superOnly && role !== 'super_admin')
     return { path: '/' }
-  if (to.meta.adminOnly && role !== 'admin' && role !== 'super_admin')
+  // admin 角色已移除：adminOnly 等同仅超级管理员
+  if (to.meta.adminOnly && role !== 'super_admin')
     return { path: '/' }
   return true
 })

@@ -26,7 +26,7 @@ const submitting = ref(false)
 const form = ref({
   username: '',
   password: '',
-  role: 'user' as 'user' | 'admin' | 'super_admin',
+  role: 'user' as 'user' | 'super_admin',
   accountLimit: 2,
   expiresAt: '',
   isPermanent: false,
@@ -86,7 +86,7 @@ function openEdit(user: User) {
   form.value = {
     username: user.username,
     password: '',
-    role: user.role === 'super_admin' ? 'super_admin' : user.role === 'admin' ? 'admin' : 'user',
+    role: user.role === 'super_admin' ? 'super_admin' : 'user',
     // -1 表示不限额度，原样回填，避免编辑时被悄悄改成 99
     accountLimit: user.accountLimit ?? 2,
     expiresAt: user.subscription?.expiresAt
@@ -195,7 +195,7 @@ async function removeUser(user: User) {
 }
 
 async function clearExpired() {
-  if (!window.confirm('确认清理所有已过期的普通用户？管理员不受影响。'))
+  if (!window.confirm('确认清理所有已过期的普通用户？超级管理员不受影响。'))
     return
   const result = await userStore.clearExpiredUsers()
   if (!result.ok) {
@@ -208,7 +208,7 @@ async function clearExpired() {
 
 function statusBadge(user: User) {
   if (user.role !== 'user')
-    return { text: user.role === 'super_admin' ? '超管' : '管理员', cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' }
+    return { text: '超管', cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' }
   if (user.subscription?.enabled === false)
     return { text: '已禁用', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' }
   if (user.isExpired)
@@ -227,7 +227,7 @@ defineExpose({ load })
       <div
         v-for="item in [
           { label: '总用户', value: stats.total, icon: 'i-carbon-user-multiple' },
-          { label: '管理员', value: stats.admin, icon: 'i-carbon-user-admin' },
+          { label: '超管', value: stats.admin, icon: 'i-carbon-user-admin' },
           { label: '正常', value: stats.active, icon: 'i-carbon-checkmark-outline' },
           { label: '已过期', value: stats.expired, icon: 'i-carbon-time' },
           { label: '已禁用', value: stats.disabled, icon: 'i-carbon-misuse' },
@@ -317,7 +317,7 @@ defineExpose({ load })
                     v-if="user.role !== 'user'"
                     class="rounded px-1.5 py-0.5 text-[10px] text-white font-medium"
                     :class="user.role === 'super_admin' ? 'bg-purple-500' : 'bg-blue-500'"
-                  >{{ user.role === 'super_admin' ? '超管' : '管理员' }}</span>
+                  >超管</span>
                 </div>
                 <div class="text-[11px] text-gray-400">
                   农场账号 {{ user.accountCount ?? 0 }} 个
@@ -397,9 +397,6 @@ defineExpose({ load })
               <select v-model="form.role" class="form-input" :disabled="isEditingSelf">
                 <option value="user">
                   普通用户
-                </option>
-                <option value="admin">
-                  管理员
                 </option>
                 <option v-if="userStore.isSuperAdmin" value="super_admin">
                   超级管理员

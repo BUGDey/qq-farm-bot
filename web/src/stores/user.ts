@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import api from '@/api'
 
-export type UserRole = 'user' | 'admin' | 'super_admin'
+export type UserRole = 'user' | 'super_admin'
 export type CardType = 'time' | 'quota'
 export type CardStatus = 'unused' | 'used' | 'disabled' | 'revoked'
 
@@ -186,7 +186,8 @@ export const useUserStore = defineStore('user', () => {
   const userInfo = useStorage<User | null>('user_info', null)
 
   const isLoggedIn = computed(() => !!token.value)
-  const isAdmin = computed(() => userInfo.value?.role === 'admin' || userInfo.value?.role === 'super_admin')
+  // admin 角色已移除：isAdmin 等同于超级管理员（保留名称以免改动大量引用）
+  const isAdmin = computed(() => userInfo.value?.role === 'super_admin')
   const isSuperAdmin = computed(() => userInfo.value?.role === 'super_admin')
   const username = computed(() => userInfo.value?.username || '')
   const role = computed<UserRole>(() => userInfo.value?.role || 'user')

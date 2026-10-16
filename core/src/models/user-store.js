@@ -313,9 +313,12 @@ function normalizeSubscription(raw, fallbackUsername = '') {
 
 function normalizeUser(raw) {
   const input = raw && typeof raw === 'object' ? raw : {};
-  const role = [USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(input.role)
-    ? input.role
-    : USER_ROLES.USER;
+  // admin 角色已移除：存量数据自动迁移为超级管理员
+  const role = input.role === 'admin'
+    ? USER_ROLES.SUPER_ADMIN
+    : [USER_ROLES.USER, USER_ROLES.SUPER_ADMIN].includes(input.role)
+      ? input.role
+      : USER_ROLES.USER;
   const accountLimitRaw = toInt(input.accountLimit, Number.NaN);
   let accountLimit = Number.isFinite(accountLimitRaw) ? accountLimitRaw : DEFAULT_ACCOUNT_LIMIT;
   if (isElevatedRole(role)) accountLimit = UNLIMITED;
@@ -946,7 +949,7 @@ function createUserByAdmin({ username, password, role = USER_ROLES.USER, account
     subscription.isPermanent = false;
   }
 
-  const targetRole = [USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(role)
+  const targetRole = [USER_ROLES.USER, USER_ROLES.SUPER_ADMIN].includes(role)
     ? role
     : USER_ROLES.USER;
   const user = normalizeUser({
@@ -1146,7 +1149,7 @@ function editUser(username, updates = {}) {
 
   if (
     updates.role !== undefined
-    && [USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(updates.role)
+    && [USER_ROLES.USER, USER_ROLES.SUPER_ADMIN].includes(updates.role)
   ) {
     user.role = updates.role;
     if (isElevatedRole(user.role)) user.accountLimit = UNLIMITED;
@@ -1631,10 +1634,9 @@ function ensureBootstrapAdmin() {
   const bootstrapName = String(USER_SYSTEM_CONFIG.bootstrapAdminUsername || '').trim();
   if (!bootstrapName) return;
 
-  // 默认让内置管理员拥有超级管理员权限，避免出现"无人能管理管理员"的权限死锁
-  const bootstrapRole = USER_SYSTEM_CONFIG.bootstrapAdminAsSuper === false
-    ? USER_ROLES.ADMIN
-    : USER_ROLES.SUPER_ADMIN;
+  // 首个创建的账号（内置管理员）固定为超级管理员，也是默认唯一的超管，
+  // 避免出现"无人能管理管理员"的权限死锁
+  const bootstrapRole = USER_ROLES.SUPER_ADMIN;
 
   const existing = findUserRecord(users, bootstrapName);
   if (existing) {

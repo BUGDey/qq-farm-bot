@@ -291,33 +291,27 @@ test('所有登录用户可见全部账号，普通用户不能控制他人账�
   assert.equal(edit.status, 403);
 });
 
-test('普通管理员不能控制他人账号，超级管理员可以', async () => {
-  // 创建 dave 并提升为管理员（admin 角色）
+test('普通用户不能控制他人账号，提升为超级管理员后可以', async () => {
+  // 创建 dave（普通用户）
   const created = await api('/api/admin/users', {
     method: 'POST',
     token: adminToken,
     body: { username: 'dave', password: 'Dave@12345', role: 'user' },
   });
   assert.equal(created.status, 200, JSON.stringify(created.body));
-  const promoted = await api('/api/admin/users/dave/edit', {
-    method: 'POST',
-    token: adminToken,
-    body: { username: 'dave', role: 'admin' },
-  });
-  assert.equal(promoted.status, 200, JSON.stringify(promoted.body));
   const daveLogin = await api('/api/login', {
     method: 'POST',
     body: { username: 'dave', password: 'Dave@12345' },
   });
   const daveToken = daveLogin.body.data.token;
 
-  // 管理员同样可见全部账号
+  // 普通用户可见全部账号
   const daveList = await api('/api/accounts', { token: daveToken });
   const daveAccounts = daveList.body.data.accounts || [];
   const bobAccount = daveAccounts.find(item => item.username === 'bob');
-  assert.ok(bobAccount, '管理员可见 bob 的账号');
+  assert.ok(bobAccount, '普通用户可见 bob 的账号');
 
-  // 但 admin 角色不能删除/编辑/改名他人账号
+  // 但不能删除/编辑/改名他人账号
   const del = await api(`/api/accounts/${bobAccount.id}`, { method: 'DELETE', token: daveToken });
   assert.equal(del.status, 403);
   const edit = await api('/api/accounts', {
@@ -329,9 +323,20 @@ test('普通管理员不能控制他人账号，超级管理员可以', async ()
   });
   assert.equal(remark.status, 403);
 
-  // 超级管理员不受限制（用备注接口验证，改回原名避免副作用）
+  // 提升为超级管理员后不受归属限制（用备注接口验证，改回原名避免副作用）
+  const promoted = await api('/api/admin/users/dave/edit', {
+    method: 'POST',
+    token: adminToken,
+    body: { username: 'dave', role: 'super_admin' },
+  });
+  assert.equal(promoted.status, 200, JSON.stringify(promoted.body));
+  assert.equal(promoted.body.data.role, 'super_admin');
+  const superLogin = await api('/api/login', {
+    method: 'POST',
+    body: { username: 'dave', password: 'Dave@12345' },
+  });
   const superRemark = await api('/api/account/remark', {
-    method: 'POST', token: adminToken, body: { id: String(bobAccount.id), remark: 'bob的农场' },
+    method: 'POST', token: superLogin.body.data.token, body: { id: String(bobAccount.id), remark: 'bob的农场' },
   });
   assert.equal(superRemark.status, 200, JSON.stringify(superRemark.body));
 
@@ -388,7 +393,7 @@ test('管理员不能修改自己的角色', async () => {
   assert.equal(me.body.data.role, 'super_admin');
 });
 
-test('管理员可以把普通用户提升为管理员', async () => {
+test('超级管理员可以把普通用户提升为超级管理员', async () => {
   const created = await api('/api/admin/users', {
     method: 'POST',
     token: adminToken,
@@ -399,10 +404,10 @@ test('管理员可以把普通用户提升为管理员', async () => {
   const promoted = await api('/api/admin/users/carol/edit', {
     method: 'POST',
     token: adminToken,
-    body: { username: 'carol', role: 'admin' },
+    body: { username: 'carol', role: 'super_admin' },
   });
   assert.equal(promoted.status, 200, JSON.stringify(promoted.body));
-  assert.equal(promoted.body.data.role, 'admin');
+  assert.equal(promoted.body.data.role, 'super_admin');
   assert.equal(promoted.body.data.accountLimit, -1);
 
   // 收尾：先降级回普通用户再删除，避免影响后续用例

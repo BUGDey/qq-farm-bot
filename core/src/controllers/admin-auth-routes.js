@@ -330,7 +330,7 @@ function registerAdminAuthRoutes({
     }
     const admin = {
       username: USER_SYSTEM_CONFIG.bootstrapAdminUsername,
-      role: 'admin',
+      role: 'super_admin',
       accountLimit: -1,
       subscription: { isPermanent: true, expiresAt: null, enabled: true },
       card: { isPermanent: true, expiresAt: null, enabled: true },
