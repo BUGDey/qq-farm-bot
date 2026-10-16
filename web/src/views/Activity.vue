@@ -8,6 +8,7 @@ import HeluExchangePanel from '@/components/activity/HeluExchangePanel.vue'
 import HeluPassportPanel from '@/components/activity/HeluPassportPanel.vue'
 import SolarTermsActivityPanel from '@/components/activity/SolarTermsActivityPanel.vue'
 import HeluSolarTermsPanel from '@/components/activity/HeluSolarTermsPanel.vue'
+import QingMeiActivityPanel from '@/components/activity/QingMeiActivityPanel.vue'
 import QixiActivityPanel from '@/components/activity/QixiActivityPanel.vue'
 import RainPoemActivityPanel from '@/components/activity/RainPoemActivityPanel.vue'
 import StarRecordPanel from '@/components/activity/StarRecordPanel.vue'
@@ -113,6 +114,7 @@ const charityFlowerActivityActive = computed(() => isWithinActivityWindowMs(CHAR
 const wishSignActivityActive = computed(() => isWithinActivityWindowMs(WISH_SIGN_ACTIVITY_WINDOW, nowMs.value))
 const shareRewardActivityActive = computed(() => isWithinActivityWindowMs(SHARE_REWARD_ACTIVITY_WINDOW, nowMs.value))
 const petDiaryActivityActive = computed(() => isWithinActivityWindowMs(PET_DIARY_ACTIVITY_WINDOW, nowMs.value))
+const qingmeiActivity = computed(() => activity.value?.qingmei || null)
 const selectedActivity = ref<string | null>(null)
 const activityStatusFilter = ref<'active' | 'upcoming' | 'ended'>('active')
 const activeSection = ref<ActivitySectionKey>('journey')
@@ -211,7 +213,13 @@ const activityCards = computed(() => {
   const cards = source.map((group) => {
     const adaptedKey = group.id === 2026090100
       ? 'pet-diary' as const
-      : group.activityIds.includes(2026070300) ? 'rain-poem' as const : group.activityIds.includes(2026090900) ? 'charity-flower' as const : null
+      : group.activityIds.includes(2026070300)
+        ? 'rain-poem' as const
+        : group.activityIds.includes(2026081200)
+          ? 'qing-mei' as const
+          : group.activityIds.includes(2026090900)
+            ? 'charity-flower' as const
+            : null
     const adapted = group.activityIds.includes(2026110100) ? 'milk-tea' as const : group.activityIds.includes(2026092400) ? 'wish-sign' as const : group.activityIds.includes(2026092500) ? 'share-reward' as const : adaptedKey
     const window = { startMs: group.startTime * 1000, endMs: group.endTime * 1000 }
     const hue = Math.abs(group.id * 37) % 360
@@ -222,7 +230,7 @@ const activityCards = computed(() => {
       adaptedKey: adapted,
       title: adapted === 'pet-diary' ? '萌宠日记' : group.title || `活动 ${group.id}`,
       description: adapted
-        ? adapted === 'milk-tea' ? '经营奶茶小店、兑换商店与兼职工作' : adapted === 'pet-diary' ? '查看比熊成长、爪印手记、拾物小铺与比熊赠礼' : adapted === 'charity-flower' ? '查看爱心、公益进度与奖励状态' : adapted === 'wish-sign' ? '查看祈愿状态、祈愿池和每日奖励' : adapted === 'share-reward' ? '查看每日快乐值与档位进度' : '查看天气、每日进度与气象研究'
+        ? adapted === 'milk-tea' ? '经营奶茶小店、兑换商店与兼职工作' : adapted === 'pet-diary' ? '查看比熊成长、爪印手记、拾物小铺与比熊赠礼' : adapted === 'charity-flower' ? '查看爱心、公益进度与奖励状态' : adapted === 'qing-mei' ? '领取青梅种子、精酿并售卖青梅酿' : adapted === 'wish-sign' ? '查看祈愿状态、祈愿池和每日奖励' : adapted === 'share-reward' ? '查看每日快乐值与档位进度' : '查看天气、每日进度与气象研究'
         : ACTIVITY_CLIENT_PREVIEWS.some(item => item.title === group.title || item.ids.some(id => group.activityIds.includes(id)))
           ? '已读取客户端静态预览，动态规则待服务端开放'
           : '暂未适配详情',
@@ -231,6 +239,7 @@ const activityCards = computed(() => {
         'milk-tea': 'i-carbon-cafe',
         'pet-diary': 'i-fa-solid-paw',
         'charity-flower': 'i-carbon-favorite',
+        'qing-mei': 'i-carbon-bee',
         'rain-poem': 'i-carbon-rain-heavy', 'wish-sign': 'i-carbon-sun', 'share-reward': 'i-carbon-share',
       }[adapted || ''] || 'i-carbon-calendar',
       image: adapted === 'milk-tea' ? '/activity/milk-tea/img_s4Main_bg.png' : adapted === 'pet-diary' ? '/activity/pet-diary/scene-home-adult.webp?v=20260912' : adapted === 'wish-sign' ? '/activity/wish-sign/card-bg.svg' : adapted === 'share-reward' ? '/activity/share-reward/card-bg.svg' : group.imageUrl || (adapted === 'rain-poem' ? '/activity/rain-poem/day-rain-bg.jpg' : ''),
@@ -649,6 +658,12 @@ onUnmounted(() => {
       <div v-else-if="charityFlowerActivityActive && !currentAccountId" class="rounded-lg bg-white p-10 text-center text-sm text-gray-500 shadow dark:bg-gray-800">
         {{ L.needAccount }}
       </div>
+    </div>
+    <div v-else-if="selectedActivityCard?.adaptedKey === 'qing-mei' && selectedActivityCard.status === 'active'" class="space-y-3">
+      <button class="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900 dark:hover:text-white" @click="selectedActivity = null">
+        <span class="i-carbon-arrow-left" />返回活动列表
+      </button>
+      <QingMeiActivityPanel :activity="qingmeiActivity" :loading="heluLoading" @refresh="refreshAll" />
     </div>
     <div v-else-if="selectedActivityCard?.adaptedKey === 'wish-sign' && selectedActivityCard.status === 'active'" class="space-y-3">
       <button class="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900 dark:hover:text-white" @click="selectedActivity = null"><span class="i-carbon-arrow-left" />返回活动列表</button>

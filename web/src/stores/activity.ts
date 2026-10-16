@@ -266,6 +266,9 @@ export interface QingmeiActivity {
   startTime?: number
   endTime?: number
   status?: number
+  claimActive?: boolean
+  wineActive?: boolean
+  claimStatusKnown?: boolean
   claimed: boolean
   claimable: boolean
   reward: HeluDrawReward
