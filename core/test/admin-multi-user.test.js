@@ -247,7 +247,7 @@ test('额度卡提升账号配额后可继续添加', async () => {
   assert.equal(res.status, 200, JSON.stringify(res.body));
 });
 
-test('普通用户不能访问他人的农场账号', async () => {
+test('所有登录用户可见全部账号，普通用户不能控制他人账号', async () => {
   // 管理员给 bob 开号并添加农场账号
   const bobCard = await api('/api/admin/cards', {
     method: 'POST',
@@ -269,26 +269,84 @@ test('普通用户不能访问他人的农场账号', async () => {
     body: { name: 'bob的农场', platform: 'qq', uin: '20001' },
   });
 
-  // 普通用户只能看到自己添加的账号（他人账号既不可见也不可操作）
+  // 所有登录用户可见全部账号（仅展示），返回结果带归一化的创建者字段
   const list = await api('/api/accounts', { token: aliceToken });
   const listAccounts = list.body.data.accounts || [];
   const owners = new Set(listAccounts.map(item => item.username));
   assert.ok(owners.has('alice'));
-  assert.ok(!owners.has('bob'), 'alice 不应看到 bob 的账号');
-  // 返回结果带归一化的创建者字段
+  assert.ok(owners.has('bob'), '所有登录用户可见全部账号');
   assert.ok(listAccounts.every(item => item.owner));
 
-  // 管理员仍可见全部账号
-  const adminList = await api('/api/accounts', { token: adminToken });
-  const adminOwners = new Set((adminList.body.data.accounts || []).map(item => item.username));
-  assert.ok(adminOwners.has('alice'));
-  assert.ok(adminOwners.has('bob'));
-
-  // alice 不能操作 bob 的账号（bob 的账号对 alice 不可见，直接越权删除也被接口层拦下）
-  const bobAccounts = await api('/api/accounts', { token: bobToken });
-  const bobAccount = (bobAccounts.body.data.accounts || []).find(item => item.username === 'bob');
+  // alice 不能操作 bob 的账号：删除、改名、编辑都被接口层拦下
+  const bobAccount = listAccounts.find(item => item.username === 'bob');
   const del = await api(`/api/accounts/${bobAccount.id}`, { method: 'DELETE', token: aliceToken });
   assert.equal(del.status, 403);
+  const remark = await api('/api/account/remark', {
+    method: 'POST', token: aliceToken, body: { id: String(bobAccount.id), remark: '越权改名' },
+  });
+  assert.equal(remark.status, 403);
+  const edit = await api('/api/accounts', {
+    method: 'POST', token: aliceToken, body: { id: String(bobAccount.id), name: '越权改名' },
+  });
+  assert.equal(edit.status, 403);
+});
+
+test('普通管理员不能控制他人账号，超级管理员可以', async () => {
+  // 创建 dave 并提升为管理员（admin 角色）
+  const created = await api('/api/admin/users', {
+    method: 'POST',
+    token: adminToken,
+    body: { username: 'dave', password: 'Dave@12345', role: 'user' },
+  });
+  assert.equal(created.status, 200, JSON.stringify(created.body));
+  const promoted = await api('/api/admin/users/dave/edit', {
+    method: 'POST',
+    token: adminToken,
+    body: { username: 'dave', role: 'admin' },
+  });
+  assert.equal(promoted.status, 200, JSON.stringify(promoted.body));
+  const daveLogin = await api('/api/login', {
+    method: 'POST',
+    body: { username: 'dave', password: 'Dave@12345' },
+  });
+  const daveToken = daveLogin.body.data.token;
+
+  // 管理员同样可见全部账号
+  const daveList = await api('/api/accounts', { token: daveToken });
+  const daveAccounts = daveList.body.data.accounts || [];
+  const bobAccount = daveAccounts.find(item => item.username === 'bob');
+  assert.ok(bobAccount, '管理员可见 bob 的账号');
+
+  // 但 admin 角色不能删除/编辑/改名他人账号
+  const del = await api(`/api/accounts/${bobAccount.id}`, { method: 'DELETE', token: daveToken });
+  assert.equal(del.status, 403);
+  const edit = await api('/api/accounts', {
+    method: 'POST', token: daveToken, body: { id: String(bobAccount.id), name: '越权改名' },
+  });
+  assert.equal(edit.status, 403);
+  const remark = await api('/api/account/remark', {
+    method: 'POST', token: daveToken, body: { id: String(bobAccount.id), remark: '越权改名' },
+  });
+  assert.equal(remark.status, 403);
+
+  // 超级管理员不受限制（用备注接口验证，改回原名避免副作用）
+  const superRemark = await api('/api/account/remark', {
+    method: 'POST', token: adminToken, body: { id: String(bobAccount.id), remark: 'bob的农场' },
+  });
+  assert.equal(superRemark.status, 200, JSON.stringify(superRemark.body));
+
+  // 收尾：先降级回普通用户再删除，避免影响后续用例
+  await api('/api/admin/users/dave/edit', {
+    method: 'POST',
+    token: adminToken,
+    body: { username: 'dave', role: 'user' },
+  });
+  const delUser = await api('/api/admin/users/dave', {
+    method: 'DELETE',
+    token: adminToken,
+    body: { confirmed: true },
+  });
+  assert.equal(delUser.status, 200, JSON.stringify(delUser.body));
 });
 
 test('管理员可查看全部用户与名下账号配置', async () => {
@@ -458,10 +516,28 @@ test('登录日志已记录', async () => {
   assert.ok(events.has('login_failed'));
 });
 
-test('普通用户可读系统配置（只读端点），管理员写接口仍拒绝', async () => {
+test('普通用户可读写系统配置（公开端点），管理员端点仍拒绝', async () => {
   const pub = await api('/api/system-config', { token: aliceToken });
   assert.equal(pub.status, 200);
   assert.ok(pub.body.data.default.clientVersion, '应返回默认版本号');
+
+  // 普通用户可经公开端点修改系统配置（管理后台的管理端点仍拒绝）
+  const before = pub.body.data.saved || pub.body.data.default;
+  const write = await api('/api/system-config', {
+    method: 'POST',
+    token: aliceToken,
+    body: { ...before, platform: 'wx', confirmed: true },
+  });
+  assert.equal(write.status, 200, JSON.stringify(write.body));
+  assert.equal(write.body.data.saved.platform, 'wx');
+  // 还原，避免影响其他用例
+  const restore = await api('/api/system-config', {
+    method: 'POST',
+    token: aliceToken,
+    body: { ...before, confirmed: true },
+  });
+  assert.equal(restore.status, 200, JSON.stringify(restore.body));
+
   const denied = await api('/api/admin/system-config', { token: aliceToken });
   assert.equal(denied.status, 403);
 });

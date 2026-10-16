@@ -118,10 +118,16 @@ function isElevatedRole(role) {
   return role === USER_ROLES.ADMIN || role === USER_ROLES.SUPER_ADMIN;
 }
 
+/** 超级管理员：唯一不受农场账号归属限制的角色 */
+function isSuperAdminRole(role) {
+  return role === USER_ROLES.SUPER_ADMIN;
+}
+
 module.exports = {
   USER_SYSTEM_CONFIG,
   USER_ROLES,
   CARD_TYPES,
   CARD_STATUS,
   isElevatedRole,
+  isSuperAdminRole,
 };

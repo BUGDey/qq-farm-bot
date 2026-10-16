@@ -30,18 +30,27 @@ const error = ref('')
 const bagError = ref('')
 const search = ref('')
 const expanded = ref(false)
+// 本账号作物图鉴中已解锁的果实 ID（/api/illustrated 的 seedId 字段实为果实 ID），用于优先展示与「未解锁」标记
+const unlockedFruitIds = ref<Set<number>>(new Set())
 let requestId = 0
 
 const excludeSet = computed(() => new Set(excludes.value.map(Number)))
 
-// 已选（不卖）置顶：toggle 维护模型为「最新选中在前」，此处按模型顺序排列；其余保持接口返回顺序（ID 升序）
+function isUnlocked(fruit: Fruit) {
+  return fruit.inBag || unlockedFruitIds.value.has(fruit.id)
+}
+
+// 已选（不卖）置顶：toggle 维护模型为「最新选中在前」，此处按模型顺序排列；
+// 其余按「图鉴已解锁优先」分组，组内保持接口返回顺序（ID 升序）
 const ordered = computed(() => {
   const byId = new Map(fruits.value.map(fruit => [fruit.id, fruit]))
   const selected = excludes.value
     .map(id => byId.get(Number(id)))
     .filter((fruit): fruit is Fruit => !!fruit)
   const rest = fruits.value.filter(fruit => !excludeSet.value.has(fruit.id))
-  return [...selected, ...rest]
+  const unlocked = rest.filter(fruit => isUnlocked(fruit))
+  const locked = rest.filter(fruit => !isUnlocked(fruit))
+  return [...selected, ...unlocked, ...locked]
 })
 
 const visibleFruits = computed(() => {
@@ -82,6 +91,25 @@ async function refresh() {
   }
 }
 
+// 拉取本账号作物图鉴的已解锁果实，失败静默降级（不影响列表展示，仅失去优先排序与准确解锁标记）
+async function fetchUnlocked() {
+  if (!props.accountId)
+    return
+  try {
+    const res = await api.get('/api/illustrated', {
+      params: { illustrated_type: 1 },
+      headers: { 'x-account-id': props.accountId },
+    })
+    const items = Array.isArray(res.data?.data?.items) ? res.data.data.items : []
+    unlockedFruitIds.value = new Set(
+      items.filter((item: any) => item && item.unlocked).map((item: any) => Number(item.seedId)),
+    )
+  }
+  catch {
+    unlockedFruitIds.value = new Set()
+  }
+}
+
 function toggle(id: number) {
   const list = excludes.value.map(Number)
   excludes.value = list.includes(id)
@@ -92,6 +120,8 @@ function toggle(id: number) {
 watch(() => props.accountId, () => {
   fruits.value = []
   search.value = ''
+  unlockedFruitIds.value = new Set()
+  void fetchUnlocked()
   void refresh()
 }, { immediate: true })
 
@@ -131,7 +161,7 @@ watch(expanded, (value) => {
         <button type="button" class="h-8 shrink-0 text-xs text-[var(--theme-primary)] disabled:opacity-50" :disabled="loading" @click="refresh">
           {{ loading ? '读取中…' : '刷新' }}
         </button>
-        <span tabindex="0" aria-label="点击果实卡片加入不卖白名单，选中的果实会框起来并置顶，自动出售时跳过；背包没有的果实显示未解锁，也可以提前加入名单。保存设置后生效。" title="点击果实卡片加入不卖白名单，选中的果实会框起来并置顶，自动出售时跳过；背包没有的果实显示未解锁，也可以提前加入名单。保存设置后生效。" class="i-carbon-information h-4 w-4 shrink-0 text-gray-400" />
+        <span tabindex="0" aria-label="点击果实卡片加入不卖白名单，选中的果实会框起来并置顶，自动出售时跳过；图鉴已解锁的果实优先显示在前，未解锁的果实也可以提前加入名单。保存设置后生效。" title="点击果实卡片加入不卖白名单，选中的果实会框起来并置顶，自动出售时跳过；图鉴已解锁的果实优先显示在前，未解锁的果实也可以提前加入名单。保存设置后生效。" class="i-carbon-information h-4 w-4 shrink-0 text-gray-400" />
       </div>
     </div>
     <div v-show="expanded" class="mt-2">
@@ -170,7 +200,7 @@ watch(expanded, (value) => {
                   :style="{ backgroundColor: 'var(--theme-primary)' }"
                 >不卖</span>
                 <span
-                  v-else-if="!fruit.inBag"
+                  v-else-if="!isUnlocked(fruit)"
                   class="rounded bg-gray-200 px-1 py-0.5 text-[10px] text-gray-500 font-medium leading-none dark:bg-gray-700 dark:text-gray-400"
                 >未解锁</span>
               </div>

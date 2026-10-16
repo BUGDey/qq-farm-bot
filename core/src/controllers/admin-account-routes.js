@@ -17,6 +17,10 @@ function isAdminUser(user) {
   return user && (user.role === "admin" || user.role === "super_admin");
 }
 
+function isSuperAdminUser(user) {
+  return user && user.role === "super_admin";
+}
+
 function hasWxRefreshIdentity(account) {
   return !!String((account && account.wxid) || "").trim();
 }
@@ -91,19 +95,15 @@ function registerAdminAccountRoutes({
       const currentUser = req.currentUser;
       let data;
       if (currentUser) {
-        // 普通用户只能看到自己添加（owner）的账号；管理员/超管可见全部。
+        // 所有登录用户可见全部账号（仅展示）；能否操作由接口层的归属校验决定
+        // （仅超级管理员不受归属限制，普通用户与管理员都只能控制本人添加的账号）。
         // owner 为归一化后的创建者/绑定用户字段（优先 owner，兼容旧数据回落 username）。
         const accounts = provider.getAccounts();
         const allAccounts = accounts && Array.isArray(accounts.accounts) ? accounts.accounts : null;
         if (allAccounts) {
-          const visible = isAdminUser(currentUser)
-            ? allAccounts
-            : allAccounts.filter(
-                (account) => getAccountOwner(account) === String(currentUser.username || "").trim(),
-              );
           data = {
             ...accounts,
-            accounts: visible.map((account) => ({
+            accounts: allAccounts.map((account) => ({
               ...account,
               owner: getAccountOwner(account),
             })),
@@ -131,10 +131,11 @@ function registerAdminAccountRoutes({
       }
 
       const allAccounts = getAccountsForUser();
-      const accessibleAccounts = isAdminUser(currentUser)
+      // 仅超级管理员可刷新全部账号的微信 Code；管理员与普通用户都只能刷本人添加的账号
+      const accessibleAccounts = isSuperAdminUser(currentUser)
         ? allAccounts
         : allAccounts.filter(
-            (account) => account && account.username === currentUser.username,
+            (account) => account && getAccountOwner(account) === String(currentUser.username || "").trim(),
           );
       const targetAccounts = accessibleAccounts.filter(hasWxRefreshIdentity);
 
@@ -193,6 +194,10 @@ function registerAdminAccountRoutes({
       if (!account || !account.id) {
         return res.status(404).json({ ok: false, error: "Account not found" });
       }
+      // 改备注也属于控制操作：仅归属用户或超级管理员可执行
+      if (!canAccessAccount(req, String(account.id))) {
+        return res.status(403).json({ ok: false, error: "无权访问此账号" });
+      }
 
       const remark = String(
         body.remark !== undefined ? body.remark : body.name || "",
@@ -232,8 +237,10 @@ function registerAdminAccountRoutes({
       const isAdmin =
         currentUser &&
         (currentUser.role === "admin" || currentUser.role === "super_admin");
+      const isSuperAdmin = isSuperAdminUser(currentUser);
 
-      if (isUpdate && currentUser && !isAdmin) {
+      // 更新已有账号需要归属校验：仅超级管理员可绕过，普通管理员也不能改他人账号
+      if (isUpdate && currentUser && !isSuperAdmin) {
         if (!canAccessAccount(req, resolveAccountReference(body.id))) {
           return res.status(403).json({ ok: false, error: "无权访问此账号" });
         }

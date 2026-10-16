@@ -1,5 +1,6 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import api from '@/api'
+import { useUserStore } from '@/stores/user'
 
 export interface SystemConfig {
   serverUrl: string
@@ -58,6 +59,9 @@ const defaultLoginLinks: LoginLinks = {
 }
 
 export function useAdminSystemConfig(options: UseAdminSystemConfigOptions) {
+  const userStore = useUserStore()
+  // 系统配置的读写对所有登录用户开放：管理员走管理端点，普通用户走公开端点（同一套逻辑）
+  const systemConfigApiBase = computed(() => userStore.isAdmin ? '/api/admin/system-config' : '/api/system-config')
   const systemConfigSaving = ref(false)
   const systemConfigLoading = ref(false)
   const captureConfigSaving = ref(false)
@@ -235,7 +239,7 @@ export function useAdminSystemConfig(options: UseAdminSystemConfigOptions) {
   async function loadSystemConfig(readonly = false) {
     systemConfigLoading.value = true
     try {
-      // 普通用户走只读公开端点（内容相同，仅不含运行时快照）
+      // 普通用户走公开端点（内容相同，仅不含运行时快照）
       const { data } = await api.get(readonly ? '/api/system-config' : '/api/admin/system-config')
       if (data?.ok) {
         if (data.data.saved)
@@ -256,7 +260,7 @@ export function useAdminSystemConfig(options: UseAdminSystemConfigOptions) {
     showSaveSystemConfirm.value = false
     systemConfigSaving.value = true
     try {
-      const { data } = await api.post('/api/admin/system-config', {
+      const { data } = await api.post(systemConfigApiBase.value, {
         ...localSystemConfig.value,
         confirmed: true,
       })
@@ -277,7 +281,7 @@ export function useAdminSystemConfig(options: UseAdminSystemConfigOptions) {
     showResetSystemConfirm.value = false
     systemConfigSaving.value = true
     try {
-      const { data } = await api.post('/api/admin/system-config/reset', {
+      const { data } = await api.post(`${systemConfigApiBase.value}/reset`, {
         confirmed: true,
       })
       if (data?.ok) {

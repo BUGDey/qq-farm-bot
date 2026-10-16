@@ -92,8 +92,7 @@ function registerAdminSystemRoutes({
     },
   );
 
-  // 系统配置只读视图：任何登录用户可看（普通用户的「系统配置」tab 为只读展示，
-  // 修改仍需管理员走 /api/admin/system-config）。
+  // 系统配置视图：任何登录用户可看（不含运行时快照，运行时快照仅管理员可见）。
   app.get("/api/system-config", requireAdminToken, (req, res) => {
     try {
       res.json({
@@ -107,6 +106,64 @@ function registerAdminSystemRoutes({
       res.status(500).json({ ok: false, error: error.message });
     }
   });
+
+  // 系统配置的修改与重置对所有登录用户开放（与 /api/admin/system-config 同一套逻辑，
+  // 仅角色门槛不同；管理后台的其他功能仍仅管理员可见）。
+  function handleUpdateSystemConfig(req, res) {
+    try {
+      if (!requireDangerConfirmation(req, res, "UPDATE_SYSTEM_CONFIG")) return;
+      const { serverUrl, clientVersion, platform, os } = req.body || {};
+      const saved = store.setSystemConfig({
+        serverUrl,
+        clientVersion,
+        platform,
+        os,
+      });
+      updateRuntimeConfig(saved);
+      logger.warn("更新系统配置", {
+        admin: req.currentUser?.username || "",
+        serverUrl: saved?.serverUrl || "",
+        clientVersion: saved?.clientVersion || "",
+        platform: saved?.platform || "",
+        os: saved?.os || "",
+        confirmation: "UPDATE_SYSTEM_CONFIG",
+      });
+      res.json({
+        ok: true,
+        data: {
+          saved,
+          current: getRuntimeConfig(),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  }
+
+  function handleResetSystemConfig(req, res) {
+    try {
+      if (!requireDangerConfirmation(req, res, "RESET_SYSTEM_CONFIG")) return;
+      const saved = getDefaultSystemConfig();
+      store.setSystemConfig(saved);
+      updateRuntimeConfig(saved);
+      logger.warn("重置系统配置", {
+        admin: req.currentUser?.username || "",
+        confirmation: "RESET_SYSTEM_CONFIG",
+      });
+      res.json({
+        ok: true,
+        data: {
+          saved,
+          current: getRuntimeConfig(),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  }
+
+  app.post("/api/system-config", requireAdminToken, handleUpdateSystemConfig);
+  app.post("/api/system-config/reset", requireAdminToken, handleResetSystemConfig);
 
   // 默认版本号快捷设置（管理后台全局设置用）：只改 clientVersion，其余字段保持不变，
   // 保存后立即同步到运行时（所有账号 worker 经配置同步拿到新版本号）。
@@ -181,63 +238,14 @@ function registerAdminSystemRoutes({
    "/api/admin/system-config",
     requireAdminToken,
     requireAdminRole,
-    (req, res) => {
-      try {
-        if (!requireDangerConfirmation(req, res, "UPDATE_SYSTEM_CONFIG")) return;
-        const { serverUrl, clientVersion, platform, os } = req.body || {};
-        const saved = store.setSystemConfig({
-          serverUrl,
-          clientVersion,
-          platform,
-          os,
-        });
-        updateRuntimeConfig(saved);
-        logger.warn("更新系统配置", {
-          admin: req.currentUser?.username || "",
-          serverUrl: saved?.serverUrl || "",
-          clientVersion: saved?.clientVersion || "",
-          platform: saved?.platform || "",
-          os: saved?.os || "",
-          confirmation: "UPDATE_SYSTEM_CONFIG",
-        });
-        res.json({
-          ok: true,
-          data: {
-            saved,
-            current: getRuntimeConfig(),
-          },
-        });
-      } catch (error) {
-        res.status(500).json({ ok: false, error: error.message });
-      }
-    },
+    handleUpdateSystemConfig,
   );
 
   app.post(
     "/api/admin/system-config/reset",
     requireAdminToken,
     requireAdminRole,
-    (req, res) => {
-      try {
-        if (!requireDangerConfirmation(req, res, "RESET_SYSTEM_CONFIG")) return;
-        const saved = getDefaultSystemConfig();
-        store.setSystemConfig(saved);
-        updateRuntimeConfig(saved);
-        logger.warn("重置系统配置", {
-          admin: req.currentUser?.username || "",
-          confirmation: "RESET_SYSTEM_CONFIG",
-        });
-        res.json({
-          ok: true,
-          data: {
-            saved,
-            current: getRuntimeConfig(),
-          },
-        });
-      } catch (error) {
-        res.status(500).json({ ok: false, error: error.message });
-      }
-    },
+    handleResetSystemConfig,
   );
 
 }

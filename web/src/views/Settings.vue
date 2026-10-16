@@ -58,8 +58,6 @@ function getInitialSettingsTab(): SettingsTabKey {
 
 const activeTab = ref<SettingsTabKey>(getInitialSettingsTab())
 // 无权限用户从 localStorage 恢复到受限 tab 时回落到账号管理
-if (activeTab.value === 'system' && !isAdminUser.value)
-  activeTab.value = 'account'
 if (activeTab.value === 'admin-panel' && !isSuperAdminUser.value)
   activeTab.value = 'account'
 const settingsTabsNav = ref<HTMLElement | null>(null)
@@ -84,7 +82,7 @@ const tabs = [
   { key: 'admin-panel', label: '管理后台', icon: 'i-carbon-user-admin' },
 ] as const
 
-/** 系统配置 tab 所有登录用户可见（普通用户只读）；管理后台 tab 仅超级管理员可见（接口均为对应角色专属） */
+/** 系统配置 tab 所有登录用户可见且可修改；管理后台 tab 仅超级管理员可见（接口均为对应角色专属） */
 const ADMIN_ONLY_TABS: SettingsTabKey[] = []
 const SUPER_ONLY_TABS: SettingsTabKey[] = ['admin-panel']
 const visibleTabs = computed(() =>
@@ -180,6 +178,7 @@ const {
   currentAccountId,
   currentAccountName,
   userIsAdmin,
+  userIsSuperAdmin,
   currentUserUsername,
   showModal,
   showDeleteConfirm,
@@ -295,6 +294,15 @@ async function saveSystemSettings() {
     return
   systemSettingsSaving.value = true
   try {
+    // 普通用户只保存全局连接参数（设备协议与抓包服务为管理员功能，不在其页面内）
+    if (!isAdminUser.value) {
+      const systemResult = await api.post('/api/system-config', { ...localSystemConfig.value, confirmed: true })
+      if (!systemResult.data?.ok)
+        throw new Error(systemResult.data?.error || '系统配置保存失败')
+      await loadSystemConfig(true)
+      showAlert('系统配置已保存并立即生效，无需重启项目')
+      return
+    }
     const devicePayload = {
       enabled: !!deviceProtocolForm.value.enabled,
       userAgent: String(deviceProtocolForm.value.userAgent || '').trim(),
@@ -402,7 +410,7 @@ watch(currentAccountId, async () => {
 })
 
 onMounted(async () => {
-  // 系统配置所有登录用户可读（普通用户走只读公开端点）；抓包配置仅管理员可用
+  // 系统配置所有登录用户可读写（普通用户走公开端点）；抓包配置仅管理员可用
   if (isAdminUser.value)
     await Promise.all([loadSystemConfig(), loadCaptureConfig()])
   else
@@ -455,6 +463,7 @@ onMounted(async () => {
           :accounts-loading="accountsLoading"
           :current-account-id="currentAccountId"
           :user-is-admin="userIsAdmin"
+          :user-is-super-admin="userIsSuperAdmin"
           :current-user-username="currentUserUsername"
           :stopped-accounts-count="stoppedAccountsCount"
           :is-add-account-disabled="isAddAccountDisabled"
@@ -538,10 +547,10 @@ onMounted(async () => {
                 系统配置
               </h3>
               <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {{ isAdminUser ? '统一管理连接参数、设备协议和抓包服务。' : '全局连接参数由管理员统一维护，此处为只读展示。' }}
+                {{ isAdminUser ? '统一管理连接参数、设备协议和抓包服务。' : '全局连接参数对所有登录用户开放，修改后立即对所有账号生效。' }}
               </p>
             </div>
-            <BaseButton v-if="isAdminUser" size="sm" :loading="anySystemSaving" @click="saveSystemSettings">
+            <BaseButton size="sm" :loading="anySystemSaving" @click="saveSystemSettings">
               保存系统配置
             </BaseButton>
           </div>
@@ -560,7 +569,6 @@ onMounted(async () => {
             section="system"
             :show-heading="false"
             :show-save="false"
-            :readonly="!isAdminUser"
             :default-system-config="defaultSystemConfig"
             :platform-options="platformOptions"
             :os-options="osOptions"

@@ -21,8 +21,13 @@ const submitting = ref(false)
 const redemptions = ref<Redemption[]>([])
 
 const accounts = computed(() => accountStore.accounts)
+// 账号列表对所有登录用户可见，但额度与「我的农场账号」只统计/展示本人添加的账号
+const myAccounts = computed(() => {
+  const username = String(userStore.username || '').trim()
+  return accounts.value.filter(acc => String(acc?.owner || acc?.username || '').trim() === username)
+})
 const unlimited = computed(() => userStore.accountLimit < 0)
-const accountUsed = computed(() => accounts.value.length)
+const accountUsed = computed(() => myAccounts.value.length)
 const accountRemaining = computed(() => unlimited.value ? -1 : Math.max(0, userStore.accountLimit - accountUsed.value))
 
 async function load() {
@@ -169,12 +174,12 @@ onMounted(load)
           去配置自动化 / 掉线提醒 →
         </button>
       </div>
-      <div v-if="accounts.length === 0" class="py-6 text-center text-sm text-gray-400">
+      <div v-if="myAccounts.length === 0" class="py-6 text-center text-sm text-gray-400">
         暂无农场账号，请在概览页或账号菜单中添加
       </div>
       <div v-else class="grid gap-2 sm:grid-cols-2">
         <div
-          v-for="account in accounts"
+          v-for="account in myAccounts"
           :key="account.id"
           class="flex items-center justify-between border rounded-xl px-3 py-2.5"
           style="border-color: var(--surface-border);"

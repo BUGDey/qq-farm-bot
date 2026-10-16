@@ -23,16 +23,23 @@ export function useAccountSettings(showAlert: (message: string, type?: AlertType
   const refreshWxCodesLoading = ref(false)
 
   const userIsAdmin = computed(() => userStore.isAdmin)
+  const userIsSuperAdmin = computed(() => userStore.isSuperAdmin)
   const isAccountOpsDisabled = computed(() => !userStore.isAdmin && userStore.isExpired)
   const currentUserUsername = computed(() => String(userStore.username || '').trim())
 
-  /** 账号是否归属当前登录用户（管理员视为全部归属）。普通用户对非本人账号只读。 */
+  /** 账号是否归属当前登录用户（仅超级管理员视为全部归属，普通管理员不豁免）。其他人对非本人账号只读。 */
   function isAccountOwnedByCurrentUser(acc: any) {
-    if (userIsAdmin.value)
+    if (userIsSuperAdmin.value)
       return true
     const owner = String(acc?.owner || acc?.username || '').trim()
     return !!owner && owner === currentUserUsername.value
   }
+
+  /** 当前用户自己添加的账号（账号列表对所有登录用户可见，额度只统计本人名下的） */
+  const ownAccounts = computed(() => accounts.value.filter((acc: any) => {
+    const owner = String(acc?.owner || acc?.username || '').trim()
+    return !!owner && owner === currentUserUsername.value
+  }))
   const quotaLimit = computed(() => {
     const limit = userStore.accountLimit
     if (limit === undefined || limit === null)
@@ -45,7 +52,7 @@ export function useAccountSettings(showAlert: (message: string, type?: AlertType
     const limit = quotaLimit.value
     if (limit === -1)
       return false
-    return accounts.value.length >= limit
+    return ownAccounts.value.length >= limit
   })
   const isAddAccountDisabled = computed(() => isAccountOpsDisabled.value || isOverQuota.value)
   const addAccountDisabledReason = computed(() => {
@@ -56,7 +63,8 @@ export function useAccountSettings(showAlert: (message: string, type?: AlertType
     return ''
   })
 
-  const stoppedAccounts = computed(() => accounts.value.filter((acc: any) => !acc.running))
+  // 一键清理只作用于当前用户可控制的账号（超管=全部，其他人=本人添加的）
+  const stoppedAccounts = computed(() => accounts.value.filter((acc: any) => !acc.running && isAccountOwnedByCurrentUser(acc)))
   const stoppedAccountsCount = computed(() => stoppedAccounts.value.length)
   const currentAccountName = computed(() => {
     const acc = accounts.value.find((item: any) => item.id === currentAccountId.value)
@@ -196,6 +204,7 @@ export function useAccountSettings(showAlert: (message: string, type?: AlertType
     currentAccountId,
     currentAccountName,
     userIsAdmin,
+    userIsSuperAdmin,
     currentUserUsername,
     isAccountOwnedByCurrentUser,
     showModal,

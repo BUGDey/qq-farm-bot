@@ -292,8 +292,9 @@ function leaveAccountRooms(socket) {
   }
 }
 
-function hasElevatedAdminRole(session) {
-  return session.role === "admin" || session.role === "super_admin";
+/** 仅超级管理员豁免账号归属校验（订阅他人账号的实时推送房间） */
+function isSuperAdminSession(session) {
+  return session.role === "super_admin";
 }
 
 function getSocketHandshakeToken(socket) {
@@ -648,7 +649,7 @@ function startAdminServer(dataProvider) {
     const token = socket.data.adminToken;
     const session = token ? getAdminSession(token) : null;
 
-    if (accountId && session && !hasElevatedAdminRole(session)) {
+    if (accountId && session && !isSuperAdminSession(session)) {
       const accounts = getAccountsForUser();
       const account = accounts.find((item) => item.id === accountId);
       if (!account || !isAccountOwner(account, session)) {

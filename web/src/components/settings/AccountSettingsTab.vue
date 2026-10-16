@@ -9,6 +9,7 @@ const props = defineProps<{
   accountsLoading: boolean
   currentAccountId: string | number | null | undefined
   userIsAdmin: boolean
+  userIsSuperAdmin: boolean
   currentUserUsername: string
   stoppedAccountsCount: number
   isAddAccountDisabled: boolean
@@ -45,9 +46,9 @@ const emit = defineEmits<{
   confirmClearStopped: []
 }>()
 
-/** 账号是否归属当前登录用户（管理员视为全部归属）。普通用户对非本人账号只能查看，不能启停。 */
+/** 账号是否归属当前登录用户（仅超级管理员视为全部归属，普通管理员不豁免）。其他人对非本人账号只能查看，不能操作。 */
 function isOwnedAccount(acc: any) {
-  if (props.userIsAdmin)
+  if (props.userIsSuperAdmin)
     return true
   const owner = String(acc?.owner || acc?.username || '').trim()
   return !!owner && owner === String(props.currentUserUsername || '').trim()
@@ -84,7 +85,7 @@ function accountAvatar(acc: any) {
           @click="emit('refreshWxCodes')"
         >
           <div class="i-carbon-renew mr-2" />
-          <span class="hidden sm:inline">{{ userIsAdmin ? '刷新全部微信Code' : '刷新我的微信Code' }}</span>
+          <span class="hidden sm:inline">{{ userIsSuperAdmin ? '刷新全部微信Code' : '刷新我的微信Code' }}</span>
           <span class="sm:hidden">刷新Code</span>
         </BaseButton>
         <BaseButton
@@ -184,7 +185,7 @@ function accountAvatar(acc: any) {
               class="border rounded-full shadow-sm transition-all duration-500 ease-in-out sm:w-20 active:scale-95"
               :class="acc.running ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 focus:ring-red-500 active:border-red-300 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 dark:focus:ring-red-500 dark:active:border-red-700' : 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100 focus:ring-green-500 active:border-green-300 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30 dark:focus:ring-green-500 dark:active:border-green-700'"
               :disabled="!isOwnedAccount(acc) || (!acc.running && isAccountOpsDisabled)"
-              :title="!isOwnedAccount(acc) ? '仅账号归属用户或管理员可以操作' : (!acc.running && isAccountOpsDisabled ? '账号已到期，无法启动账号' : '')"
+              :title="!isOwnedAccount(acc) ? '仅账号归属用户或超级管理员可以操作' : (!acc.running && isAccountOpsDisabled ? '账号已到期，无法启动账号' : '')"
               @click="emit('toggle', acc)"
             >
               <div :class="acc.running ? 'i-carbon-stop-filled' : 'i-carbon-play-filled'" class="mr-1" />
@@ -203,7 +204,7 @@ function accountAvatar(acc: any) {
 
           <div class="flex flex-1 flex-wrap justify-end gap-1 sm:flex-initial sm:gap-2">
             <BaseButton
-              v-if="userIsAdmin"
+              v-if="userIsAdmin && isOwnedAccount(acc)"
               :data-testid="`set-default-plan-${acc.id}`"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
@@ -219,7 +220,7 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
             <BaseButton
-              v-if="userIsAdmin"
+              v-if="userIsAdmin && isOwnedAccount(acc)"
               :data-testid="`apply-default-plan-${acc.id}`"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
@@ -237,8 +238,9 @@ function accountAvatar(acc: any) {
             <BaseButton
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
+              :disabled="!isOwnedAccount(acc)"
               aria-label="设置"
-              title="设置"
+              :title="isOwnedAccount(acc) ? '设置' : '仅账号归属用户或超级管理员可以配置'"
               @click="emit('settings', acc)"
             >
               <div i-carbon-settings />
@@ -247,7 +249,7 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
             <BaseButton
-              v-if="userIsAdmin"
+              v-if="userIsAdmin && isOwnedAccount(acc)"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
               aria-label="编辑"
@@ -260,7 +262,7 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
             <BaseButton
-              v-if="userIsAdmin"
+              v-if="userIsAdmin && isOwnedAccount(acc)"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] text-red-500 !p-2 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300"
               aria-label="删除"

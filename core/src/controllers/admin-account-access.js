@@ -2,7 +2,7 @@ const {
   normalizeAccountRef,
   resolveAccountId,
 } = require('../services/account-resolver');
-const { isElevatedRole } = require('../config/user-system');
+const { isSuperAdminRole } = require('../config/user-system');
 
 /** 账号归属字段：优先 owner，兼容旧数据使用 username */
 function getAccountOwner(account) {
@@ -11,10 +11,10 @@ function getAccountOwner(account) {
   return owner || String(account.username || '').trim();
 }
 
-/** 判断账号是否归属于该登录用户 */
+/** 判断账号是否归属于该登录用户（仅超级管理员视为全部归属，普通管理员不豁免） */
 function isAccountOwner(account, user) {
   if (!account || !user) return false;
-  if (isElevatedRole(user.role)) return true;
+  if (isSuperAdminRole(user.role)) return true;
   return getAccountOwner(account) === String(user.username || '').trim();
 }
 
@@ -53,7 +53,7 @@ function createAdminAccountAccess({ store, getProvider }) {
   function canAccessAccount(req, accountId) {
     const currentUser = req.currentUser;
     if (!currentUser) return false;
-    if (isElevatedRole(currentUser.role)) return true;
+    if (isSuperAdminRole(currentUser.role)) return true;
     const targetId = String(accountId || '').trim();
     if (!targetId) return false;
     const accountList = getAccountsForUser();
@@ -66,7 +66,7 @@ function createAdminAccountAccess({ store, getProvider }) {
     const currentUser = req.currentUser;
     if (!currentUser) return [];
     const accountList = getAccountsForUser();
-    if (isElevatedRole(currentUser.role)) {
+    if (isSuperAdminRole(currentUser.role)) {
       return accountList.map(account => account.id);
     }
     return accountList
@@ -77,7 +77,7 @@ function createAdminAccountAccess({ store, getProvider }) {
   function getAccessibleAccountIdsForUser(user) {
     if (!user) return [];
     const accountList = getAccountsForUser();
-    if (isElevatedRole(user.role)) {
+    if (isSuperAdminRole(user.role)) {
       return accountList.map(account => account.id);
     }
     return accountList
