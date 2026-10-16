@@ -368,7 +368,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
 
     <Teleport to="body">
       <div v-if="activeModule && activeInfo" class="fixed inset-0 z-[200] grid place-items-center overflow-y-auto bg-gray-950/45 p-3 backdrop-blur-[2px] sm:p-6" @click.self="cancel">
-        <section class="max-h-[94vh] max-w-4xl w-full flex flex-col overflow-hidden border border-gray-200 rounded-lg bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+        <section class="feature-config-modal max-h-[94vh] max-w-4xl w-full flex flex-col overflow-hidden border border-gray-200 rounded-lg bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
           <header class="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 dark:border-gray-700 sm:px-6">
             <div class="min-w-0 flex items-start gap-3">
               <img v-if="activeInfo.image" :src="activeInfo.image" alt="" class="h-11 w-11 shrink-0 rounded-lg bg-gray-100 object-contain p-1.5 dark:bg-gray-700">
@@ -791,3 +791,17 @@ watch(() => props.currentAccountId, loadQixiFriends)
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+/* 账号设置里的功能配置弹窗：纯色不透明底。
+   全局 .bg-white 被 !important 改成半透明毛玻璃，这里用更高特异性改回纯色。 */
+.bg-white.feature-config-modal {
+  background: #fff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dark .bg-white.feature-config-modal {
+  background: #1f2937 !important;
+}
+</style>
