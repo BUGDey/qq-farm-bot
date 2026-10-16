@@ -414,7 +414,7 @@ onMounted(async () => {
       </h1>
     </div>
 
-    <div class="border border-gray-200 rounded-lg bg-white shadow dark:border-gray-700 dark:bg-gray-800">
+    <div class="settings-solid border border-gray-200 rounded-lg bg-white shadow dark:border-gray-700 dark:bg-gray-800">
       <div class="border-b border-gray-200 dark:border-gray-700">
         <nav ref="settingsTabsNav" class="flex gap-1 overflow-x-auto p-2">
           <button
@@ -628,3 +628,19 @@ onMounted(async () => {
     />
   </div>
 </template>
+
+<style scoped>
+/* 设置页整体改纯色不透明：全局 .bg-white 毛玻璃规则会让密集文字透出背景图。
+   用更高特异性覆盖，:deep 覆盖子组件（账号设置卡片、账号管理卡片等）里的白底块。 */
+.settings-solid.bg-white,
+.settings-solid :deep(.bg-white) {
+  background: #fff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dark .settings-solid.bg-white,
+.dark .settings-solid :deep(.bg-white) {
+  background: #1f2937 !important;
+}
+</style>
