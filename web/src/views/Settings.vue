@@ -26,10 +26,20 @@ const settingStore = useSettingStore()
 const userStore = useUserStore()
 const route = useRoute()
 
-/** 普通用户对账号配置只读，且不加载任何管理员专属接口（避免右上角弹出"需要管理员权限"） */
 const isAdminUser = computed(() => userStore.isAdmin)
 /** 管理后台仅超级管理员可见 */
 const isSuperAdminUser = computed(() => userStore.isSuperAdmin)
+const currentAccount = computed(() => accounts.value.find((acc: any) => acc.id === currentAccountId.value))
+/** 账号配置编辑权限：超级管理员可操作任意账号，普通用户只能操作自己添加的账号 */
+const isCurrentAccountEditable = computed(() => {
+  if (!currentAccount.value)
+    return false
+  if (userStore.isSuperAdmin)
+    return true
+  const owner = String(currentAccount.value.owner || currentAccount.value.username || '').trim()
+  const me = String(userStore.username || '').trim()
+  return !!owner && owner === me
+})
 
 type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'system' | 'my-account' | 'admin-panel'
 
@@ -505,7 +515,7 @@ onMounted(async () => {
           :current-account-id="currentAccountId"
           :loading="settingsLoading"
           :saving="accountSettingsSaving"
-          :is-readonly="!isAdminUser"
+          :is-readonly="!isCurrentAccountEditable"
           :planting-strategy-options="plantingStrategyOptions"
           :bag-fallback-strategy-options="bagFallbackStrategyOptions"
           :strategy-preview-label="strategyPreviewLabel"
