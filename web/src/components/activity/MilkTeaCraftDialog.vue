@@ -86,6 +86,11 @@ function unlockLevel(r: any) {
   background: #21180fc4;
   overflow: hidden;
 }
+.craft-shade button {
+  /* 抵消全局触屏最小触控目标：弹窗在按画布等比缩放的游戏容器内，44px 下限会把 cqw 小按钮撑大 */
+  min-width: 0;
+  min-height: 0;
+}
 .craft-book {
   /* Definite bounds keep the list from sizing the grid and pushing the footer off-screen. */
   position: absolute;

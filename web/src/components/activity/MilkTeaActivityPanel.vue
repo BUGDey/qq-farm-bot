@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import api from '@/api'
 import { isWithinActivityWindowMs, MILK_TEA_ACTIVITY_WINDOW } from '@/constants/activity-windows'
 import { useAccountStore } from '@/stores/account'
+import { formatWanAmount } from '@/utils/number-format'
 import MilkTeaCraftDialog from './MilkTeaCraftDialog.vue'
 import MilkTeaShopDialogs from './MilkTeaShopDialogs.vue'
 
@@ -70,7 +71,9 @@ let timer: ReturnType<typeof setInterval>
 let generation = 0
 const img = (name: string) => `/activity/milk-tea/${name}.png`
 const currencyIcon = (item: any) => ({ 1001: '/game-config/resource-icons/gold.png', 1004: '/game-config/resource-icons/diamond.png', 1041: img('icon_s4_ticket') } as Record<string, string>)[String(item.id ?? item.itemId)] || item.image || ''
-const money = (id: string) => state.value?.balances?.find((x: any) => String(x.itemId ?? x.id) === id)?.count || '0'
+// 大额数字统一带万/亿单位（不足 1 万时显示原始数字），避免数字过长溢出胶囊框
+const fmt = (v: any) => formatWanAmount(v ?? 0)
+const money = (id: string) => fmt(state.value?.balances?.find((x: any) => String(x.itemId ?? x.id) === id)?.count || '0')
 const goods = computed(() => (state.value?.goods || []).filter((g: any) => filter.value === '全部' || (filter.value === '种子' ? g.category_tag === 'seed' : g.category_tag !== 'seed')))
 const recipes = computed(() => (state.value?.recipes || []).filter((x: any) => x.unlocked).sort((a: any, b: any) => Number(a.recipe_id) - Number(b.recipe_id)))
 const shelfRecipes = computed(() => [...recipes.value].sort((a: any, b: any) => Number(b.stock_cups === '-1') - Number(a.stock_cups === '-1') || Number(b.recipe_id) - Number(a.recipe_id)))
@@ -231,9 +234,9 @@ onUnmounted(() => {
         </div>
         <div class="balances">
           <div v-if="tab === 'exchange'">
-            <img :src="currencyIcon({ id: '1001' })" alt="金币">{{ money('1001') }}
-          </div><div><img :src="img('img_s4TeaUI_rewardpng')" alt="奶茶券">{{ money('1041') }}</div><div v-if="tab === 'exchange'">
-            <img :src="currencyIcon({ id: '1004' })" alt="钻石">{{ money('1004') }}
+            <img :src="currencyIcon({ id: '1001' })" alt="金币"><span>{{ money('1001') }}</span>
+          </div><div><img :src="img('img_s4TeaUI_rewardpng')" alt="奶茶券"><span>{{ money('1041') }}</span></div><div v-if="tab === 'exchange'">
+            <img :src="currencyIcon({ id: '1004' })" alt="钻石"><span>{{ money('1004') }}</span>
           </div>
         </div>
       </header>
@@ -244,7 +247,7 @@ onUnmounted(() => {
           </div><div>
             <strong>{{ state.summary.shop_name || '奶茶小铺' }}</strong><button class="edit image-button" @click="open('rename')">
               <img :src="img('img_s4TeaUI_editBtn')" alt="修改店名">
-            </button><p>营业额： <img class="revenue-ticket" :src="img('img_s4TeaUI_rewardpng')" alt="奶茶券"> {{ state.shop.total_revenue }}</p>
+            </button><p>营业额： <img class="revenue-ticket" :src="img('img_s4TeaUI_rewardpng')" alt="奶茶券"> {{ fmt(state.shop.total_revenue) }}</p>
           </div><button class="upgrade image-button" @click="open('upgrade')">
             <img :src="img('img_s4TeaUI_myShop')" alt="店铺升级"><span>店铺升级</span>
           </button>
@@ -261,7 +264,7 @@ onUnmounted(() => {
         </div>
         <button class="cashier image-button" :disabled="busy || !state.shop.pending_rewards.some((x: any) => Number(x.count) > 0)" @click="act('cashier')">
           <div class="cashier-orb">
-            <img :src="img('img_s4TeaUI_rewardpng')" alt="奶茶券"><b>{{ state.shop.pending_rewards.find((x: any) => String(x.id) === '1041')?.count || '0' }}</b>
+            <img :src="img('img_s4TeaUI_rewardpng')" alt="奶茶券"><b>{{ fmt(state.shop.pending_rewards.find((x: any) => String(x.id) === '1041')?.count || '0') }}</b>
           </div><span>领取收益</span>
         </button>
         <div class="employees">
@@ -304,7 +307,7 @@ onUnmounted(() => {
         </div>
         <div class="goods-grid">
           <button v-for="g in goods" :key="g.id" class="goods" :class="{ unavailable: !g.unlocked || !g.remaining }" :style="{ backgroundImage: `url(${img(Number(g.background_type) >= 2 ? 'img_s4Shop_itemBg3' : 'img_s4Shop_itemBg1')})` }" @click="open(`goods:${g.id}`)">
-            <strong>{{ g.name }}</strong><img :src="g.items[0]?.image || g.items[0]?.imageUrl || img('img_exchange_item1')" :alt="g.name"><span v-if="!g.unlocked" class="goods-lock">🔒<br>店铺{{ g.cond_hints.find((x: any) => !x.satisfied)?.target }}级解锁</span><small>{{ ({ 1: '每日', 2: '每周', 4: '永久' } as any)[g.restriction_type] || '' }}限购{{ g.remaining }}/{{ g.purchase_limit }}</small><b v-if="!g.remaining">已售罄</b><b v-else class="goods-costs"><span v-for="cost in g.costs" :key="cost.id"><img v-if="currencyIcon(cost)" :src="currencyIcon(cost)" :alt="cost.name"><span v-else>{{ cost.name }}</span>{{ cost.count }}</span></b>
+            <strong>{{ g.name }}</strong><img :src="g.items[0]?.image || g.items[0]?.imageUrl || img('img_exchange_item1')" :alt="g.name"><span v-if="!g.unlocked" class="goods-lock">🔒<br>店铺{{ g.cond_hints.find((x: any) => !x.satisfied)?.target }}级解锁</span><small>{{ ({ 1: '每日', 2: '每周', 4: '永久' } as any)[g.restriction_type] || '' }}限购{{ g.remaining }}/{{ g.purchase_limit }}</small><b v-if="!g.remaining">已售罄</b><b v-else class="goods-costs"><span v-for="cost in g.costs" :key="cost.id"><img v-if="currencyIcon(cost)" :src="currencyIcon(cost)" :alt="cost.name"><span v-else>{{ cost.name }}</span>{{ fmt(cost.count) }}</span></b>
           </button>
         </div>
       </main>
@@ -441,6 +444,9 @@ onUnmounted(() => {
   color: inherit;
   border: 0;
   background-color: transparent;
+  /* 抵消全局触屏最小触控目标（style.css 的 pointer:coarse 规则）：本面板按 900×1600 画布等比缩放，44px 下限会把 cqw 小按钮撑大互相遮挡 */
+  min-width: 0;
+  min-height: 0;
 }
 .milk-game button:disabled {
   cursor: default;
@@ -516,21 +522,33 @@ onUnmounted(() => {
   position: absolute;
   right: 4%;
   top: 40%;
-  width: 20%;
-  font-size: 3.2cqw;
+  width: 24%;
+  font-size: 3cqw;
   font-weight: 900;
 }
 .balances > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 4%;
   background: #fff9e8dd;
   border-radius: 30px;
   margin-bottom: 8%;
-  padding: 0 5%;
+  padding: 0 4%;
+  overflow: hidden;
 }
 .balances img {
-  width: 34%;
+  width: auto;
+  height: 3.4cqw;
+  flex-shrink: 0;
+}
+.balances > div > span {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* Positions use the full 900 × 1600 game canvas, matching the official portrait view. */
 .milk-game.shop {
@@ -622,7 +640,8 @@ onUnmounted(() => {
   position: absolute;
   top: 24.5%;
   left: 9%;
-  right: 9%;
+  /* 右边界让开右侧按钮列（shop-actions 宽 15% + 右 1%），避免饮品格被按钮压住 */
+  right: 17%;
   height: 8.2%;
   display: flex;
   gap: 0.8cqw;
@@ -630,7 +649,8 @@ onUnmounted(() => {
 }
 .drink {
   position: relative;
-  flex: 0 0 17.2%;
+  /* 6 格在收窄后的货架内恰好放下 */
+  flex: 0 0 15.8%;
   min-width: 0;
   box-sizing: border-box;
   background: linear-gradient(150deg, #fff0c9 75%, #ba9473 75%);

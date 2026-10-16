@@ -1056,6 +1056,9 @@ em {
 }
 button {
   cursor: pointer;
+  /* 抵消全局触屏最小触控目标：弹窗在按画布等比缩放的游戏容器内，44px 下限会把 cqw 小按钮撑大 */
+  min-width: 0;
+  min-height: 0;
 }
 button:disabled {
   cursor: default;
