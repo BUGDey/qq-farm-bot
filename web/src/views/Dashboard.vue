@@ -205,6 +205,30 @@ const resourceCards = computed(() => [
     icon: '/game-config/resource-icons/gold-bean.png',
     amount: formatGoldBeanAmount(status.value?.status?.goldBean || 0),
   },
+  {
+    key: 'fert-normal',
+    label: '普通肥',
+    icon: '/game-config/resource-icons/fertilizer-normal.png',
+    amount: formatBucketTime(fertilizerNormal.value),
+  },
+  {
+    key: 'fert-organic',
+    label: '有机肥',
+    icon: '/game-config/resource-icons/fertilizer-organic.png',
+    amount: formatBucketTime(fertilizerOrganic.value),
+  },
+  {
+    key: 'crop',
+    label: '作物图鉴',
+    icon: '/game-config/resource-icons/illustrated-crop.png',
+    amount: `Lv.${illustratedLevels.value.crop}`,
+  },
+  {
+    key: 'mutant',
+    label: '超变图鉴',
+    icon: '/game-config/resource-icons/illustrated-mutant.png',
+    amount: `Lv.${illustratedLevels.value.mutant}`,
+  },
 ])
 
 const featureCards = computed(() => [
@@ -1335,6 +1359,22 @@ useIntervalFn(updateCountdowns, 1000)
   background: linear-gradient(165deg, rgba(255, 216, 160, 0.6) 0%, rgba(255, 246, 232, 0.24) 100%);
 }
 
+.res-fert-normal {
+  background: linear-gradient(165deg, rgba(222, 196, 166, 0.6) 0%, rgba(250, 244, 235, 0.24) 100%);
+}
+
+.res-fert-organic {
+  background: linear-gradient(165deg, rgba(198, 240, 156, 0.6) 0%, rgba(244, 252, 236, 0.24) 100%);
+}
+
+.res-crop {
+  background: linear-gradient(165deg, rgba(255, 199, 220, 0.6) 0%, rgba(255, 243, 248, 0.24) 100%);
+}
+
+.res-mutant {
+  background: linear-gradient(165deg, rgba(216, 192, 252, 0.6) 0%, rgba(246, 241, 255, 0.24) 100%);
+}
+
 /* 资源数值：按资源着色并放大 */
 .res-gold .resource-amount {
   color: #d97706;
@@ -1350,6 +1390,22 @@ useIntervalFn(updateCountdowns, 1000)
 
 .res-bean .resource-amount {
   color: #c2620a;
+}
+
+.res-fert-normal .resource-amount {
+  color: #92610f;
+}
+
+.res-fert-organic .resource-amount {
+  color: #55800a;
+}
+
+.res-crop .resource-amount {
+  color: #d6336c;
+}
+
+.res-mutant .resource-amount {
+  color: #7048e8;
 }
 
 .resource-head {
