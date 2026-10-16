@@ -204,14 +204,13 @@ function accountAvatar(acc: any) {
 
           <div class="flex flex-1 flex-wrap justify-end gap-1 sm:flex-initial sm:gap-2">
             <BaseButton
-              v-if="userIsAdmin && isOwnedAccount(acc)"
               :data-testid="`set-default-plan-${acc.id}`"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
               :loading="defaultPlanSettingId === String(acc.id)"
-              :disabled="!!defaultPlanSettingId || !!defaultPlanApplyingId"
+              :disabled="!isOwnedAccount(acc) || !!defaultPlanSettingId || !!defaultPlanApplyingId"
               aria-label="设置默认方案"
-              title="设置默认方案"
+              :title="isOwnedAccount(acc) ? '设置默认方案' : '仅账号归属用户或超级管理员可以设置'"
               @click="emit('setDefaultPlan', acc)"
             >
               <div v-if="defaultPlanSettingId !== String(acc.id)" i-carbon-document-export />
@@ -220,14 +219,13 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
             <BaseButton
-              v-if="userIsAdmin && isOwnedAccount(acc)"
               :data-testid="`apply-default-plan-${acc.id}`"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
               :loading="defaultPlanApplyingId === String(acc.id)"
-              :disabled="!!defaultPlanSettingId || !!defaultPlanApplyingId"
+              :disabled="!isOwnedAccount(acc) || !!defaultPlanSettingId || !!defaultPlanApplyingId"
               aria-label="应用默认方案"
-              title="应用默认方案"
+              :title="isOwnedAccount(acc) ? '应用默认方案' : '仅账号归属用户或超级管理员可以应用'"
               @click="emit('applyDefaultPlan', acc)"
             >
               <div v-if="defaultPlanApplyingId !== String(acc.id)" i-carbon-document-import />
@@ -249,11 +247,11 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
             <BaseButton
-              v-if="userIsAdmin && isOwnedAccount(acc)"
               variant="ghost"
               class="group relative min-h-[36px] min-w-[36px] !p-2"
+              :disabled="!isOwnedAccount(acc)"
               aria-label="编辑"
-              title="编辑"
+              :title="isOwnedAccount(acc) ? '编辑' : '仅账号归属用户或超级管理员可以编辑'"
               @click="emit('edit', acc)"
             >
               <div i-carbon-edit />
@@ -262,11 +260,11 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
             <BaseButton
-              v-if="userIsAdmin && isOwnedAccount(acc)"
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] text-red-500 !p-2 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300"
+              class="group relative min-h-[36px] min-w-[36px] text-red-500 !p-2 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 disabled:text-red-300 disabled:opacity-60 dark:disabled:text-red-400/60"
+              :disabled="!isOwnedAccount(acc)"
               aria-label="删除"
-              title="删除"
+              :title="isOwnedAccount(acc) ? '删除' : '仅账号归属用户或超级管理员可以删除'"
               @click="emit('delete', acc)"
             >
               <div i-carbon-trash-can />
