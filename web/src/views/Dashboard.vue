@@ -69,6 +69,35 @@ const filteredLogs = computed(() => allLogs.value.filter((log) => {
 
 const visibleLogs = computed(() => compactRuntimeLogs(filteredLogs.value))
 
+// ===== 首页运行日志面板（game-home 区，不受下方筛选条件影响） =====
+const homeLogContainer = ref<HTMLElement | null>(null)
+const homeLogAutoScroll = ref(true)
+const homeLogs = computed(() => compactRuntimeLogs(allLogs.value))
+const latestHomeLog = computed(() => homeLogs.value[homeLogs.value.length - 1] || null)
+
+function onHomeLogScroll() {
+  const element = homeLogContainer.value
+  if (!element)
+    return
+  homeLogAutoScroll.value = element.scrollHeight - element.scrollTop - element.clientHeight < 40
+}
+
+function scrollHomeLogToBottom() {
+  const element = homeLogContainer.value
+  if (element)
+    element.scrollTop = element.scrollHeight
+  homeLogAutoScroll.value = true
+}
+
+watch(() => homeLogs.value.length, () => {
+  if (homeLogAutoScroll.value)
+    nextTick(scrollHomeLogToBottom)
+})
+
+onMounted(() => {
+  nextTick(scrollHomeLogToBottom)
+})
+
 const modules = [
   { label: '全部模块', value: '' },
   { label: '农场', value: 'farm' },
@@ -831,17 +860,33 @@ useIntervalFn(updateCountdowns, 1000)
         </div>
       </div>
 
-      <!-- 每日签到横幅 -->
-      <div class="daily-checkin-banner">
-        <img src="/dashboard/cow.png" alt="奶牛" class="banner-cow">
-        <div class="banner-text">
-          <h3>每日签到</h3>
-          <p>领取丰厚奖励</p>
+      <!-- 运行日志面板 -->
+      <div class="home-log-panel">
+        <div class="home-log-side">
+          <h3>运行日志</h3>
+          <p>
+            共 {{ homeLogs.length }} 条<span v-if="latestHomeLog"> · 最新 {{ latestHomeLog.tag }}</span>
+          </p>
         </div>
-        <RouterLink to="/activity" class="checkin-btn">
-          立即前往
-          <span class="i-carbon-chevron-right" />
-        </RouterLink>
+        <div ref="homeLogContainer" class="home-log-list" @scroll="onHomeLogScroll">
+          <div v-if="!homeLogs.length" class="home-log-empty">
+            暂无日志
+          </div>
+          <div
+            v-for="log in homeLogs"
+            :key="log.id"
+            class="home-log-row"
+            :class="getLogRowClass(log)"
+          >
+            <span class="home-log-time">{{ formatLogTimeRange(log) }}</span>
+            <span class="shrink-0 rounded px-1.5 py-0.5 text-xs font-bold" :class="getLogTagClass(log.tag)">{{ log.tag }}</span>
+            <span class="home-log-msg" :class="getLogMsgClass(log.tag)">{{ log.msg }}<template v-if="(log.repeatCount || 1) > 1"> ×{{ log.repeatCount }}</template></span>
+          </div>
+        </div>
+        <button class="home-log-latest" @click="scrollHomeLogToBottom">
+          最新
+          <span class="i-carbon-arrow-down" />
+        </button>
       </div>
     </div>
 
@@ -1775,14 +1820,15 @@ useIntervalFn(updateCountdowns, 1000)
   text-overflow: ellipsis;
 }
 
-/* 每日签到横幅 */
-.daily-checkin-banner {
+/* 运行日志面板 */
+.home-log-panel {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: stretch;
+  gap: 14px;
+  min-height: 260px;
+  max-height: 320px;
   border-radius: 20px;
-  padding: 12px 16px 12px 0;
-  min-height: 88px;
+  padding: 16px 18px;
   background:
     linear-gradient(180deg, rgba(186, 226, 248, 0.35) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(134, 214, 152, 0.4) 100%),
     linear-gradient(165deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.26) 100%);
@@ -1795,55 +1841,94 @@ useIntervalFn(updateCountdowns, 1000)
   overflow: hidden;
 }
 
-.banner-cow {
-  height: 100%;
-  width: 108px;
-  object-fit: cover;
-  object-position: center;
+.home-log-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   flex-shrink: 0;
-  border-radius: 14px 0 0 14px;
-  margin: -12px 0 -12px -16px;
-  margin-left: -1.5px;
+  min-width: 110px;
 }
 
-.banner-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.banner-text h3 {
-  font-size: 19px;
+.home-log-side h3 {
+  font-size: 20px;
   font-weight: 800;
   color: #166534;
   margin: 0;
   letter-spacing: 1px;
 }
 
-.banner-text p {
+.home-log-side p {
   font-size: 12px;
   color: #4d7c5f;
-  margin: 3px 0 0;
+  margin: 6px 0 0;
 }
 
-.checkin-btn {
+.home-log-list {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 12px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.35);
+  overscroll-behavior: contain;
+}
+
+.home-log-empty {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.home-log-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.home-log-time {
+  flex-shrink: 0;
+  color: #9ca3af;
+  font-size: 12px;
+  font-family: 'DM Mono', 'Courier New', monospace;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.home-log-msg {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.home-log-latest {
+  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  border: 0;
   border-radius: 999px;
   padding: 9px 18px;
   background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
-  text-decoration: none;
+  cursor: pointer;
   box-shadow:
     0 5px 14px rgba(16, 185, 129, 0.45),
     inset 0 0 0 2px rgba(255, 255, 255, 0.55);
   transition: all 0.2s ease;
 }
 
-.checkin-btn:hover {
+.home-log-latest:hover {
   transform: translateY(-2px);
   box-shadow:
     0 8px 18px rgba(16, 185, 129, 0.5),
@@ -1896,11 +1981,22 @@ useIntervalFn(updateCountdowns, 1000)
     width: 40%;
   }
 
-  .banner-cow {
-    width: 88px;
+  .home-log-panel {
+    min-height: 220px;
+    max-height: 280px;
+    gap: 10px;
+    padding: 12px 14px;
   }
 
-  .checkin-btn {
+  .home-log-side {
+    min-width: 88px;
+  }
+
+  .home-log-side h3 {
+    font-size: 17px;
+  }
+
+  .home-log-latest {
     padding: 8px 14px;
     font-size: 13px;
   }
@@ -1980,21 +2076,29 @@ useIntervalFn(updateCountdowns, 1000)
     border-radius: 16px;
   }
 
-  .daily-checkin-banner {
-    min-height: 68px;
+  .home-log-panel {
+    min-height: 200px;
+    max-height: 240px;
     border-radius: 16px;
+    padding: 10px 12px;
+    gap: 8px;
   }
 
-  .banner-cow {
-    width: 72px;
+  .home-log-side {
+    min-width: 72px;
   }
 
-  .banner-text h3 {
+  .home-log-side h3 {
     font-size: 15px;
   }
 
-  .banner-text p {
+  .home-log-side p {
     font-size: 10px;
+  }
+
+  .home-log-row {
+    font-size: 12px;
+    padding: 3px 4px;
   }
 }
 </style>
