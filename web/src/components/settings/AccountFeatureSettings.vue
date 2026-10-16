@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import api from '@/api'
+import SellFruitExcludes from '@/components/settings/SellFruitExcludes.vue'
 import StrategySettingsTab from '@/components/settings/StrategySettingsTab.vue'
 import StrategyTimingPanel from '@/components/settings/StrategyTimingPanel.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -123,7 +124,9 @@ function summaryTags(key: ModuleKey) {
     return [
       ...(hasFallback ? [primaryLabel || '未设置策略'] : []),
       hasFallback ? `第二策略：${props.strategyPreviewLabel || '等待选种'}` : props.strategyPreviewLabel || '等待选种',
-      automation.value.automation.sell ? '卖果实' : '不卖果实',
+      automation.value.automation.sell
+        ? `卖果实${automation.value.automation.sell_fruit_excludes?.length ? `（保留 ${automation.value.automation.sell_fruit_excludes.length} 种）` : ''}`
+        : '不卖果实',
       strategy.value.prioritize2x2Crops ? '优先 2x2' : '常规占地',
       `巡田 ${intervalTag(strategy.value.intervals.farmMin, strategy.value.intervals.farmMax)}`,
     ]
@@ -417,6 +420,12 @@ watch(() => props.currentAccountId, loadQixiFriends)
                   <BaseSwitch v-model="automation.automation.skip_own_weed_bug" label="保留自己农场的草虫" />
                 </div>
               </section>
+
+              <SellFruitExcludes
+                v-if="automation.automation.sell"
+                v-model="automation.automation.sell_fruit_excludes"
+                :account-id="currentAccountId ?? ''"
+              />
 
               <section class="border border-gray-100 rounded-lg p-4 dark:border-gray-700">
                 <StrategySettingsTab

@@ -18,7 +18,7 @@ const {
   getSeedImageBySeedId,
   isSeedItem,
 } = require('../config/gameConfig');
-const { isAutomationOn } = require('../models/store');
+const { isAutomationOn, getSellFruitExcludes } = require('../models/store');
 const { sendMsgAsync, networkEvents, getUserState } = require('../utils/network');
 const { types } = require('../utils/proto');
 const { toLong, toNum, log, logWarn, sleep, getServerTimeSec } = require('../utils/utils');
@@ -538,12 +538,19 @@ async function sellAllFruits() {
       ? await activityService.isQingmeiWineActiveCached().catch(() => false)
       : false;
 
+    // 用户配置的「不卖出」白名单：名单内的果实整批跳过（不影响背包手动出售）
+    const sellExcludes = new Set(getSellFruitExcludes());
+
     for (const item of items) {
       const id = toNum(item.id);
       const count = toNum(item.count);
       const reservedForTea = require('./activity-milk-tea').reserveMilkTeaFruit(id, isAutomationOn('milk_tea_craft'), getServerTimeSec());
       if (activityService.reserveQingmeiFruit(id, qingmeiWineActive)) {
         log('仓库', '青梅为活动专属果实，酿造活动进行中已跳过普通出售', { module: 'warehouse', event: '跳过活动专属果实', result: 'skip', itemId: id, count });
+        continue;
+      }
+      if (sellExcludes.has(id)) {
+        log('仓库', `${getFruitName(id)}在不卖白名单中，已跳过出售`, { module: 'warehouse', event: '跳过白名单果实', result: 'skip', itemId: id, count });
         continue;
       }
       if (isFruitItemId(id) && count > 0 && !reservedForTea) {

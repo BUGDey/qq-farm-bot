@@ -264,6 +264,8 @@ const DEFAULT_AUTOMATION = {
     qixi_bridge_build: false,
     qixi_sachet_gift: false,
     qixi_friend_priority: [],
+    // 卖果实白名单：名单内的果实 ID 在自动出售时跳过（不影响背包手动出售）
+    sell_fruit_excludes: [],
     rain_poem_bottle_buy: false,
     rain_poem_weather_collect: false,
     rain_poem_summon_use: false,
@@ -806,6 +808,8 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
                 cfg.automation[key] = Math.max(60, Math.min(7200, Number(value) || 300));
             } else if (key === 'qixi_friend_priority') {
                 cfg.automation[key] = normalizeKnownFriendGids(value, []);
+            } else if (key === 'sell_fruit_excludes') {
+                cfg.automation[key] = normalizeKnownFriendGids(value, []);
             } else if (['milk_tea_hire_duration', 'milk_tea_hire_talent', 'milk_tea_hire_fallback_talent'].includes(key)) {
                 const field = { milk_tea_hire_duration: 'durationId', milk_tea_hire_talent: 'talentId', milk_tea_hire_fallback_talent: 'fallbackTalentId' }[key];
                 cfg.automation[key] = require('../services/activity-milk-tea').normalizeHireOptions({ [field]: value })[field];
@@ -1296,7 +1300,13 @@ function getAutomation(accountId) {
     const auto = { ...getAccountConfigSnapshot(accountId).automation };
     auto.fertilizer_land_types = normalizeFertilizerLandTypes(auto.fertilizer_land_types);
     auto.qixi_friend_priority = normalizeKnownFriendGids(auto.qixi_friend_priority, []);
+    auto.sell_fruit_excludes = normalizeKnownFriendGids(auto.sell_fruit_excludes, []);
     return disableHiddenActivityAutomation(auto);
+}
+
+/** 卖果实白名单：名单内的果实 ID 在自动出售时跳过 */
+function getSellFruitExcludes(accountId) {
+    return normalizeKnownFriendGids(getAccountConfigSnapshot(accountId).automation.sell_fruit_excludes, []);
 }
 
 function getConfigSnapshot(accountId) {
@@ -1345,6 +1355,8 @@ function applyConfigSnapshot(patch = {}, opts = {}) {
             } else if (key === 'fertilizer_smart_seconds') {
                 cfg.automation[key] = Math.max(60, Math.min(7200, Number(value) || 300));
             } else if (key === 'qixi_friend_priority') {
+                cfg.automation[key] = normalizeKnownFriendGids(value, []);
+            } else if (key === 'sell_fruit_excludes') {
                 cfg.automation[key] = normalizeKnownFriendGids(value, []);
             } else if (['milk_tea_hire_duration', 'milk_tea_hire_talent', 'milk_tea_hire_fallback_talent'].includes(key)) {
                 const field = { milk_tea_hire_duration: 'durationId', milk_tea_hire_talent: 'talentId', milk_tea_hire_fallback_talent: 'fallbackTalentId' }[key];
@@ -2140,6 +2152,7 @@ module.exports = {
     getConfigSnapshot,
     applyConfigSnapshot,
     getAutomation,
+    getSellFruitExcludes,
     setAutomation,
     getAutoCodeRefresh,
     setAutoCodeRefresh,

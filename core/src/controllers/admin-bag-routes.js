@@ -1,4 +1,4 @@
-const { getItemById } = require("../config/gameConfig");
+const { getItemById, getAllPlants, getItemImageById, getFruitPrice, getFruitName } = require("../config/gameConfig");
 const { toNum } = require("../utils/utils");
 
 function wait(ms) {
@@ -98,6 +98,48 @@ async function sellMergedBagItems(provider, accountId, items) {
   return results.length === 1 ? results[0] : results;
 }
 
+/**
+ * 构建果实图鉴目录（纯静态配置，不依赖账号在线）。
+ * 返回 [{ id, name, image, price, priceUnit, count: 0, inBag: false }]，按 ID 升序。
+ */
+function buildFruitCatalog() {
+  const seen = new Set();
+  const fruits = [];
+  for (const plant of getAllPlants()) {
+    const fruitId = toNum(plant && plant.fruit && plant.fruit.id);
+    if (fruitId <= 0 || seen.has(fruitId)) continue;
+    seen.add(fruitId);
+    const info = getItemById(fruitId) || null;
+    fruits.push({
+      id: fruitId,
+      name: info && info.name ? String(info.name) : `${getFruitName(fruitId)}果实`,
+      image: getItemImageById(fruitId),
+      price: getFruitPrice(fruitId),
+      priceUnit: "金",
+      count: 0,
+      inBag: false,
+    });
+  }
+  fruits.sort((a, b) => a.id - b.id);
+  return fruits;
+}
+
+/** 从背包详情中提取果实条目（category === 'fruit'）。 */
+function extractBagFruits(bag) {
+  const items = Array.isArray(bag && bag.items) ? bag.items : [];
+  return items
+    .filter(item => item && item.category === "fruit" && toNum(item.id) > 0 && toNum(item.count) > 0)
+    .map(item => ({
+      id: toNum(item.id),
+      name: String(item.name || ""),
+      image: String(item.image || ""),
+      price: toNum(item.price),
+      priceUnit: String(item.priceUnit || "金"),
+      count: toNum(item.count),
+      inBag: true,
+    }));
+}
+
 function registerAdminBagRoutes({
   app,
   provider,
@@ -190,6 +232,55 @@ function registerAdminBagRoutes({
     }
   });
 
+  // 果实列表：source=bag 仅背包果实；source=catalog 仅图鉴目录（纯配置，账号离线也可用）；
+  // source=all（默认）图鉴目录合并背包数量，背包读取失败时降级为纯目录并带 bagError。
+  app.get("/api/bag/fruits", async (req, res) => {
+    const accountId = requireAccessibleAccount(req, res, getAccountIdFromRequest, canAccessAccount);
+    if (!accountId)
+      return;
+
+    const source = String(req.query.source || "all");
+    try {
+      let bagFruits = [];
+      let bagError = "";
+      if (source !== "catalog") {
+        try {
+          bagFruits = extractBagFruits(await provider.getBag(accountId));
+        }
+        catch (error) {
+          if (source === "bag") throw error;
+          bagError = String((error && error.message) || error || "背包读取失败");
+        }
+      }
+
+      let fruits;
+      if (source === "bag") {
+        fruits = bagFruits;
+      }
+      else {
+        const byId = new Map(buildFruitCatalog().map(fruit => [fruit.id, fruit]));
+        for (const bagFruit of bagFruits) {
+          const existing = byId.get(bagFruit.id);
+          if (existing) {
+            existing.count = bagFruit.count;
+            existing.inBag = true;
+            if (!existing.image && bagFruit.image) existing.image = bagFruit.image;
+            if (!existing.price && bagFruit.price) existing.price = bagFruit.price;
+          }
+          else {
+            byId.set(bagFruit.id, bagFruit);
+          }
+        }
+        fruits = Array.from(byId.values()).sort((a, b) => a.id - b.id);
+      }
+
+      res.json({ ok: true, data: { fruits, bagError } });
+    }
+    catch (error) {
+      sendProviderError(res, error);
+    }
+  });
+
   app.get("/api/bag/seeds", async (req, res) => {
     const accountId = requireAccessibleAccount(req, res, getAccountIdFromRequest, canAccessAccount);
     if (!accountId)
@@ -229,4 +320,4 @@ function registerAdminBagRoutes({
   });
 }
 
-module.exports = { registerAdminBagRoutes, sellMergedBagItems };
+module.exports = { registerAdminBagRoutes, sellMergedBagItems, buildFruitCatalog, extractBagFruits };
