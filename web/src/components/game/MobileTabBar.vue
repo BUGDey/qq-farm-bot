@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import NavMoreMenu from '@/components/game/NavMoreMenu.vue'
 import { menuRoutes } from '@/router/menu'
-import { useAccountStore } from '@/stores/account'
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const userStore = useUserStore()
-const accountStore = useAccountStore()
-const { currentAccount } = storeToRefs(accountStore)
 
 const primaryItems = [
   { path: '/', label: '首页', icon: 'i-fas-home' },
@@ -21,8 +18,10 @@ const primaryItems = [
   return !target?.adminOnly || userStore.isAdmin
 })
 
+// 「我的账户 / 设置 / 管理后台」已从更多菜单移除：设置改为底部独立 tab，
+// 我的账号与管理后台在设置页内有入口。
 const moreItems = menuRoutes
-  .filter(item => !['dashboard', 'personal', 'friends', 'activity'].includes(item.name))
+  .filter(item => !['dashboard', 'personal', 'friends', 'activity', 'account', 'Settings', 'adminPanel'].includes(item.name))
   // 管理后台等入口只对管理员可见（与侧边栏行为一致）
   .filter(item => !item.adminOnly || userStore.isAdmin)
   .map(item => ({
@@ -30,10 +29,68 @@ const moreItems = menuRoutes
     label: item.label,
     icon: item.icon,
   }))
+
+/**
+ * 移动端菜单栏自动隐藏：30 秒无操作隐藏；滚动到页面最顶部或最底部时重新显示并重新计时。
+ * 仅在窄屏（<1024px）启用；页面不可滚动时保持常显，避免没有唤回手段。
+ */
+const barVisible = ref(true)
+const HIDE_DELAY_MS = 30000
+const EDGE_THRESHOLD = 4
+let hideTimer: ReturnType<typeof setTimeout> | undefined
+let scrollContainer: HTMLElement | null = null
+const autoHideMedia = window.matchMedia('(max-width: 1023px)')
+
+function autoHideEnabled() {
+  if (!autoHideMedia.matches || !scrollContainer)
+    return false
+  // 页面内容不足一屏时没有滚动边界可以唤回菜单栏，保持常显
+  return scrollContainer.scrollHeight > scrollContainer.clientHeight + EDGE_THRESHOLD
+}
+
+function scheduleHide() {
+  clearTimeout(hideTimer)
+  hideTimer = undefined
+  if (!autoHideEnabled())
+    return
+  hideTimer = setTimeout(() => {
+    barVisible.value = false
+  }, HIDE_DELAY_MS)
+}
+
+function showBar() {
+  barVisible.value = true
+  scheduleHide()
+}
+
+function handleScroll() {
+  const el = scrollContainer
+  if (!el)
+    return
+  const atTop = el.scrollTop <= EDGE_THRESHOLD
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - EDGE_THRESHOLD
+  if (atTop || atBottom)
+    showBar()
+}
+
+onMounted(() => {
+  scrollContainer = document.querySelector<HTMLElement>('.custom-scrollbar')
+  scrollContainer?.addEventListener('scroll', handleScroll, { passive: true })
+  scheduleHide()
+})
+
+onUnmounted(() => {
+  clearTimeout(hideTimer)
+  scrollContainer?.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <template>
-  <div class="mobile-tabbar">
+  <div
+    class="mobile-tabbar"
+    :class="{ 'tabbar-hidden': !barVisible }"
+    @pointerdown="showBar"
+  >
     <div class="tabbar-glass">
       <RouterLink
         v-for="item in primaryItems"
@@ -53,15 +110,9 @@ const moreItems = menuRoutes
 
     <RouterLink to="/settings" class="tab-me" :class="{ active: route.path === '/settings' }">
       <span class="me-avatar">
-        <img
-          v-if="currentAccount?.avatar"
-          :src="currentAccount.avatar"
-          alt="我的"
-          class="h-full w-full object-cover"
-        >
-        <div v-else class="i-carbon-user text-lg text-emerald-600" />
+        <div class="i-carbon-settings text-lg text-emerald-600" />
       </span>
-      <span class="tab-label">我的</span>
+      <span class="tab-label">设置</span>
     </RouterLink>
   </div>
 </template>
@@ -79,6 +130,14 @@ const moreItems = menuRoutes
   gap: 10px;
   padding: 0 12px;
   pointer-events: none;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.mobile-tabbar.tabbar-hidden {
+  transform: translateY(calc(100% + 20px));
+  opacity: 0;
 }
 
 .tabbar-glass {

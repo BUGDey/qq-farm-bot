@@ -20,8 +20,8 @@ const farmLoaded = ref(false)
 const confirmVisible = ref(false)
 const farmViewport = ref<HTMLElement | null>(null)
 const farmStageWidth = ref<number | null>(null)
-const FARM_CANVAS_WIDTH = 1200
-const FARM_CANVAS_HEIGHT = 650
+// 农场场景舞台的最大展示宽度（画布逻辑尺寸仍为 FarmScene 内的 1200×650，按比例缩放）
+const FARM_STAGE_MAX_WIDTH = 1600
 type PendingLandAction = 'fertilize' | 'remove'
 
 const confirmConfig = ref({
@@ -184,30 +184,6 @@ const farmStageStyle = computed(() => farmStageWidth.value
   ? { width: `${farmStageWidth.value}px` }
   : undefined)
 
-// 页面本身不滚动，内容在若干层内部容器里滚动，需要把它们已滚动的距离补回来，
-// 这样无论当前滚到哪里，量出来的都是"滚到顶部时"场景距屏幕顶端的距离。
-function ancestorScrollTop(element: HTMLElement | null) {
-  let offset = 0
-  let node = element?.parentElement
-  while (node) {
-    if (node.scrollTop)
-      offset += node.scrollTop
-    node = node.parentElement
-  }
-  return offset
-}
-
-// 底部悬浮菜单栏会盖住内容，按它实际占用的高度预留，而不是写死一个数字。
-function bottomReserve() {
-  const tabbar = document.querySelector('.mobile-tabbar')
-  if (!tabbar)
-    return 24
-  const top = tabbar.getBoundingClientRect().top
-  if (!top)
-    return 24
-  return Math.max(56, window.innerHeight - top + 8)
-}
-
 function updateFarmStageSize() {
   const viewport = farmViewport.value
   if (!viewport) {
@@ -220,10 +196,9 @@ function updateFarmStageSize() {
     farmStageWidth.value = null
     return
   }
-  const documentTop = viewport.getBoundingClientRect().top + window.scrollY + ancestorScrollTop(viewport)
-  const availableHeight = Math.max(240, window.innerHeight - documentTop - bottomReserve())
-  // 保持 1200×650 比例并限制在当前一屏内；外层 viewport 同步收窄，不再露出第二层背景。
-  farmStageWidth.value = Math.min(availableWidth, FARM_CANVAS_WIDTH, availableHeight * FARM_CANVAS_WIDTH / FARM_CANVAS_HEIGHT)
+  // 不再限制在一屏内（内容区可滚动），让土地尽量铺满卡片、显示更全；
+  // 上限 FARM_STAGE_MAX_WIDTH 防止过宽拉伸，与 FarmScene 的 max-width 保持一致。
+  farmStageWidth.value = Math.min(availableWidth, FARM_STAGE_MAX_WIDTH)
 }
 
 // 土地数据是异步到的，场景容器出现时机晚于 onMounted，元素挂载后要补算一次尺寸。

@@ -760,13 +760,42 @@ useIntervalFn(updateCountdowns, 1000)
             </div>
             <span class="farm-status-label">农场运行中</span>
           </div>
-          <div class="farm-preview">
-            <span class="farm-clock">
-              <span class="i-carbon-time" />
-            </span>
-            <div class="farm-preview-text">
-              <span class="farm-time">{{ formatDuration(localUptime) }}</span>
-              <span class="farm-progress-label">已运行</span>
+          <div class="farm-metrics">
+            <div class="farm-metric">
+              <span class="farm-metric-icon metric-farm">
+                <span class="i-carbon-sprout" />
+              </span>
+              <div class="farm-metric-text">
+                <span class="farm-metric-value" :title="nextFarmCheck">{{ nextFarmCheck }}</span>
+                <span class="farm-metric-label">农场</span>
+              </div>
+            </div>
+            <div class="farm-metric">
+              <span class="farm-metric-icon metric-help">
+                <span class="i-carbon-user-multiple" />
+              </span>
+              <div class="farm-metric-text">
+                <span class="farm-metric-value" :title="nextHelpCheck">{{ nextHelpCheck }}</span>
+                <span class="farm-metric-label">帮助</span>
+              </div>
+            </div>
+            <div class="farm-metric">
+              <span class="farm-metric-icon metric-steal">
+                <span class="i-carbon-run" />
+              </span>
+              <div class="farm-metric-text">
+                <span class="farm-metric-value" :title="nextStealCheck">{{ nextStealCheck }}</span>
+                <span class="farm-metric-label">偷菜</span>
+              </div>
+            </div>
+            <div class="farm-metric">
+              <span class="farm-metric-icon metric-uptime">
+                <span class="i-carbon-time" />
+              </span>
+              <div class="farm-metric-text">
+                <span class="farm-metric-value">{{ formatDuration(localUptime) }}</span>
+                <span class="farm-metric-label">已运行</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1464,7 +1493,7 @@ useIntervalFn(updateCountdowns, 1000)
   justify-content: space-between;
   gap: 12px;
   padding: 16px 18px;
-  min-height: 128px;
+  min-height: 148px;
   overflow: hidden;
   text-decoration: none;
   cursor: pointer;
@@ -1545,45 +1574,72 @@ useIntervalFn(updateCountdowns, 1000)
   font-weight: 600;
 }
 
-.farm-preview {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #333;
+/* 三个检查倒计时 + 已运行：两行两列，均限制在左侧区域，不遮挡右侧插画 */
+.farm-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
 }
 
-.farm-clock {
+.farm-metric {
   display: flex;
-  height: 40px;
-  width: 40px;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.farm-metric-icon {
+  display: flex;
+  height: 30px;
+  width: 30px;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, #34d399, #10b981);
   color: #fff;
-  font-size: 20px;
-  box-shadow: 0 5px 12px rgba(16, 185, 129, 0.4);
-  flex-shrink: 0;
+  font-size: 15px;
 }
 
-.farm-preview-text {
+.farm-metric-icon.metric-farm {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.35);
+}
+
+.farm-metric-icon.metric-help {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.35);
+}
+
+.farm-metric-icon.metric-steal {
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.35);
+}
+
+.farm-metric-icon.metric-uptime {
+  background: linear-gradient(135deg, #34d399, #10b981);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35);
+}
+
+.farm-metric-text {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
-.farm-time {
-  font-size: 28px;
-  font-weight: 800;
+.farm-metric-value {
+  font-size: 14px;
+  font-weight: 700;
   font-family: 'DM Mono', 'Courier New', monospace;
   color: #1f2937;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.farm-progress-label {
+.farm-metric-label {
   color: #6b7280;
-  font-size: 12px;
-  margin-top: 2px;
+  font-size: 11px;
 }
 
 /* 农场插画：左侧渐隐融入毛玻璃卡片，贴齐卡片右缘，避免“贴图”感 */

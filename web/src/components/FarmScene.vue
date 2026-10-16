@@ -218,7 +218,7 @@ onUnmounted(() => {
   container-type: inline-size;
   overflow: hidden;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1600px;
   margin-inline: auto;
   border-radius: 1rem;
   background: #a8d85d;

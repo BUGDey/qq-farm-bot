@@ -19,6 +19,7 @@ import { useUserSettings } from '@/composables/settings/useUserSettings'
 import { useAdminSystemConfig } from '@/composables/useAdminSystemConfig'
 import { useSettingStore } from '@/stores/setting'
 import { useUserStore } from '@/stores/user'
+import AdminPanel from '@/views/AdminPanel.vue'
 import RenewalPanel from '@/views/Renewal.vue'
 
 const settingStore = useSettingStore()
@@ -28,9 +29,9 @@ const route = useRoute()
 /** 普通用户对账号配置只读，且不加载任何管理员专属接口（避免右上角弹出"需要管理员权限"） */
 const isAdminUser = computed(() => userStore.isAdmin)
 
-type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'system' | 'my-account'
+type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'system' | 'my-account' | 'admin-panel'
 
-const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'system', 'my-account']
+const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'system', 'my-account', 'admin-panel']
 const LEGACY_SETTINGS_TABS: Record<string, SettingsTabKey> = {
   'strategy': 'account-config',
   'automation': 'account-config',
@@ -54,8 +55,8 @@ function getInitialSettingsTab(): SettingsTabKey {
 }
 
 const activeTab = ref<SettingsTabKey>(getInitialSettingsTab())
-// 普通用户从 localStorage 恢复到"系统配置"时回落到账号管理
-if (!isAdminUser.value && activeTab.value === 'system')
+// 普通用户从 localStorage 恢复到管理员专属 tab 时回落到账号管理
+if (!isAdminUser.value && (activeTab.value === 'system' || activeTab.value === 'admin-panel'))
   activeTab.value = 'account'
 const settingsTabsNav = ref<HTMLElement | null>(null)
 
@@ -76,11 +77,13 @@ const tabs = [
   { key: 'notification', label: '通知设置', icon: 'i-carbon-notification' },
   { key: 'system', label: '系统配置', icon: 'i-carbon-settings-services' },
   { key: 'my-account', label: '我的账号', icon: 'i-carbon-user-avatar' },
+  { key: 'admin-panel', label: '管理后台', icon: 'i-carbon-user-admin' },
 ] as const
 
-/** 系统配置 tab 仅管理员可见（其接口均为管理员专属） */
+/** 系统配置 / 管理后台 tab 仅管理员可见（其接口均为管理员专属） */
+const ADMIN_ONLY_TABS: SettingsTabKey[] = ['system', 'admin-panel']
 const visibleTabs = computed(() =>
-  isAdminUser.value ? tabs : tabs.filter(tab => tab.key !== 'system'),
+  isAdminUser.value ? tabs : tabs.filter(tab => !ADMIN_ONLY_TABS.includes(tab.key)),
 )
 
 const modalVisible = ref(false)
@@ -595,6 +598,9 @@ onMounted(async () => {
 
         <!-- 我的账号：有效期 / 卡密续费 / 农场账号 / 核销记录（复用 Renewal 页面） -->
         <RenewalPanel v-else-if="activeTab === 'my-account'" />
+
+        <!-- 管理后台：用户 / 卡密 / 流水 / 日志（复用 AdminPanel 页面，仅管理员可见该 tab） -->
+        <AdminPanel v-else-if="activeTab === 'admin-panel' && isAdminUser" />
       </div>
     </div>
 
