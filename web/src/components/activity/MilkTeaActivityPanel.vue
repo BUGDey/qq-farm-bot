@@ -838,8 +838,9 @@ onUnmounted(() => {
 .shop-actions {
   position: absolute;
   top: 28.4%;
-  right: 1%;
-  width: 15%;
+  right: 0.5%;
+  /* 15% 宽放不下「快乐不独享」5 个字（nowrap），文字会超出画布右缘被裁掉 */
+  width: 18%;
   display: flex;
   flex-direction: column;
   gap: 2.2cqw;
@@ -849,7 +850,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 2.9cqw;
+  font-size: 2.6cqw;
   font-weight: 800;
   line-height: 1.1;
   color: #fff;
@@ -947,9 +948,13 @@ onUnmounted(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 3cqw 2cqw;
 }
-.goods {
+/* 不用 aspect-ratio：与网格 auto 行高 + 子元素百分比高度混用时行轨道会塌陷，卡片互相重叠；
+   用 cqw 最小高度兜底、内容超高时自动撑开，保证每张卡片完整显示再排下一张。
+   注意必须带 .milk-game 前缀：scoped 下 .milk-game button[data-v]（0-2-1）的 min-height:0
+   会压过裸 .goods[data-v]（0-2-0） */
+.milk-game .goods {
   position: relative;
-  aspect-ratio: 240/320;
+  min-height: 36cqw;
   background-size: 100% 100%;
   padding: 6% 5% 8% !important;
   display: flex;
@@ -965,7 +970,8 @@ onUnmounted(() => {
 }
 .goods > img {
   width: 85%;
-  height: 52%;
+  /* 卡片高度改为内容自适应后，百分比高度会解析失败，改为 cqw 固定高 */
+  height: 13cqw;
   object-fit: contain;
 }
 .goods small {
