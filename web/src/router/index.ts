@@ -19,6 +19,7 @@ const router = createRouter({
         path: route.path,
         name: route.name,
         component: route.component,
+        meta: { adminOnly: !!route.adminOnly, superOnly: !!route.superOnly },
       })),
     },
     { path: '/admin', redirect: '/admin-panel' },
@@ -31,7 +32,17 @@ const router = createRouter({
  * 登录守卫
  * - 未持有 token 一律跳转登录页
  * - 已登录访问 /login 时回到首页
+ * - 角色隔离：superOnly 仅超管、adminOnly 仅管理员可访问，越权回首页
  */
+function currentRole(): string {
+  try {
+    return JSON.parse(localStorage.getItem('user_info') || 'null')?.role || ''
+  }
+  catch {
+    return ''
+  }
+}
+
 router.beforeEach(async (to) => {
   NProgress.start()
 
@@ -45,6 +56,12 @@ router.beforeEach(async (to) => {
   if (!hasToken) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
+
+  const role = currentRole()
+  if (to.meta.superOnly && role !== 'super_admin')
+    return { path: '/' }
+  if (to.meta.adminOnly && role !== 'admin' && role !== 'super_admin')
+    return { path: '/' }
   return true
 })
 

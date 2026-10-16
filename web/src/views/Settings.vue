@@ -28,6 +28,8 @@ const route = useRoute()
 
 /** 普通用户对账号配置只读，且不加载任何管理员专属接口（避免右上角弹出"需要管理员权限"） */
 const isAdminUser = computed(() => userStore.isAdmin)
+/** 管理后台仅超级管理员可见 */
+const isSuperAdminUser = computed(() => userStore.isSuperAdmin)
 
 type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'system' | 'my-account' | 'admin-panel'
 
@@ -55,8 +57,10 @@ function getInitialSettingsTab(): SettingsTabKey {
 }
 
 const activeTab = ref<SettingsTabKey>(getInitialSettingsTab())
-// 普通用户从 localStorage 恢复到管理员专属 tab 时回落到账号管理
-if (!isAdminUser.value && (activeTab.value === 'system' || activeTab.value === 'admin-panel'))
+// 无权限用户从 localStorage 恢复到受限 tab 时回落到账号管理
+if (activeTab.value === 'system' && !isAdminUser.value)
+  activeTab.value = 'account'
+if (activeTab.value === 'admin-panel' && !isSuperAdminUser.value)
   activeTab.value = 'account'
 const settingsTabsNav = ref<HTMLElement | null>(null)
 
@@ -80,10 +84,17 @@ const tabs = [
   { key: 'admin-panel', label: '管理后台', icon: 'i-carbon-user-admin' },
 ] as const
 
-/** 系统配置 / 管理后台 tab 仅管理员可见（其接口均为管理员专属） */
-const ADMIN_ONLY_TABS: SettingsTabKey[] = ['system', 'admin-panel']
+/** 系统配置 tab 仅管理员可见；管理后台 tab 仅超级管理员可见（接口均为对应角色专属） */
+const ADMIN_ONLY_TABS: SettingsTabKey[] = ['system']
+const SUPER_ONLY_TABS: SettingsTabKey[] = ['admin-panel']
 const visibleTabs = computed(() =>
-  isAdminUser.value ? tabs : tabs.filter(tab => !ADMIN_ONLY_TABS.includes(tab.key)),
+  tabs.filter((tab) => {
+    if (SUPER_ONLY_TABS.includes(tab.key))
+      return isSuperAdminUser.value
+    if (ADMIN_ONLY_TABS.includes(tab.key))
+      return isAdminUser.value
+    return true
+  }),
 )
 
 const modalVisible = ref(false)
@@ -599,8 +610,8 @@ onMounted(async () => {
         <!-- 我的账号：有效期 / 卡密续费 / 农场账号 / 核销记录（复用 Renewal 页面） -->
         <RenewalPanel v-else-if="activeTab === 'my-account'" />
 
-        <!-- 管理后台：用户 / 卡密 / 流水 / 日志（复用 AdminPanel 页面，仅管理员可见该 tab） -->
-        <AdminPanel v-else-if="activeTab === 'admin-panel' && isAdminUser" />
+        <!-- 管理后台：用户 / 卡密 / 流水 / 日志（复用 AdminPanel 页面，仅超级管理员可见该 tab） -->
+        <AdminPanel v-else-if="activeTab === 'admin-panel' && isSuperAdminUser" />
       </div>
     </div>
 

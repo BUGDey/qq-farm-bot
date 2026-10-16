@@ -5,6 +5,8 @@ export interface MenuItem {
   icon: string
   component: () => Promise<any>
   adminOnly?: boolean
+  /** 仅超级管理员可见/可访问（优先级高于 adminOnly） */
+  superOnly?: boolean
   showInNav?: boolean
 }
 
@@ -86,5 +88,6 @@ export const menuRoutes: MenuItem[] = [
     icon: 'i-carbon-user-admin',
     component: () => import('@/views/AdminPanel.vue'),
     adminOnly: true,
+    superOnly: true,
   },
 ]

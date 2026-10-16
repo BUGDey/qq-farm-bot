@@ -15,15 +15,15 @@ const primaryItems = [
   { path: '/activity', label: '活动', icon: 'i-carbon-gift' },
 ].filter((item) => {
   const target = menuRoutes.find(menu => `/${menu.path}` === item.path || (item.path === '/' && menu.path === ''))
-  return !target?.adminOnly || userStore.isAdmin
+  return (!target?.adminOnly || userStore.isAdmin) && (!target?.superOnly || userStore.isSuperAdmin)
 })
 
 // 「我的账户 / 设置 / 管理后台」已从更多菜单移除：设置改为底部独立 tab，
 // 我的账号与管理后台在设置页内有入口。
 const moreItems = menuRoutes
   .filter(item => !['dashboard', 'personal', 'friends', 'activity', 'account', 'Settings', 'adminPanel'].includes(item.name))
-  // 管理后台等入口只对管理员可见（与侧边栏行为一致）
-  .filter(item => !item.adminOnly || userStore.isAdmin)
+  // 受限入口按角色隔离（与侧边栏行为一致）：adminOnly 仅管理员、superOnly 仅超管
+  .filter(item => (!item.adminOnly || userStore.isAdmin) && (!item.superOnly || userStore.isSuperAdmin))
   .map(item => ({
     path: item.path ? `/${item.path}` : '/',
     label: item.label,

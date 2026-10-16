@@ -144,8 +144,9 @@ const connectionStatus = computed(() => {
 // 根据用户角色过滤导航菜单
 const navItems = computed(() => {
   const isAdmin = userStore.isAdmin
+  const isSuperAdmin = userStore.isSuperAdmin
   return menuRoutes
-    .filter(item => item.showInNav !== false && (!item.adminOnly || isAdmin))
+    .filter(item => item.showInNav !== false && (!item.adminOnly || isAdmin) && (!item.superOnly || isSuperAdmin))
     .map(item => ({
       path: item.path ? `/${item.path}` : '/',
       label: item.label,

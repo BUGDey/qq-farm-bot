@@ -91,6 +91,8 @@ const searchResults = computed(() => {
   if (!keyword)
     return []
   return menuRoutes
+    // 权限隔离：adminOnly 仅管理员、superOnly 仅超管可被搜到（与侧边栏/移动导航一致）
+    .filter(item => (!item.adminOnly || userStore.isAdmin) && (!item.superOnly || userStore.isSuperAdmin))
     .filter(item => item.label.toLowerCase().includes(keyword) || item.name.toLowerCase().includes(keyword))
     .map(item => ({
       path: item.path ? `/${item.path}` : '/',
