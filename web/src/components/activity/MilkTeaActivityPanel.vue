@@ -318,11 +318,13 @@ onUnmounted(() => {
           </div>
         </div>
         <template v-if="state.work.my_shift">
-          <h3>{{ state.work.my_shift.shop_name }}</h3><p>{{ state.work.my_shift.talent_name }} · {{ duration(Number(state.work.my_shift.end_at) - now / 1000) }}后下班</p><div class="interactions">
-            <button v-for="interaction in state.interactions" :key="interaction.interaction_id" class="gold-button" :disabled="busy || state.work.interact_done || state.phase !== 'business'" @click="act('interact', { interactionType: interaction.interaction_id })">
+          <h3>{{ state.work.my_shift.shop_name }}</h3><p>{{ state.work.my_shift.talent_name }} · {{ duration(Number(state.work.my_shift.end_at) - now / 1000) }}后下班<span v-if="state.work.my_shift.baseWage != null"> · 本班工资 {{ state.work.my_shift.baseWage }} 奶茶券</span></p><p v-if="state.work.talentDescription" class="talent-desc">{{ state.work.talentDescription }}</p><div class="interactions">
+            <button v-for="interaction in state.interactions" :key="interaction.interaction_id" class="gold-button" :disabled="busy || state.work.interact_done || state.phase !== 'business' || interaction.ready === false" :title="interaction.description || ''" @click="act('interact', { interactionType: interaction.interaction_id })">
               {{ interaction.name }}
             </button>
-          </div>
+          </div><p v-if="state.work.my_shift.interactionResult" class="interact-result">
+            上次互动：{{ state.work.my_shift.interactionResult.name }}<template v-if="state.work.my_shift.interactionResult.reward?.count">，获得 {{ state.work.my_shift.interactionResult.reward.name }}×{{ state.work.my_shift.interactionResult.reward.count }}</template>
+          </p>
         </template>
         <button v-else class="gold-button invite" @click="open('invite')">
           ➤ 邀请好友雇佣我
@@ -332,7 +334,9 @@ onUnmounted(() => {
         </h3><div v-if="!state.work.slips.length" class="empty-work">
           <img :src="img('img_s4_null1')" alt=""><p>暂无工作记录</p>
         </div><div v-for="slip in state.work.slips" :key="slip.shift_id" class="work-record">
-          <strong>{{ slip.shop_name }}</strong><p>{{ date(Number(slip.begin_at)) }} — {{ date(Number(slip.end_at)) }}</p>
+          <strong>{{ slip.shop_name }}</strong><p>{{ date(Number(slip.begin_at)) }} — {{ date(Number(slip.end_at)) }}</p><p v-if="slip.interactionResult" class="interact-result">
+            {{ slip.interactionResult.name }}<template v-if="slip.interactionResult.reward?.count">：{{ slip.interactionResult.reward.name }}×{{ slip.interactionResult.reward.count }}</template>
+          </p>
         </div><button v-if="state.summary.has_unclaimed_wage" class="gold-button" :disabled="busy" @click="act('wages')">
           领取工资
         </button>
@@ -1063,6 +1067,18 @@ onUnmounted(() => {
   border-bottom: 1px dashed #a97d53;
   font-size: 2.7cqw;
   padding: 10px;
+}
+/* 兼职规范化：天赋描述与互动结果（milk-tea-work.js 提供） */
+.talent-desc {
+  margin: 1cqw 0 0;
+  font-size: 2.6cqw;
+  color: #936647;
+}
+.interact-result {
+  margin: 1cqw 0 0;
+  font-size: 2.6cqw;
+  font-weight: 700;
+  color: #7b4b32;
 }
 .interactions {
   display: flex;

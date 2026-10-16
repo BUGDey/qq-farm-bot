@@ -1,5 +1,6 @@
 const catalog = require('../activity-data/milk-tea-20261015.json');
 const { serializeMutation, businessError, positiveDecimal } = require('./activity-center-helpers');
+const { normalizeMilkTeaWork } = require('./milk-tea-work');
 function normalizeWireMaps(value) {
   if (Array.isArray(value)) return value.map(normalizeWireMaps);
   if (!value || typeof value !== 'object') return value;
@@ -99,7 +100,9 @@ function createMilkTeaService({ types, sendMsgAsync, getBag, getBagItems, getSer
     }));
     const shareView = share ? { ...share, milestones: list(share.milestones).map(tier => ({ ...tier, rewards: list(tier.rewards).map(itemDto) })) } : null;
     const fundView = fund ? { ...fund, unlock_cost: list(fund.unlock_cost).map(itemDto), tiers: list(fund.tiers).map(tier => ({ ...tier, reward: list(tier.reward).map(itemDto) })) } : null;
-    return { ...state, share: shareView, fund: fundView, shop: shop.shop, recipes, work, goods, balances: ['1001', '1004', '1041', '1042'].map(id => itemDto({ id, count: inventory.filter(x => String(x.id) === id).reduce((n, x) => n + BigInt(String(x.count || 0)), 0n).toString() })), levels, durations: catalog.MilkTeaHireDurationConfig, interactions: catalog.MilkTeaInteractionType };
+    // 兼职规范化：班次工资、互动描述 {0} 占位替换、互动结果奖励（移植自 milk-tea-work.ts）
+    const workNorm = normalizeMilkTeaWork(work);
+    return { ...state, share: shareView, fund: fundView, shop: shop.shop, recipes, work: workNorm.work, goods, balances: ['1001', '1004', '1041', '1042'].map(id => itemDto({ id, count: inventory.filter(x => String(x.id) === id).reduce((n, x) => n + BigInt(String(x.count || 0)), 0n).toString() })), levels, durations: catalog.MilkTeaHireDurationConfig, interactions: workNorm.interactions };
   }
   function getMilkTea() { if (!pendingRead) pendingRead = read().finally(() => { pendingRead = null; }); return pendingRead; }
   async function mutate(action, input = {}) {
