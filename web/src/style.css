@@ -232,3 +232,17 @@ button {
   background: linear-gradient(165deg, rgba(31, 41, 55, 0.95) 0%, rgba(31, 41, 55, 0.88) 100%) !important;
   border-color: rgba(255, 255, 255, 0.12);
 }
+
+/*
+ * 弹窗纯色底：完全不透明，覆盖全局 .bg-white 毛玻璃。
+ * 与玻璃规则特异性相同但声明在后（同文件靠后生效）；内容密集的弹窗（如管理后台表单）用它。
+ */
+.modal-solid {
+  background: #fff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dark .modal-solid {
+  background: #1f2937 !important;
+}

@@ -399,7 +399,7 @@ defineExpose({ load })
         class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4"
         @click.self="closeCreateModal"
       >
-        <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-xl dark:bg-gray-800" style="background: var(--surface-1);">
+        <div class="modal-solid max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-xl dark:bg-gray-800">
           <div class="mb-4 flex items-center justify-between">
             <h3 class="flex items-center gap-2 text-base text-gray-900 font-semibold dark:text-gray-100">
               <div class="i-carbon-add-alt" />

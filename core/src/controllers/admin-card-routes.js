@@ -77,6 +77,27 @@ function registerAdminCardRoutes({
     }
   });
 
+  /** 批量删除卡密。注意：必须注册在 /:code 之前，否则会被参数路由抢先匹配成 code="batch-delete" */
+  app.post('/api/admin/cards/batch-delete', requireAdminToken, requireAdminRole, (req, res) => {
+    try {
+      if (!requireDangerConfirmation(req, res, 'DELETE_CARDS_BATCH')) return;
+      const { codes } = req.body || {};
+      if (!Array.isArray(codes) || codes.length === 0) {
+        return res.status(400).json({ ok: false, error: '请提供要删除的卡密列表' });
+      }
+      const result = userStore.deleteCardsBatch(codes);
+      adminLogger.warn('批量删除卡密', {
+        admin: req.currentUser?.username || '',
+        deleteCount: codes.length,
+        deletedCount: result.deletedCount,
+        confirmation: 'DELETE_CARDS_BATCH',
+      });
+      res.json({ ok: true, data: result });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
   /** 更新卡密（描述 / 启停 / 作废） */
   app.post('/api/admin/cards/:code', requireAdminToken, requireAdminRole, (req, res) => {
     try {
@@ -119,27 +140,6 @@ function registerAdminCardRoutes({
         confirmation: 'DELETE_CARD',
       });
       res.json({ ok: true, data: result.card });
-    } catch (error) {
-      res.status(500).json({ ok: false, error: error.message });
-    }
-  });
-
-  /** 批量删除卡密 */
-  app.post('/api/admin/cards/batch-delete', requireAdminToken, requireAdminRole, (req, res) => {
-    try {
-      if (!requireDangerConfirmation(req, res, 'DELETE_CARDS_BATCH')) return;
-      const { codes } = req.body || {};
-      if (!Array.isArray(codes) || codes.length === 0) {
-        return res.status(400).json({ ok: false, error: '请提供要删除的卡密列表' });
-      }
-      const result = userStore.deleteCardsBatch(codes);
-      adminLogger.warn('批量删除卡密', {
-        admin: req.currentUser?.username || '',
-        deleteCount: codes.length,
-        deletedCount: result.deletedCount,
-        confirmation: 'DELETE_CARDS_BATCH',
-      });
-      res.json({ ok: true, data: result });
     } catch (error) {
       res.status(500).json({ ok: false, error: error.message });
     }

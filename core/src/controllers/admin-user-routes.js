@@ -171,6 +171,27 @@ function registerAdminUserRoutes({
     }
   });
 
+  /** 清理已过期的普通用户。注意：必须注册在 /:username 之前，否则会被参数路由抢先匹配成 username="clear-expired" */
+  app.post('/api/admin/users/clear-expired', requireAdminToken, requireAdminRole, (req, res) => {
+    try {
+      if (!requireDangerConfirmation(req, res, 'CLEAR_EXPIRED_USERS')) return;
+      const result = userStore.clearExpiredUsers();
+      if (result.ok && result.deletedCount > 0) {
+        for (const username of result.deletedUsers) {
+          invalidateAdminSessions(session => session.username === username);
+        }
+        adminLogger.info('清理到期用户', {
+          admin: req.currentUser?.username || '',
+          deletedCount: result.deletedCount,
+          deletedUsers: result.deletedUsers,
+        });
+      }
+      res.json({ ok: true, data: result });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
   /** 启停 / 改有效期（危险操作） */
   app.post('/api/admin/users/:username', requireAdminToken, requireAdminRole, (req, res) => {
     try {
@@ -323,27 +344,6 @@ function registerAdminUserRoutes({
         confirmation: 'DELETE_USER',
       });
       invalidateAdminSessions(session => session.username === username);
-      res.json({ ok: true, data: result });
-    } catch (error) {
-      res.status(500).json({ ok: false, error: error.message });
-    }
-  });
-
-  /** 清理已过期的普通用户 */
-  app.post('/api/admin/users/clear-expired', requireAdminToken, requireAdminRole, (req, res) => {
-    try {
-      if (!requireDangerConfirmation(req, res, 'CLEAR_EXPIRED_USERS')) return;
-      const result = userStore.clearExpiredUsers();
-      if (result.ok && result.deletedCount > 0) {
-        for (const username of result.deletedUsers) {
-          invalidateAdminSessions(session => session.username === username);
-        }
-        adminLogger.info('清理到期用户', {
-          admin: req.currentUser?.username || '',
-          deletedCount: result.deletedCount,
-          deletedUsers: result.deletedUsers,
-        });
-      }
       res.json({ ok: true, data: result });
     } catch (error) {
       res.status(500).json({ ok: false, error: error.message });
