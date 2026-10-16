@@ -232,10 +232,11 @@ export function useAdminSystemConfig(options: UseAdminSystemConfigOptions) {
     }
   }
 
-  async function loadSystemConfig() {
+  async function loadSystemConfig(readonly = false) {
     systemConfigLoading.value = true
     try {
-      const { data } = await api.get('/api/admin/system-config')
+      // 普通用户走只读公开端点（内容相同，仅不含运行时快照）
+      const { data } = await api.get(readonly ? '/api/system-config' : '/api/admin/system-config')
       if (data?.ok) {
         if (data.data.saved)
           localSystemConfig.value = { ...data.data.saved }

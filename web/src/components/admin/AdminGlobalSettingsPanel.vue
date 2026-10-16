@@ -20,6 +20,12 @@ const freeCardStock = ref(0)
 const freeCardLoaded = ref(false)
 const freeCardSaving = ref(false)
 
+// 默认版本号
+const defaultVersion = ref('')
+const defaultVersionSaved = ref('')
+const defaultVersionLoading = ref(false)
+const defaultVersionSaving = ref(false)
+
 const themeEntries = computed(() =>
   Object.entries(appStore.themes) as [Theme, typeof appStore.themes[Theme]][],
 )
@@ -111,9 +117,56 @@ async function toggleFreeCard(value: boolean | undefined) {
   }
 }
 
+async function loadDefaultVersion() {
+  defaultVersionLoading.value = true
+  try {
+    const res = await api.get('/api/admin/system-config')
+    if (res.data?.ok) {
+      const version = String(res.data.data?.saved?.clientVersion || res.data.data?.default?.clientVersion || '')
+      defaultVersion.value = version
+      defaultVersionSaved.value = version
+    }
+  }
+  catch {
+    toast.error('读取默认版本号失败')
+  }
+  finally {
+    defaultVersionLoading.value = false
+  }
+}
+
+async function saveDefaultVersion() {
+  const clientVersion = defaultVersion.value.trim()
+  if (!clientVersion) {
+    toast.error('请填写默认版本号')
+    return
+  }
+  if (clientVersion === defaultVersionSaved.value)
+    return
+  defaultVersionSaving.value = true
+  try {
+    const res = await api.post('/api/admin/default-version', { clientVersion, confirmed: true })
+    if (res.data?.ok) {
+      defaultVersionSaved.value = String(res.data.data?.saved?.clientVersion || clientVersion)
+      defaultVersion.value = defaultVersionSaved.value
+      toast.success('默认版本号已保存，并同步到所有账号')
+    }
+    else {
+      toast.error(res.data?.error || '保存失败')
+    }
+  }
+  catch (error: any) {
+    toast.error(error?.response?.data?.error || '保存失败')
+  }
+  finally {
+    defaultVersionSaving.value = false
+  }
+}
+
 onMounted(() => {
   load()
   loadFreeCardStatus()
+  loadDefaultVersion()
 })
 </script>
 
@@ -143,6 +196,43 @@ onMounted(() => {
         <span v-if="freeCardSaving" class="text-xs text-gray-400">保存中…</span>
         <span v-if="freeCardLoaded" class="text-xs text-gray-500 dark:text-gray-400">
           当前可领取库存：<b :class="freeCardStock > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'">{{ freeCardStock }}</b> 张免费加时卡
+        </span>
+      </div>
+    </div>
+
+    <!-- 默认版本号 -->
+    <div class="ui-card overflow-hidden rounded-xl p-4">
+      <div class="mb-1 flex items-center gap-2">
+        <div class="i-carbon-version text-lg" style="color: var(--theme-primary);" />
+        <h2 class="text-base text-gray-900 font-semibold dark:text-gray-100">
+          默认版本号
+        </h2>
+        <span v-if="defaultVersionLoading" class="text-xs text-gray-400">读取中…</span>
+      </div>
+      <p class="mb-3 text-xs text-gray-500 leading-relaxed dark:text-gray-400">
+        全局客户端版本号（形如 1.15.0.2_20261001）。保存后立即生效并同步到所有用户的账号连接，无需重启；设置错误可能导致账号无法连接，请确认后保存。
+      </p>
+      <div class="flex flex-wrap items-center gap-2">
+        <input
+          v-model="defaultVersion"
+          type="text"
+          placeholder="1.15.0.2_20261001"
+          class="h-9 w-56 border border-gray-300 rounded-lg bg-transparent px-3 text-sm font-mono outline-none focus:border-[var(--theme-primary)] dark:border-gray-600"
+          :disabled="defaultVersionSaving || defaultVersionLoading"
+          @keyup.enter="saveDefaultVersion"
+        >
+        <button
+          type="button"
+          class="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm text-white font-medium transition disabled:cursor-not-allowed disabled:opacity-50"
+          style="background: var(--theme-primary);"
+          :disabled="defaultVersionSaving || defaultVersionLoading || defaultVersion.trim() === defaultVersionSaved"
+          @click="saveDefaultVersion"
+        >
+          <div v-if="defaultVersionSaving" class="i-svg-spinners-90-ring-with-bg text-sm" />
+          {{ defaultVersionSaving ? '保存中…' : '保存' }}
+        </button>
+        <span v-if="defaultVersionSaved" class="text-xs text-gray-400">
+          当前生效：{{ defaultVersionSaved }}
         </span>
       </div>
     </div>

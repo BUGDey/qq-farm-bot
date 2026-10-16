@@ -19,9 +19,11 @@ const props = withDefaults(defineProps<{
   captureConfigTesting: boolean
   showHeading?: boolean
   showSave?: boolean
+  readonly?: boolean
 }>(), {
   showHeading: true,
   showSave: true,
+  readonly: false,
 })
 
 defineEmits<{
@@ -50,6 +52,7 @@ const localCaptureConfig = defineModel<CaptureConfig>('localCaptureConfig', { re
         <h4 class="mb-3 flex items-center gap-2 text-base text-gray-900 font-bold dark:text-gray-100">
           <div class="i-carbon-settings" />
           系统配置
+          <span v-if="readonly" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 font-normal dark:bg-gray-700 dark:text-gray-400">只读</span>
         </h4>
 
         <div class="grid gap-3 md:grid-cols-3">
@@ -83,7 +86,7 @@ const localCaptureConfig = defineModel<CaptureConfig>('localCaptureConfig', { re
           服务器地址与客户端版本通常需要成对调整，建议先在测试环境验证，再同步到生产使用。
         </div>
 
-        <div class="mb-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+        <div v-if="!readonly" class="mb-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
           保存后会立刻影响全局连接参数。若服务器地址、平台或系统版本不匹配，可能导致后续账号连接异常。
         </div>
 
@@ -94,6 +97,7 @@ const localCaptureConfig = defineModel<CaptureConfig>('localCaptureConfig', { re
             type="text"
             placeholder="wss://..."
             class="col-span-2"
+            :disabled="readonly"
           />
           <BaseInput
             v-model="localSystemConfig.clientVersion"
@@ -101,6 +105,7 @@ const localCaptureConfig = defineModel<CaptureConfig>('localCaptureConfig', { re
             type="text"
             placeholder="1.13.0.5_20260723"
             class="col-span-2"
+            :disabled="readonly"
           />
           <div class="flex flex-col gap-1.5">
             <label class="text-sm text-gray-700 font-medium dark:text-gray-300">平台</label>
@@ -108,12 +113,14 @@ const localCaptureConfig = defineModel<CaptureConfig>('localCaptureConfig', { re
               <button
                 v-for="option in platformOptions"
                 :key="option.value"
+                type="button"
                 class="rounded-lg px-3 py-1.5 text-sm transition-all"
                 :class="localSystemConfig.platform === option.value
                   ? 'text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
                 :style="localSystemConfig.platform === option.value ? { backgroundColor: 'var(--theme-primary)' } : {}"
-                @click="localSystemConfig.platform = option.value"
+                :disabled="readonly"
+                @click="!readonly && (localSystemConfig.platform = option.value)"
               >
                 {{ option.label }}
               </button>
@@ -125,12 +132,14 @@ const localCaptureConfig = defineModel<CaptureConfig>('localCaptureConfig', { re
               <button
                 v-for="option in osOptions"
                 :key="option.value"
+                type="button"
                 class="rounded-lg px-3 py-1.5 text-sm transition-all"
                 :class="localSystemConfig.os === option.value
                   ? 'text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
                 :style="localSystemConfig.os === option.value ? { backgroundColor: 'var(--theme-primary)' } : {}"
-                @click="localSystemConfig.os = option.value"
+                :disabled="readonly"
+                @click="!readonly && (localSystemConfig.os = option.value)"
               >
                 {{ option.label }}
               </button>
@@ -138,7 +147,7 @@ const localCaptureConfig = defineModel<CaptureConfig>('localCaptureConfig', { re
           </div>
         </div>
 
-        <div class="mt-3 flex justify-end gap-2">
+        <div v-if="!readonly" class="mt-3 flex justify-end gap-2">
           <BaseButton
             variant="secondary"
             size="sm"

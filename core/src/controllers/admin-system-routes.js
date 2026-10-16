@@ -92,6 +92,54 @@ function registerAdminSystemRoutes({
     },
   );
 
+  // 系统配置只读视图：任何登录用户可看（普通用户的「系统配置」tab 为只读展示，
+  // 修改仍需管理员走 /api/admin/system-config）。
+  app.get("/api/system-config", requireAdminToken, (req, res) => {
+    try {
+      res.json({
+        ok: true,
+        data: {
+          saved: store.getSystemConfig(),
+          default: getDefaultSystemConfig(),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // 默认版本号快捷设置（管理后台全局设置用）：只改 clientVersion，其余字段保持不变，
+  // 保存后立即同步到运行时（所有账号 worker 经配置同步拿到新版本号）。
+  const CLIENT_VERSION_RE = /^\d+(?:\.\d+){2,4}_\d{8}$/;
+  app.post(
+    "/api/admin/default-version",
+    requireAdminToken,
+    requireAdminRole,
+    (req, res) => {
+      try {
+        if (!requireDangerConfirmation(req, res, "UPDATE_SYSTEM_CONFIG")) return;
+        const clientVersion = String((req.body || {}).clientVersion || "").trim();
+        if (!clientVersion) {
+          return res.status(400).json({ ok: false, error: "请填写默认版本号" });
+        }
+        if (!CLIENT_VERSION_RE.test(clientVersion)) {
+          return res.status(400).json({ ok: false, error: "版本号格式不正确，应形如 1.15.0.2_20261001" });
+        }
+        const current = store.getSystemConfig() || getDefaultSystemConfig();
+        const saved = store.setSystemConfig({ ...current, clientVersion });
+        updateRuntimeConfig(saved);
+        logger.warn("更新默认版本号", {
+          admin: req.currentUser?.username || "",
+          clientVersion,
+          confirmation: "UPDATE_SYSTEM_CONFIG",
+        });
+        res.json({ ok: true, data: { saved, current: getRuntimeConfig() } });
+      } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
+      }
+    },
+  );
+
   app.get("/api/public/login-links", (req, res) => {
     try {
       res.json({ ok: true, data: store.getLoginLinks() });

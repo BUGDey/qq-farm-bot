@@ -84,8 +84,8 @@ const tabs = [
   { key: 'admin-panel', label: '管理后台', icon: 'i-carbon-user-admin' },
 ] as const
 
-/** 系统配置 tab 仅管理员可见；管理后台 tab 仅超级管理员可见（接口均为对应角色专属） */
-const ADMIN_ONLY_TABS: SettingsTabKey[] = ['system']
+/** 系统配置 tab 所有登录用户可见（普通用户只读）；管理后台 tab 仅超级管理员可见（接口均为对应角色专属） */
+const ADMIN_ONLY_TABS: SettingsTabKey[] = []
 const SUPER_ONLY_TABS: SettingsTabKey[] = ['admin-panel']
 const visibleTabs = computed(() =>
   tabs.filter((tab) => {
@@ -402,9 +402,11 @@ watch(currentAccountId, async () => {
 })
 
 onMounted(async () => {
-  // 系统配置/抓包配置接口仅管理员可用；普通用户加载会得到 403 并触发全局错误 toast
+  // 系统配置所有登录用户可读（普通用户走只读公开端点）；抓包配置仅管理员可用
   if (isAdminUser.value)
     await Promise.all([loadSystemConfig(), loadCaptureConfig()])
+  else
+    await loadSystemConfig(true)
   await fetchAccounts()
   await Promise.all([fetchDeviceProtocol(), fetchYYBConfig()])
   selectFirstAccountIfNeeded()
@@ -536,10 +538,10 @@ onMounted(async () => {
                 系统配置
               </h3>
               <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                统一管理连接参数、设备协议和抓包服务。
+                {{ isAdminUser ? '统一管理连接参数、设备协议和抓包服务。' : '全局连接参数由管理员统一维护，此处为只读展示。' }}
               </p>
             </div>
-            <BaseButton size="sm" :loading="anySystemSaving" @click="saveSystemSettings">
+            <BaseButton v-if="isAdminUser" size="sm" :loading="anySystemSaving" @click="saveSystemSettings">
               保存系统配置
             </BaseButton>
           </div>
@@ -547,6 +549,7 @@ onMounted(async () => {
           <ChangePasswordCard />
 
           <YYBConfigCard
+            v-if="isAdminUser"
             v-model:config="yybConfig"
             :loading="yybConfigLoading"
           />
@@ -557,6 +560,7 @@ onMounted(async () => {
             section="system"
             :show-heading="false"
             :show-save="false"
+            :readonly="!isAdminUser"
             :default-system-config="defaultSystemConfig"
             :platform-options="platformOptions"
             :os-options="osOptions"
@@ -567,44 +571,46 @@ onMounted(async () => {
             @test-capture="handleTestCaptureConfig"
           />
 
-          <DeviceProtocolCard
-            v-model:form="deviceProtocolForm"
-            v-model:selected-preset="selectedDevicePreset"
-            :loading="deviceProtocolLoading"
-            :saving="deviceProtocolSaving"
-            :preset-options="deviceProtocolPresetOptions"
-            :show-save="false"
-            @apply-preset="applyDevicePreset"
-            @random-mac="fillRandomDeviceMac"
-            @random-device-id="fillRandomDeviceId"
-            @random-imei="fillRandomImei"
-          />
+          <template v-if="isAdminUser">
+            <DeviceProtocolCard
+              v-model:form="deviceProtocolForm"
+              v-model:selected-preset="selectedDevicePreset"
+              :loading="deviceProtocolLoading"
+              :saving="deviceProtocolSaving"
+              :preset-options="deviceProtocolPresetOptions"
+              :show-save="false"
+              @apply-preset="applyDevicePreset"
+              @random-mac="fillRandomDeviceMac"
+              @random-device-id="fillRandomDeviceId"
+              @random-imei="fillRandomImei"
+            />
 
-          <AutoCodeRefreshCard
-            v-model:config="localAutoCodeRefresh"
-            :current-account-name="currentAccountName"
-            :current-account-id="currentAccountId"
-            :loading="settingsLoading"
-            :saving="autoCodeRefreshSaving"
-            :refreshing="autoCodeRefreshing"
-            @save="saveAutoCodeRefreshSettings"
-            @refresh="runAutoCodeRefreshNow"
-          />
+            <AutoCodeRefreshCard
+              v-model:config="localAutoCodeRefresh"
+              :current-account-name="currentAccountName"
+              :current-account-id="currentAccountId"
+              :loading="settingsLoading"
+              :saving="autoCodeRefreshSaving"
+              :refreshing="autoCodeRefreshing"
+              @save="saveAutoCodeRefreshSettings"
+              @refresh="runAutoCodeRefreshNow"
+            />
 
-          <AdminSystemPanel
-            v-model:local-system-config="localSystemConfig"
-            v-model:local-capture-config="localCaptureConfig"
-            section="capture"
-            :show-heading="false"
-            :show-save="false"
-            :default-system-config="defaultSystemConfig"
-            :platform-options="platformOptions"
-            :os-options="osOptions"
-            :system-config-saving="systemConfigSaving"
-            :capture-config-saving="captureConfigSaving"
-            :capture-config-testing="captureConfigTesting"
-            @test-capture="handleTestCaptureConfig"
-          />
+            <AdminSystemPanel
+              v-model:local-system-config="localSystemConfig"
+              v-model:local-capture-config="localCaptureConfig"
+              section="capture"
+              :show-heading="false"
+              :show-save="false"
+              :default-system-config="defaultSystemConfig"
+              :platform-options="platformOptions"
+              :os-options="osOptions"
+              :system-config-saving="systemConfigSaving"
+              :capture-config-saving="captureConfigSaving"
+              :capture-config-testing="captureConfigTesting"
+              @test-capture="handleTestCaptureConfig"
+            />
+          </template>
         </div>
 
         <!-- 我的账号：有效期 / 卡密续费 / 农场账号 / 核销记录（复用 Renewal 页面） -->

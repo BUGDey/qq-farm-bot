@@ -458,6 +458,44 @@ test('登录日志已记录', async () => {
   assert.ok(events.has('login_failed'));
 });
 
+test('普通用户可读系统配置（只读端点），管理员写接口仍拒绝', async () => {
+  const pub = await api('/api/system-config', { token: aliceToken });
+  assert.equal(pub.status, 200);
+  assert.ok(pub.body.data.default.clientVersion, '应返回默认版本号');
+  const denied = await api('/api/admin/system-config', { token: aliceToken });
+  assert.equal(denied.status, 403);
+});
+
+test('默认版本号快捷设置：格式校验 + 只改版本号其它字段保留', async () => {
+  const bad = await api('/api/admin/default-version', {
+    method: 'POST', token: adminToken, body: { clientVersion: 'abc', confirmed: true },
+  });
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error, /格式/);
+
+  const noConfirm = await api('/api/admin/default-version', {
+    method: 'POST', token: adminToken, body: { clientVersion: '1.15.0.2_20261001' },
+  });
+  assert.equal(noConfirm.status, 400);
+  assert.equal(noConfirm.body.requiredConfirmation, 'UPDATE_SYSTEM_CONFIG');
+
+  const before = await api('/api/admin/system-config', { token: adminToken });
+  const prev = before.body.data.saved || before.body.data.default;
+  const okRes = await api('/api/admin/default-version', {
+    method: 'POST', token: adminToken, body: { clientVersion: '9.9.9.9_20261231', confirmed: true },
+  });
+  assert.equal(okRes.status, 200, JSON.stringify(okRes.body));
+  assert.equal(okRes.body.data.saved.clientVersion, '9.9.9.9_20261231');
+  assert.equal(okRes.body.data.saved.serverUrl, prev.serverUrl, '只改版本号不应影响服务器地址');
+
+  // 还原，避免影响其他用例
+  await api('/api/admin/default-version', {
+    method: 'POST',
+    token: adminToken,
+    body: { clientVersion: prev.clientVersion || '1.15.0.2_20261001', confirmed: true },
+  });
+});
+
 test('退出登录后 token 失效', async () => {
   await api('/api/logout', { method: 'POST', token: bobToken });
   const res = await api('/api/user/me', { token: bobToken });
