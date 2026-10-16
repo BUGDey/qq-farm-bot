@@ -642,10 +642,11 @@ onUnmounted(() => {
 }
 .drink-shelf {
   position: absolute;
-  top: 24.5%;
+  /* 下移到招牌（17.6%+8.2%=25.8%）之下，不再压住招牌底部的营业额一行 */
+  top: 26.6%;
   left: 9%;
-  /* 右边界让开右侧按钮列（shop-actions 宽 15% + 右 1%），避免饮品格被按钮压住 */
-  right: 17%;
+  /* 右边界让开右侧按钮列（shop-actions 宽 18% + 右 0.5%，左缘在 81.5%），避免饮品格被按钮压住 */
+  right: 19.5%;
   height: 8.2%;
   display: flex;
   gap: 0.8cqw;
@@ -699,7 +700,7 @@ onUnmounted(() => {
 }
 .selling {
   position: absolute;
-  top: 33.2%;
+  top: 35.4%;
   left: 20%;
   right: 20%;
   font-size: 2.9cqw;
@@ -711,7 +712,7 @@ onUnmounted(() => {
 }
 .cashier {
   position: absolute;
-  top: 41.1%;
+  top: 43.3%;
   left: 6%;
   width: 16%;
   display: flex;
@@ -754,7 +755,7 @@ onUnmounted(() => {
 }
 .employees {
   position: absolute;
-  top: 38.7%;
+  top: 40.9%;
   left: 25%;
   right: 17%;
   height: 23.8%;
@@ -841,7 +842,7 @@ onUnmounted(() => {
 }
 .shop-actions {
   position: absolute;
-  top: 28.4%;
+  top: 30.6%;
   right: 0.5%;
   /* 15% 宽放不下「快乐不独享」5 个字（nowrap），文字会超出画布右缘被裁掉 */
   width: 18%;
@@ -875,7 +876,8 @@ onUnmounted(() => {
 }
 .make.gold-button {
   position: absolute;
-  top: 69.7%;
+  /* 利用按钮与底部 tab 栏之间的空白带（tabs 从 90% 开始），整体下移给上方店铺区腾位 */
+  top: 73.9%;
   left: 33%;
   width: 41%;
   height: 8.2%;
