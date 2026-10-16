@@ -269,16 +269,22 @@ test('普通用户不能访问他人的农场账号', async () => {
     body: { name: 'bob的农场', platform: 'qq', uin: '20001' },
   });
 
-  // 账号列表对所有登录用户可见（普通用户对配置只读），alice 能看到 bob 的账号但无法操作
+  // 普通用户只能看到自己添加的账号（他人账号既不可见也不可操作）
   const list = await api('/api/accounts', { token: aliceToken });
   const listAccounts = list.body.data.accounts || [];
   const owners = new Set(listAccounts.map(item => item.username));
   assert.ok(owners.has('alice'));
-  assert.ok(owners.has('bob'));
+  assert.ok(!owners.has('bob'), 'alice 不应看到 bob 的账号');
   // 返回结果带归一化的创建者字段
   assert.ok(listAccounts.every(item => item.owner));
 
-  // alice 不能操作 bob 的账号（列表是全量的，按归属过滤出 bob 的账号再尝试删除）
+  // 管理员仍可见全部账号
+  const adminList = await api('/api/accounts', { token: adminToken });
+  const adminOwners = new Set((adminList.body.data.accounts || []).map(item => item.username));
+  assert.ok(adminOwners.has('alice'));
+  assert.ok(adminOwners.has('bob'));
+
+  // alice 不能操作 bob 的账号（bob 的账号对 alice 不可见，直接越权删除也被接口层拦下）
   const bobAccounts = await api('/api/accounts', { token: bobToken });
   const bobAccount = (bobAccounts.body.data.accounts || []).find(item => item.username === 'bob');
   const del = await api(`/api/accounts/${bobAccount.id}`, { method: 'DELETE', token: aliceToken });

@@ -188,6 +188,31 @@ test('核销流水被记录', () => {
   assert.equal(list.redemptions[0].code, card.code);
 });
 
+test('删号后同名重注册：核销流水只保留新生命周期', () => {
+  const card1 = makeTimeCard(1, '首充卡');
+  assert.ok(userStore.registerUser('recycle', 'Rec@12345', card1.code).ok);
+  assert.equal(userStore.getRedemptions({ username: 'recycle' }).total, 1);
+
+  // 删号即清空该用户的核销流水
+  assert.ok(userStore.deleteUser('recycle').ok);
+  assert.equal(userStore.getRedemptions({ username: 'recycle' }).total, 0, '删号应清空其核销流水');
+
+  // 同名重注册后只有新记录
+  const card2 = makeTimeCard(2, '重注册卡');
+  assert.ok(userStore.registerUser('recycle', 'Rec@12345', card2.code).ok);
+  const list = userStore.getRedemptions({ username: 'recycle' });
+  assert.equal(list.total, 1);
+  assert.equal(list.redemptions[0].code, card2.code);
+});
+
+test('getRedemptions 支持 since 过滤（隐藏当前账号生命周期之前的残留记录）', () => {
+  const card = makeTimeCard(1, 'since卡');
+  assert.ok(userStore.registerUser('sinceuser', 'Sin@12345', card.code).ok);
+  const nowTs = Date.now();
+  assert.equal(userStore.getRedemptions({ username: 'sinceuser', since: nowTs - 60_000 }).total, 1);
+  assert.equal(userStore.getRedemptions({ username: 'sinceuser', since: nowTs + 60_000 }).total, 0);
+});
+
 test('管理员改有效期与启停生效', () => {
   const card = makeTimeCard(1);
   userStore.registerUser('mia', 'Mia@123456', card.code);

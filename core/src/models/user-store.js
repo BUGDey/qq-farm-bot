@@ -489,15 +489,30 @@ function appendRedemption(payload) {
   return record;
 }
 
-function getRedemptions({ username = '', code = '', limit = 100, offset = 0 } = {}) {
+function getRedemptions({ username = '', code = '', since = 0, limit = 100, offset = 0 } = {}) {
   const state = loadRedemptions();
   let list = state.redemptions.slice().reverse();
   if (username) list = list.filter(item => item.username === username);
   if (code) list = list.filter(item => item.code === code);
+  // since：只保留该时间点之后的流水（用于「同名删号重注册」场景，隐藏上一任账号的历史记录）
+  const sinceTs = toInt(since, 0);
+  if (sinceTs > 0) list = list.filter(item => toInt(item.at, 0) >= sinceTs);
   const total = list.length;
   const size = Math.min(Math.max(toInt(limit, 100), 1), 500);
   const start = Math.max(toInt(offset, 0), 0);
   return { redemptions: list.slice(start, start + size), total };
+}
+
+/** 清除某用户的全部核销流水（删号/同名重注册时调用，避免新账号看到上一任的记录） */
+function purgeRedemptionsForUser(username) {
+  const target = String(username || '').trim();
+  if (!target) return;
+  const state = loadRedemptions();
+  const kept = state.redemptions.filter(item => item.username !== target);
+  if (kept.length !== state.redemptions.length) {
+    state.redemptions = kept;
+    saveRedemptions(state);
+  }
 }
 
 // ==================== 登录限流 ====================
@@ -880,6 +895,9 @@ function registerUser(username, password, cardCode, options = {}) {
   saveCards(cards);
   clearAttempts(user.username, options.ip);
 
+  // 同名删号重注册：写入新流水前清掉上一任同名账号的残留记录（双保险，deleteUser 也会清）
+  purgeRedemptionsForUser(user.username);
+
   appendRedemption({
     at: timestamp,
     code: card.code,
@@ -1180,6 +1198,8 @@ function deleteUser(username, { force = false } = {}) {
   }
   users.splice(index, 1);
   saveUsers(users);
+  // 同步清除该用户的核销流水，避免同名重注册后新账号看到旧记录
+  purgeRedemptionsForUser(user.username);
   return { ok: true, deletedUsername: user.username };
 }
 
@@ -1720,6 +1740,7 @@ module.exports = {
 
   // 核销流水 / 领取
   getRedemptions,
+  purgeRedemptionsForUser,
   getCardClaimStatus,
   setCardClaimStatus,
   claimCardByUA,

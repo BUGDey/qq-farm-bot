@@ -309,12 +309,14 @@ function registerAdminAuthRoutes({
     }
   });
 
-  /** 我的核销记录 */
+  /** 我的核销记录（只含当前账号生命周期内的记录：同名删号重注册前的旧记录不显示） */
   app.get('/api/user/redemptions', requireAdminToken, (req, res) => {
     const username = req.currentUser?.username;
     if (!username) return res.status(401).json({ ok: false, error: '未登录' });
     const limit = Number.parseInt(req.query.limit) || 50;
-    const result = userStore.getRedemptions({ username, limit });
+    const me = userStore.getUserByName(username);
+    const since = me && me.createdAt ? Number(me.createdAt) || 0 : 0;
+    const result = userStore.getRedemptions({ username, limit, since });
     return res.json({ ok: true, data: result });
   });
 

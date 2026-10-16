@@ -91,19 +91,26 @@ function registerAdminAccountRoutes({
       const currentUser = req.currentUser;
       let data;
       if (currentUser) {
-        // 所有登录用户都能看到全部账号（普通用户对配置只读，修改入口由前端隐藏 + 接口层归属校验兜底）。
+        // 普通用户只能看到自己添加（owner）的账号；管理员/超管可见全部。
         // owner 为归一化后的创建者/绑定用户字段（优先 owner，兼容旧数据回落 username）。
         const accounts = provider.getAccounts();
-        data =
-          accounts && Array.isArray(accounts.accounts)
-            ? {
-                ...accounts,
-                accounts: accounts.accounts.map((account) => ({
-                  ...account,
-                  owner: getAccountOwner(account),
-                })),
-              }
-            : accounts;
+        const allAccounts = accounts && Array.isArray(accounts.accounts) ? accounts.accounts : null;
+        if (allAccounts) {
+          const visible = isAdminUser(currentUser)
+            ? allAccounts
+            : allAccounts.filter(
+                (account) => getAccountOwner(account) === String(currentUser.username || "").trim(),
+              );
+          data = {
+            ...accounts,
+            accounts: visible.map((account) => ({
+              ...account,
+              owner: getAccountOwner(account),
+            })),
+          };
+        } else {
+          data = accounts;
+        }
       } else {
         data = { accounts: [], nextId: 1 };
       }
