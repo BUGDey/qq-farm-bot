@@ -920,10 +920,20 @@ async function runStarActivityAutoClaims() {
                         if (slot == null) continue;
                         const options = getAutomation() || {};
                         params = { slotIndex: slot, autoSelect: true, ...require('../services/activity-milk-tea').normalizeHireOptions({
-                            durationId: options.milk_tea_hire_duration, talentId: options.milk_tea_hire_talent,
+                            durationId: options.milk_tea_hire_duration, talentId: options.milk_tea_hire_talent, fallbackTalentId: options.milk_tea_hire_fallback_talent,
                         }) };
                     }
                     if (action === 'cashier' && !state.shop.pending_rewards.some(x => Number(x.count) > 0)) continue;
+                    if (action === 'interact') {
+                        // 「我的工作」自动选择工作收益：好友雇佣产生的在班班次才可互动；
+                        // 班次互动完成后（interact_done 或次数用尽）本轮跳过，下一班被雇佣后自动继续。
+                        const shift = state.work?.my_shift;
+                        if (!shift || state.work?.interact_done || Number(shift.end_at) <= state.serverTime || Number(shift.interact_count) >= Number(shift.interact_limit)) continue;
+                        const options = getAutomation() || {};
+                        const type = [1, 2, 3, 4, 5].includes(Number(options.milk_tea_work_interact_type)) ? Number(options.milk_tea_work_interact_type) : 2;
+                        if (!state.interactions?.some(v => Number(v.interaction_id) === type && v.ready)) continue;
+                        params = { autoSelect: true, interactionType: type };
+                    }
                     if (action === 'craft' && !state.recipes.some(recipe => recipe.unlocked && recipe.fruits?.length)) continue;
                     if (action === 'boost' && !state.balances.some(item => String(item.id) === String(state.shop.sales_item_id) && Number(item.count) > 0)) continue;
                     if (action === 'wages' && !state.summary.has_unclaimed_wage) continue;

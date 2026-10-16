@@ -11,7 +11,7 @@ function normalizeWireMaps(value) {
 }
 const WINDOW = { startTime: 1792029600, settleTime: 1794671999, endTime: 1794844799 };
 const ACTIONS = { create: [53, 'create_shop'], rename: [54, 'rename_shop'], shop: [55, 'get_shop'], hireList: [56, 'get_hire_list'], hire: [57, 'hire'], workshop: [58, 'get_workshop'], cashier: [59, 'claim_cashier'], boost: [60, 'boost'], upgrade: [61, 'upgrade'], craft: [62, 'craft'], work: [63, 'get_work_page'], wages: [64, 'claim_wages'], interact: [65, 'interact'], rank: [66, 'get_rank'], sales: [67, 'get_sales_log'], hireDisabled: [68, 'set_hire_disable'] };
-const AUTO_ACTIONS = { milk_tea_cashier: 'cashier', milk_tea_wages: 'wages', milk_tea_upgrade: 'upgrade', milk_tea_craft: 'craft', milk_tea_boost: 'boost', milk_tea_hire: 'hire', milk_tea_seed_buy: 'buy', milk_tea_share_daily: 'shareDaily', milk_tea_share_rewards: 'shareRewards', milk_tea_fund_rewards: 'fundRewards' };
+const AUTO_ACTIONS = { milk_tea_cashier: 'cashier', milk_tea_wages: 'wages', milk_tea_upgrade: 'upgrade', milk_tea_craft: 'craft', milk_tea_boost: 'boost', milk_tea_hire: 'hire', milk_tea_seed_buy: 'buy', milk_tea_share_daily: 'shareDaily', milk_tea_share_rewards: 'shareRewards', milk_tea_fund_rewards: 'fundRewards', milk_tea_work_interact: 'interact' };
 function phase(now, window = WINDOW) { return now < window.startTime ? 'upcoming' : now > window.endTime ? 'ended' : now >= window.settleTime ? 'settling' : 'business'; }
 // Official S4ShopUI: available, sold out, locked; then configured order.
 function compareShopGoods(a, b) {
@@ -23,17 +23,30 @@ function normalizeHireOptions(input = {}) {
   return {
     durationId: [1, 2, 3].includes(Number(input.durationId)) ? Number(input.durationId) : 1,
     talentId: [0, 9001, 9002, 9003, 9004].includes(Number(input.talentId)) ? Number(input.talentId) : 0,
+    // 备选类型：undefined/null 表示未配置（保持旧的兜底行为），0 表示任意好友。
+    fallbackTalentId: input.fallbackTalentId == null ? null
+      : [0, 9001, 9002, 9003, 9004].includes(Number(input.fallbackTalentId)) ? Number(input.fallbackTalentId) : null,
   };
 }
 function selectHireCandidate(candidates, input, now) {
-  const { talentId } = normalizeHireOptions(input);
+  const { talentId, fallbackTalentId } = normalizeHireOptions(input);
   const idle = entry => entry?.friend?.gid && Number(entry.state) === 0
     && Number(entry.state_until_at || 0) <= now && Number(entry.rehire_available_at || 0) <= now;
   const friends = (candidates.friends || []).filter(entry => !entry.is_robot && idle(entry));
   const robots = (candidates.robots || []).filter(idle);
-  if (talentId === 9004) return robots[0];
-  return friends.find(entry => !talentId || Number(entry.talent_id) === talentId)
-    || friends[0] || robots[0];
+  // 严格按类型挑：实习员工只看机器人，天赋类型只匹配同天赋好友，0 为任意好友。
+  const pick = id => id === 9004 ? robots[0] : id ? friends.find(entry => Number(entry.talent_id) === id) : friends[0];
+  // 首选类型没有可雇佣好友时自动改用备选类型；备选落空后：
+  // - 未配置备选 → 保持旧兜底（天赋/任意好友：任意好友 → 实习员工；实习员工：严格不兜底）
+  // - 备选为任意好友 → 兜底实习员工
+  // - 备选为具体类型 → 用户明确限定了范围，不再兜底，返回空让上层跳过
+  let target = pick(talentId);
+  if (!target && fallbackTalentId != null) target = pick(fallbackTalentId);
+  if (!target) {
+    if (fallbackTalentId == null) target = talentId === 9004 ? undefined : friends[0] || robots[0];
+    else if (fallbackTalentId === 0) target = robots[0];
+  }
+  return target;
 }
 function createMilkTeaService({ types, sendMsgAsync, getBag, getBagItems, getServerTimeSec, itemDto, getUserState = () => ({}), log = require('../utils/utils').log }) {
   const fail = message => { throw businessError('MILK_TEA_UNAVAILABLE', message); };
@@ -145,8 +158,17 @@ function createMilkTeaService({ types, sendMsgAsync, getBag, getBagItems, getSer
       params = { hires: [{ slot_index: slot, duration_id: duration.duration_id, target_gid: target.friend.gid }] };
     }
     if (action === 'interact') {
-      const shift = state.work.my_shift; if (!shift || Number(shift.end_at) <= now || state.work.interact_done || Number(shift.interact_count) >= Number(shift.interact_limit)) fail('当前班次不可互动');
-      const type = Number(input.interactionType); if (!catalog.MilkTeaInteractionType.some(x => x.interaction_id === type)) fail('互动类型无效');params = { target_gid: shift.employer.gid, interaction_type: type };
+      const shift = state.work.my_shift;
+      const auto = input.autoSelect === true;
+      if (!shift || Number(shift.end_at) <= now || state.work.interact_done || Number(shift.interact_count) >= Number(shift.interact_limit)) {
+        if (auto) return { ok: true, skipped: true, reason: '当前班次不可互动' };
+        fail('当前班次不可互动');
+      }
+      const type = Number(input.interactionType); if (!catalog.MilkTeaInteractionType.some(x => x.interaction_id === type)) fail('互动类型无效');
+      // 自动化模式下互动事项数据不完整时跳过等下一轮，不报错；手动面板保持失败提示
+      if (auto && !list(state.interactions).some(x => Number(x.interaction_id) === type && x.ready)) return { ok: true, skipped: true, reason: '互动数据不完整，等下一轮刷新' };
+      detail = { interactionType: type, interactionName: catalog.MilkTeaInteractionType.find(x => x.interaction_id === type)?.name || '', employer: String(shift.employer?.name || '') };
+      params = { target_gid: shift.employer.gid, interaction_type: type };
     }
     if (action === 'rank' || action === 'sales' || action === 'hireList' || action === 'shop' || action === 'work' || action === 'workshop') fail('只读动作请使用查询接口');
     if (action === 'hireDisabled') params = { hire_disabled: input.disabled === true };
@@ -189,7 +211,8 @@ function createMilkTeaService({ types, sendMsgAsync, getBag, getBagItems, getSer
         skippedLogs.delete(action);
         const detail = result.detail || {};
         const hire = action === 'hire' ? `：${detail.employeeType}${detail.employeeName ? `「${detail.employeeName}」` : ''}，${catalog.MilkTeaTalentConfig.find(x => x.talent_id === detail.talentId)?.talent_name || '未知类型'}，${detail.hours}小时，奶茶券${detail.wage}${detail.fallbackUsed ? '（已兜底）' : ''}` : '';
-        log('活动', `奶茶热销中${label}完成${hire}`, { ...meta, result: 'success', ...detail });
+        const workInteract = action === 'interact' && detail.interactionName ? `：${detail.interactionName}${detail.employer ? `（在${detail.employer}的店）` : ''}` : '';
+        log('活动', `奶茶热销中${label}完成${hire}${workInteract}`, { ...meta, result: 'success', ...detail });
       }
       return result;
     } catch (error) {

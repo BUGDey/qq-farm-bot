@@ -53,6 +53,7 @@ const milkTeaSettings = computed(() => [
         { key: 'milk_tea_craft', label: '自动制作奶茶', detail: '加工全部已解锁配方对应的果实' },
         { key: 'milk_tea_boost', label: '自动使用宣传喇叭', detail: '使用背包中已有的宣传喇叭' },
         { key: 'milk_tea_hire', label: '自动雇佣员工', detail: '按列表顺序选择首个符合类型的空闲好友' },
+        { key: 'milk_tea_work_interact', label: '自动选择工作收益', detail: '好友雇佣你后，检测到可互动时自动选择该工作收益；完成后下一班自动继续' },
         { key: 'milk_tea_seed_buy', label: '自动购买已解锁种子', detail: '不使用钻石' },
       ]
     : []),
@@ -82,7 +83,7 @@ const activityKeys = computed(() => [
   'solar_calendar_claim_events',
   'solar_calendar_claim_seasons',
   ...(showMilkTeaActivity.value ? ['mall_coupon_gift_buy', 'milk_tea_cashier', 'milk_tea_wages', 'milk_tea_share_daily', 'milk_tea_share_rewards', 'milk_tea_fund_rewards'] : []),
-  ...(showMilkTeaBusiness.value ? ['milk_tea_upgrade', 'milk_tea_craft', 'milk_tea_boost', 'milk_tea_hire', 'milk_tea_seed_buy'] : []),
+  ...(showMilkTeaBusiness.value ? ['milk_tea_upgrade', 'milk_tea_craft', 'milk_tea_boost', 'milk_tea_hire', 'milk_tea_work_interact', 'milk_tea_seed_buy'] : []),
   ...(showRainPoemActivity.value
     ? ['rain_poem_bottle_buy', 'rain_poem_weather_collect', 'rain_poem_summon_use', 'rain_poem_prank_use', 'rain_poem_research_unlock']
     : []),
@@ -749,20 +750,36 @@ watch(() => props.currentAccountId, loadQixiFriends)
                     <BaseSwitch v-model="automation.automation[setting.key]" class="shrink-0" :aria-labelledby="`milk-tea-setting-${setting.key}`" />
                   </div>
                 </div>
-                <div v-if="showMilkTeaBusiness" class="mt-3 grid gap-3 sm:grid-cols-2">
+                <div v-if="showMilkTeaBusiness" class="mt-3 grid gap-3 sm:grid-cols-3">
                   <label class="text-sm">雇佣时长
                     <select v-model.number="automation.automation.milk_tea_hire_duration" class="mt-1 w-full rounded border p-2 dark:bg-gray-900">
                       <option :value="1">4 小时</option><option :value="2">12 小时</option><option :value="3">24 小时</option>
                     </select>
                   </label>
-                  <label class="text-sm">雇佣类型
+                  <label class="text-sm">员工类型
                     <select v-model.number="automation.automation.milk_tea_hire_talent" class="mt-1 w-full rounded border p-2 dark:bg-gray-900">
                       <option :value="0">任意好友</option><option :value="9001">金牌销售</option><option :value="9002">金牌宣传</option><option :value="9003">金牌服务</option><option :value="9004">实习员工（默默搬砖）</option>
                     </select>
                   </label>
-
+                  <label class="text-sm">备选类型
+                    <select v-model.number="automation.automation.milk_tea_hire_fallback_talent" class="mt-1 w-full rounded border p-2 dark:bg-gray-900">
+                      <option :value="0">任意好友</option><option :value="9001">金牌销售</option><option :value="9002">金牌宣传</option><option :value="9003">金牌服务</option><option :value="9004">实习员工（默默搬砖）</option>
+                    </select>
+                  </label>
                 </div>
-                <p v-if="showMilkTeaBusiness" class="mt-2 text-xs text-gray-500">指定类型无空闲好友时，依次选择其他空闲好友、实习员工；均不可用则等待下次检查。时长或奶茶券不足时跳过。</p>
+                <p v-if="showMilkTeaBusiness" class="mt-2 text-xs text-gray-500">首选类型没有可雇佣好友时，自动改用备选类型。备选也不可用则等待下次检查。时长或奶茶券不足时跳过。</p>
+                <div v-if="showMilkTeaBusiness" class="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label class="text-sm">工作收益
+                    <select v-model.number="automation.automation.milk_tea_work_interact_type" class="mt-1 w-full rounded border p-2 dark:bg-gray-900">
+                      <option :value="1">宣传推广（立即售出奶茶）</option>
+                      <option :value="2">花式摇杯（工资 30% 奖金，无失败风险）</option>
+                      <option :value="3">招牌试饮（随机高级奶茶）</option>
+                      <option :value="4">划水摸鱼（40% 得喇叭 / 60% 工资减半）</option>
+                      <option :value="5">申请涨薪（60% 翻倍 / 40% 减半）</option>
+                    </select>
+                  </label>
+                </div>
+                <p v-if="showMilkTeaBusiness" class="mt-2 text-xs text-gray-500">开启「自动选择工作收益」后，被好友雇佣的班次内会自动完成一次所选互动；班次结束领取工资后，下一次被雇佣时自动继续。</p>
               </section>
               <section v-if="showPetDiaryActivity" class="border border-violet-100 rounded-lg p-4 space-y-3 dark:border-violet-900/40">
                 <div>

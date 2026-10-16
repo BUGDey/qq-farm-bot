@@ -34,7 +34,7 @@ test('business and settlement boundaries fail closed', () => {
   assert.equal(phase(WINDOW.endTime), 'settling');
   assert.equal(phase(WINDOW.endTime + 1), 'ended');
 });
-function setup({ now = WINDOW.startTime + 100, diamond = false, unlocked = true, salesLog, panels = false, fundUnlocked = false, fundState = 1, inventory = [{ id: 1001, count: 1000000 }], account = {}, hireList, hireSuccess = true } = {}) {
+function setup({ now = WINDOW.startTime + 100, diamond = false, unlocked = true, salesLog, panels = false, fundUnlocked = false, fundState = 1, inventory = [{ id: 1001, count: 1000000 }], account = {}, hireList, hireSuccess = true, workShift } = {}) {
   const calls = [];
   const logs = [];
   const group = { group: { head: { id: '2026110100' }, children: [{ head: { id: '2026110101', start_time: WINDOW.startTime, end_time: WINDOW.endTime, settle_start_time: WINDOW.settleTime }, milk_tea: { summary: { shop_open_at: WINDOW.startTime, level: 1 } } }, { head: { id: '2026110102' }, shop: { goods: [{ id: 301, name: '森野甜莓种子', item: [{ id: 20525, count: 1 }], cost: [{ id: diamond ? 1004 : 1001, count: 10000 }], purchase_limit: 108, purchased_count: 0, category_tag: 'seed', cond_hints: [{ satisfied: unlocked, target: 3 }] }] } }] } };
@@ -42,10 +42,11 @@ function setup({ now = WINDOW.startTime + 100, diamond = false, unlocked = true,
     { head: { id: '2026110104' }, share_reward: { summary: { current_score: 10, milestones: [{ tier_id: 1, threshold: 10, state: 2, rewards: [{ id: '80014', count: '1' }] }] } } },
     { head: { id: '2026110103' }, growth_fund: { unlocked: fundUnlocked, unlock_cost: [{ id: '1004', count: '360' }], tiers: [{ tier_id: 1, state: fundState, conditions: [{ type: 'milk_tea_store_level', current_value: 1, target_value: 1, reached: true }], reward: [{ id: '29005', count: '2' }] }] } }
   );
+  const workPage = workShift === undefined ? fixtures[206] : { ...fixtures[206], milk_tea_get_work_page: { ...fixtures[206].milk_tea_get_work_page, my_shift: workShift, interact_done: workShift?.interact_done === true } };
   const service = createMilkTeaService({ log: (...args) => logs.push(args), types, getServerTimeSec: () => now, getUserState: () => account, log: (...args) => logs.push(args), getBag: async () => inventory, getBagItems: x => x, itemDto: x => ({ ...x, name: '夹具物品' }), sendMsgAsync: async (_, method, bytes) => {
     if (method === 'GetGroup') return { body: types.MilkTeaGetGroupReply.encode(types.MilkTeaGetGroupReply.fromObject(group)).finish() };
     const req = types.MilkTeaOperateRequest.toObject(types.MilkTeaOperateRequest.decode(bytes), { longs: String });calls.push(req);
-    const fixture = Number(req.cmd) === 56 && hireList ? { id: req.id, cmd: req.cmd, milk_tea_get_hire_list: hireList } : Number(req.cmd) === 57 ? { id: req.id, cmd: req.cmd, milk_tea_hire: { results: [{ success: hireSuccess }] } } : Number(req.cmd) === 55 ? fixtures[282] : Number(req.cmd) === 58 ? fixtures[283] : Number(req.cmd) === 63 ? fixtures[206] : Number(req.cmd) === 67 && salesLog ? { id: req.id, cmd: req.cmd, milk_tea_get_sales_log: salesLog } : { id: req.id, cmd: req.cmd };
+    const fixture = Number(req.cmd) === 56 && hireList ? { id: req.id, cmd: req.cmd, milk_tea_get_hire_list: hireList } : Number(req.cmd) === 57 ? { id: req.id, cmd: req.cmd, milk_tea_hire: { results: [{ success: hireSuccess }] } } : Number(req.cmd) === 55 ? fixtures[282] : Number(req.cmd) === 58 ? fixtures[283] : Number(req.cmd) === 63 ? workPage : Number(req.cmd) === 65 ? { id: req.id, cmd: req.cmd, milk_tea_interact: {} } : Number(req.cmd) === 67 && salesLog ? { id: req.id, cmd: req.cmd, milk_tea_get_sales_log: salesLog } : { id: req.id, cmd: req.cmd };
     const response = hireList && Number(req.cmd) === 55 ? { ...fixture, milk_tea_get_shop: { shop: { ...fixture.milk_tea_get_shop.shop, slots: [] } } } : fixture;
     return { body: types.MilkTeaOperateReply.encode(types.MilkTeaOperateReply.fromObject(response)).finish() };
   } });return { service, calls, logs };
@@ -232,8 +233,8 @@ test('hire chooses first matching idle friend, then other idle friends, then int
   candidates.robots[0].state = 1;
   assert.equal(selectHireCandidate(candidates, { talentId: 9001 }, 100), undefined);
   assert.equal(selectHireCandidate({}, {}, 100), undefined);
-  assert.deepEqual(normalizeHireOptions({ durationId: 'bad', talentId: 123 }), { durationId: 1, talentId: 0 });
-  assert.deepEqual(normalizeHireOptions({ durationId: '3', talentId: '9001' }), { durationId: 3, talentId: 9001 });
+  assert.deepEqual(normalizeHireOptions({ durationId: 'bad', talentId: 123 }), { durationId: 1, talentId: 0, fallbackTalentId: null });
+  assert.deepEqual(normalizeHireOptions({ durationId: '3', talentId: '9001' }), { durationId: 3, talentId: 9001, fallbackTalentId: null });
 });
 test('automatic hire uses selected duration and candidate in the shared validated action', async () => {
   for (const durationId of [1, 2, 3]) {
@@ -287,4 +288,70 @@ test('milk tea logs localized outcomes, hire fallback and skips without dumping 
   await assert.rejects(rejected.service.operateMilkTea('hire', { autoSelect: true }));
   assert.equal(rejected.logs[0][2].result, 'error');
   assert.match(rejected.logs[0][1], /奶茶券不足/);
+});
+
+test('hire falls back to the configured backup talent before any-friend or intern defaults', () => {
+  const seller = employee(11, 9001), promoter = employee(12, 9002), robot = employee(13, 9004, { is_robot: true });
+  const candidates = { friends: [seller, promoter], robots: [robot] };
+  // 首选金牌服务落空 → 备选金牌宣传命中
+  assert.equal(selectHireCandidate(candidates, { talentId: 9003, fallbackTalentId: 9002 }, 100), promoter);
+  // 备选也是具体类型且落空（机器人忙碌、无金牌服务好友）→ 不兜底任意好友，返回空让上层跳过
+  const busyRobots = { friends: [seller, promoter], robots: [employee(13, 9004, { is_robot: true, state: 1 })] };
+  assert.equal(selectHireCandidate(busyRobots, { talentId: 9004, fallbackTalentId: 9003 }, 100), undefined);
+  // 备选任意好友 → 首选落空后取任意空闲好友
+  assert.equal(selectHireCandidate(candidates, { talentId: 9003, fallbackTalentId: 0 }, 100), seller);
+  // 备选实习员工 → 首选落空后取机器人
+  assert.equal(selectHireCandidate(candidates, { talentId: 9003, fallbackTalentId: 9004 }, 100), robot);
+  // 未配置备选 → 保持旧兜底：任意好友 → 实习员工
+  assert.equal(selectHireCandidate(candidates, { talentId: 9003 }, 100), seller);
+  assert.equal(selectHireCandidate({ friends: [], robots: [robot] }, { talentId: 9004 }, 100), robot);
+  assert.equal(selectHireCandidate({ friends: [seller], robots: [] }, { talentId: 9004 }, 100), undefined);
+  // 非法备选值回落为未配置
+  assert.deepEqual(normalizeHireOptions({ fallbackTalentId: 'oops' }), { durationId: 1, talentId: 0, fallbackTalentId: null });
+  assert.equal(normalizeHireOptions({ fallbackTalentId: '9001' }).fallbackTalentId, 9001);
+});
+
+const workShiftFixture = (extra = {}) => ({ employer: { gid: '777', name: '老板' }, shop_name: '夹具奶茶店', shift_id: '42', talent_id: 9001, begin_at: WINDOW.startTime, end_at: WINDOW.startTime + 14400, interact_count: 0, interact_limit: 1, ...extra });
+test('automatic work interact picks the configured reward and skips when the shift is not interactable', async () => {
+  // 在班且未互动 → 发送 65 号互动指令，默认花式摇杯（2）
+  const active = setup({ workShift: workShiftFixture() });
+  const result = await active.service.operateMilkTea('interact', { autoSelect: true, interactionType: 2 });
+  assert.equal(result.ok, true);
+  const call = active.calls.find(x => Number(x.cmd) === 65);
+  assert.deepEqual(call.milk_tea_interact, { target_gid: '777', interaction_type: 2 });
+  assert.match(active.logs[0][1], /打工互动完成：花式摇杯/);
+  // 班次不存在 / 已下班 / 已互动 / 次数用尽 → 跳过且不发请求
+  for (const shift of [null, workShiftFixture({ end_at: WINDOW.startTime + 50 }), workShiftFixture({ interact_done: true }), workShiftFixture({ interact_count: 1, interact_limit: 1 })]) {
+    const skipped = setup({ workShift: shift });
+    const outcome = await skipped.service.operateMilkTea('interact', { autoSelect: true, interactionType: 2 });
+    assert.equal(outcome.skipped, true);
+    assert.ok(!skipped.calls.some(x => Number(x.cmd) === 65));
+  }
+  // 手动模式（无 autoSelect）不可互动时仍然报错
+  const manual = setup({ workShift: null });
+  await assert.rejects(manual.service.operateMilkTea('interact', { interactionType: 2 }), /当前班次不可互动/);
+  // 非法互动类型仍然报错（即使自动模式）
+  const invalid = setup({ workShift: workShiftFixture() });
+  await assert.rejects(invalid.service.operateMilkTea('interact', { autoSelect: true, interactionType: 9 }), /互动类型无效/);
+});
+
+test('work interact automation keys persist through config patch normalization', () => {
+  const store = require('../src/models/store');
+  const accountId = '__milk_tea_work_interact_test__';
+  const options = { persist: false, accountId };
+  store.applyConfigSnapshot({ automation: { milk_tea_work_interact: true, milk_tea_work_interact_type: '3', milk_tea_hire_fallback_talent: '9002' } }, options);
+  const saved = store.applyConfigSnapshot({}, options).automation;
+  assert.equal(saved.milk_tea_work_interact, true);
+  assert.equal(saved.milk_tea_work_interact_type, 3);
+  assert.equal(saved.milk_tea_hire_fallback_talent, 9002);
+  const invalid = store.applyConfigSnapshot({ automation: { milk_tea_work_interact_type: 99 } }, options).automation;
+  assert.equal(invalid.milk_tea_work_interact_type, 2);
+});
+
+test('work interact automation key is disabled with the business-phase group', () => {
+  const { disableHiddenActivityAutomation } = require('../src/models/store')._test;
+  const config = { milk_tea_work_interact: true, milk_tea_cashier: true };
+  disableHiddenActivityAutomation(config, WINDOW.settleTime);
+  assert.equal(config.milk_tea_work_interact, false);
+  assert.equal(config.milk_tea_cashier, true);
 });
