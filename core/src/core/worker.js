@@ -215,7 +215,6 @@ let wsErrorHandledAt = 0;
 let lastDailyRunDate = '';
 let friendSyncPaused = false;
 let starActivityClaimRunning = false;
-let solarCalendarAutomation = null;
 
 const workerScheduler = createScheduler('worker');
 const resourceMonitor = createResourceMonitor();
@@ -508,8 +507,6 @@ async function runStarActivityAutoClaims() {
     const wishSignChoice = Number(automation.wish_sign_choice);
     const wishSignChoiceId = Number.isInteger(wishSignChoice) && wishSignChoice >= 1 && wishSignChoice <= 6 ? wishSignChoice : 1;
     const claimWishSignEnabled = automation.wish_sign_claim === true;
-    const solarCalendarEventsEnabled = automation.solar_calendar_claim_events === true;
-    const solarCalendarSeasonsEnabled = automation.solar_calendar_claim_seasons === true;
     const shareRewardShareEnabled = automation.share_reward_share === true;
     const claimShareDailyEnabled = automation.share_reward_daily === true;
     const claimShareMilestonesEnabled = automation.share_reward_milestones === true;
@@ -533,8 +530,7 @@ async function runStarActivityAutoClaims() {
         && !buyRainPoemBottleEnabled && !collectRainPoemWeatherEnabled && !useRainPoemSummonEnabled && !useRainPoemPrankEnabled
         && !unlockRainPoemResearchEnabled && !claimCharityShareEnabled && !donateCharityLoveEnabled
         && !claimCharityRewardsEnabled && !claimCharityPublicFundEnabled && !petDiaryAnyEnabled
-        && !drawWishSignEnabled && !claimWishSignEnabled && !shareRewardShareEnabled && !claimShareDailyEnabled && !claimShareMilestonesEnabled
-        && !solarCalendarEventsEnabled && !solarCalendarSeasonsEnabled) return;
+        && !drawWishSignEnabled && !claimWishSignEnabled && !shareRewardShareEnabled && !claimShareDailyEnabled && !claimShareMilestonesEnabled) return;
 
     starActivityClaimRunning = true;
     try {
@@ -948,23 +944,6 @@ async function runStarActivityAutoClaims() {
                     if (!error.milkTeaLogged) log('活动', `奶茶热销中自动检查失败：${error.message}`, { module: 'activity', event: '奶茶热销中自动检查', result: 'error' });
                 }
             }
-        }
-        if (solarCalendarEventsEnabled || solarCalendarSeasonsEnabled) {
-            // 节令日历：串在同一轮活动自动化里，与其它活动共用同一把串行锁，不并发发请求
-            if (!solarCalendarAutomation) {
-                const { createSolarCalendarAutomation } = require('../services/solar-calendar-auto');
-                const { getSolarCalendar, operateSolarCalendar } = require('../services/solar-calendar');
-                solarCalendarAutomation = createSolarCalendarAutomation({
-                    getSolarCalendar,
-                    operateSolarCalendar,
-                    getServerTimeSec: require('../utils/utils').getServerTimeSec,
-                    log,
-                });
-            }
-            await solarCalendarAutomation.runSolarCalendarAutomation({
-                claimEvents: solarCalendarEventsEnabled,
-                claimSeasons: solarCalendarSeasonsEnabled,
-            });
         }
         if (petDiaryAnyEnabled) {
             await runPetDiaryAutomation({
@@ -2042,12 +2021,6 @@ async function handleApiCall(msg) {
             case 'operateShareReward': {
                 const activity = require('../services/activity');
                 result = await activity[method](...args);
-                break;
-            }
-            case 'getSolarCalendar':
-            case 'operateSolarCalendar': {
-                const solarCalendar = require('../services/solar-calendar');
-                result = await solarCalendar[method](...args);
                 break;
             }
             case 'getPetDiaryActivity': {

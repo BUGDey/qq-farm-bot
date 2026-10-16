@@ -258,8 +258,6 @@ const DEFAULT_AUTOMATION = {
     star_passport_claim: false,
     star_solar_claim: false,
     star_record_claim: false,
-    solar_calendar_claim_events: false,
-    solar_calendar_claim_seasons: false,
     qingmei_seed_claim: false,
     qingmei_wine_brew: false,
     qixi_dew_use: false,
