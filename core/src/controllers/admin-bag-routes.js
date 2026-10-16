@@ -124,11 +124,19 @@ function buildFruitCatalog() {
   return fruits;
 }
 
-/** 从背包详情中提取果实条目（category === 'fruit'）。 */
+/** 与背包页（BagPanel.getItemCategory）口径一致：植物果实 category='fruit'，或物品类型 17/6（活动果实，如黄金狗尾草 1040516 无植物映射）。 */
+function isBagFruitItem(item) {
+  if (!item) return false;
+  if (item.category === "fruit") return true;
+  const type = Number(item.itemType) || 0;
+  return type === 17 || type === 6;
+}
+
+/** 从背包详情中提取果实条目。 */
 function extractBagFruits(bag) {
   const items = Array.isArray(bag && bag.items) ? bag.items : [];
   return items
-    .filter(item => item && item.category === "fruit" && toNum(item.id) > 0 && toNum(item.count) > 0)
+    .filter(item => isBagFruitItem(item) && toNum(item.id) > 0 && toNum(item.count) > 0)
     .map(item => ({
       id: toNum(item.id),
       name: String(item.name || ""),
@@ -320,4 +328,4 @@ function registerAdminBagRoutes({
   });
 }
 
-module.exports = { registerAdminBagRoutes, sellMergedBagItems, buildFruitCatalog, extractBagFruits };
+module.exports = { registerAdminBagRoutes, sellMergedBagItems, buildFruitCatalog, extractBagFruits, isBagFruitItem };

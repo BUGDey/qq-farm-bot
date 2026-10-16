@@ -70,3 +70,22 @@ test('extractBagFruits keeps only positive-count fruits from bag detail', () => 
   assert.deepEqual(extractBagFruits(null), []);
   assert.deepEqual(extractBagFruits({}), []);
 });
+
+test('extractBagFruits includes activity fruits by itemType 17/6 (same rule as BagPanel)', () => {
+  // 黄金狗尾草（1040516，type 17）等活动果实没有植物映射，category 为 'item'，
+  // 但背包页按 itemType 17/6 归入果实，白名单接口必须同口径
+  const bag = {
+    items: [
+      { id: 1040516, category: 'item', itemType: 17, count: 110, name: '黄金·狗尾草', image: 'b.png', price: 3, priceUnit: '金豆豆' },
+      { id: 990001, category: 'item', itemType: 6, count: 2, name: '活动果实B' },
+      { id: 990002, category: 'item', itemType: 11, count: 1, name: '道具' },
+      { id: 990003, category: 'item', itemType: 0, count: 1, name: '杂物' },
+    ],
+  };
+  const fruits = extractBagFruits(bag);
+  assert.equal(fruits.length, 2);
+  assert.deepEqual(fruits[0], {
+    id: 1040516, name: '黄金·狗尾草', image: 'b.png', price: 3, priceUnit: '金豆豆', count: 110, inBag: true,
+  });
+  assert.equal(fruits[1].id, 990001);
+});
