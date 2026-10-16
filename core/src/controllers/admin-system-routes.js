@@ -100,6 +100,35 @@ function registerAdminSystemRoutes({
     }
   });
 
+  // 全局默认主题：公开只读（登录页/登录后都可用），内容由管理员在后台设置。
+  // 空字符串表示未设置，前端回退到本地默认主题。
+  app.get("/api/public/ui-theme", (req, res) => {
+    try {
+      res.json({ ok: true, data: { theme: store.getGlobalTheme() } });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  app.post(
+    "/api/admin/ui-theme",
+    requireAdminToken,
+    requireAdminRole,
+    (req, res) => {
+      try {
+        const theme = String((req.body || {}).theme || "").trim();
+        const saved = store.setGlobalTheme(theme);
+        logger.warn("更新全局默认主题", {
+          admin: req.currentUser?.username || "",
+          theme: saved || "(清空)",
+        });
+        res.json({ ok: true, data: { theme: saved } });
+      } catch (error) {
+        res.status(400).json({ ok: false, error: error.message });
+      }
+    },
+  );
+
   app.post(
    "/api/admin/system-config",
     requireAdminToken,

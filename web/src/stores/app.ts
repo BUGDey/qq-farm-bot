@@ -3,8 +3,12 @@ import { computed, ref, watch } from 'vue'
 import api from '@/api'
 
 const THEME_KEY = 'ui_theme'
+const THEME_CUSTOM_KEY = 'ui_theme_custom'
 
 export type Theme = 'light-blue' | 'light-green' | 'light-pink' | 'dark-blue' | 'dark-purple' | 'dark-teal' | 'dark-orange' | 'dark-red'
+
+/** 全新安装（没有任何本地选择、管理员也没设全局主题）时的默认主题：桃花林 */
+export const DEFAULT_THEME: Theme = 'light-pink'
 
 export interface LoginPageConfig {
   logoUrl: string
@@ -26,7 +30,7 @@ const defaultLoginPageConfig: LoginPageConfig = {
 
 export const useAppStore = defineStore('app', () => {
   const sidebarOpen = ref(false)
-  const currentTheme = ref<Theme>((localStorage.getItem(THEME_KEY) as Theme) || 'light-blue')
+  const currentTheme = ref<Theme>((localStorage.getItem(THEME_KEY) as Theme) || DEFAULT_THEME)
   const showThemePanel = ref(false)
   const loginPageConfig = ref<LoginPageConfig>({ ...defaultLoginPageConfig })
   let loginPageConfigPromise: Promise<void> | null = null
@@ -147,6 +151,40 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  // 用户是否主动选择过主题。选择过则全局默认主题不再覆盖他的选择。
+  function isThemeCustomized() {
+    return localStorage.getItem(THEME_CUSTOM_KEY) === '1'
+  }
+
+  // 拉取管理员设置的全局默认主题。仅当用户没有自己的主题偏好时才应用，
+  // 同时把结果写入 ui_theme，避免下次启动时先闪一下默认主题再等接口。
+  async function fetchGlobalTheme(): Promise<Theme | null> {
+    if (isThemeCustomized())
+      return null
+    try {
+      const res = await api.get('/api/public/ui-theme')
+      const theme = res.data?.data?.theme as Theme | undefined
+      if (res.data.ok && theme && themes[theme]) {
+        applyTheme(theme)
+        return theme
+      }
+    }
+    catch {
+      // 未设置全局主题或接口不可用时保持本地主题。
+    }
+    return null
+  }
+
+  // 放弃自己的主题选择：回到「系统默认」——管理员设了全局主题就用全局的，
+  // 没设就用全新安装的默认主题（桃花林）。之后管理员改全局主题会重新生效。
+  async function resetTheme() {
+    localStorage.removeItem(THEME_CUSTOM_KEY)
+    const globalTheme = await fetchGlobalTheme()
+    // 管理员没指定全局主题时，回到全新安装的默认主题（桃花林）
+    if (!globalTheme)
+      applyTheme(DEFAULT_THEME)
+  }
+
   async function fetchLoginPageConfig() {
     if (loginPageConfigPromise)
       return loginPageConfigPromise
@@ -164,14 +202,18 @@ export const useAppStore = defineStore('app', () => {
     return loginPageConfigPromise
   }
 
-  function applyTheme(theme: Theme) {
+  // custom 为 true 表示用户主动选择（主题面板点击或明暗切换），
+  // 之后管理员改全局默认主题不再覆盖该用户。
+  function applyTheme(theme: Theme, options?: { custom?: boolean }) {
     if (!themes[theme]) {
-      theme = 'light-pink'
+      theme = DEFAULT_THEME
     }
 
     const t = themes[theme]
     currentTheme.value = theme
     localStorage.setItem(THEME_KEY, theme)
+    if (options?.custom)
+      localStorage.setItem(THEME_CUSTOM_KEY, '1')
 
     if (typeof document !== 'undefined' && document.documentElement) {
       document.documentElement.style.setProperty('--theme-bg', t.bg)
@@ -196,10 +238,10 @@ export const useAppStore = defineStore('app', () => {
   function toggleDark() {
     const current = currentTheme.value
     if (themes[current]?.isDark) {
-      applyTheme('light-green')
+      applyTheme('light-green', { custom: true })
     }
     else {
-      applyTheme('light-pink')
+      applyTheme('light-pink', { custom: true })
     }
   }
 
@@ -225,6 +267,8 @@ export const useAppStore = defineStore('app', () => {
     closeSidebar,
     openSidebar,
     fetchTheme,
+    fetchGlobalTheme,
+    resetTheme,
     fetchLoginPageConfig,
   }
 })

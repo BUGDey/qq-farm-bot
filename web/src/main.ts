@@ -18,8 +18,9 @@ app.use(router)
 const THEME_KEY = 'ui_theme'
 const savedTheme = localStorage.getItem(THEME_KEY) || 'light-pink'
 const themes: Record<string, { isDark: boolean, bg: string, text: string, primary: string, secondary: string, gradient: string }> = {
-  'light-blue': { isDark: false, bg: '#f9fafb', text: '#1f2937', primary: '#3b82f6', secondary: '#2563eb', gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' },
-  'dark-blue': { isDark: true, bg: '#111827', text: '#f3f4f6', primary: '#3b82f6', secondary: '#2563eb', gradient: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)' },
+  // 取值必须与 stores/app.ts 的 themes 保持一致，否则首屏会用错色再被 store 覆盖，出现闪色
+  'light-blue': { isDark: false, bg: 'transparent', text: '#2C3E50', primary: '#2ECC71', secondary: '#3498DB', gradient: 'linear-gradient(135deg, #2ECC71 0%, #3498DB 100%)' },
+  'dark-blue': { isDark: true, bg: 'transparent', text: '#ECF0F1', primary: '#2ECC71', secondary: '#3498DB', gradient: 'linear-gradient(135deg, #2ECC71 0%, #3498DB 100%)' },
   'light-pink': { isDark: false, bg: '#fff0f5', text: '#831843', primary: '#ec4899', secondary: '#be185d', gradient: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)' },
   'light-green': { isDark: false, bg: '#f0fdf4', text: '#14532d', primary: '#22c55e', secondary: '#16a34a', gradient: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)' },
   'dark-purple': { isDark: true, bg: '#1e1b4b', text: '#e9d5ff', primary: '#a855f7', secondary: '#9333ea', gradient: 'linear-gradient(135deg, #c084fc 0%, #a855f7 100%)' },
@@ -74,5 +75,7 @@ window.onerror = (message, _source, _lineno, _colno, error) => {
 // Apply theme from localStorage immediately, then sync from server if authed
 const appStore = useAppStore()
 appStore.fetchTheme()
+// 管理员设置的全局默认主题：用户没自己选过主题时才生效
+appStore.fetchGlobalTheme()
 
 app.mount('#app')

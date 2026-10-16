@@ -5,7 +5,13 @@ import { useAppStore } from '@/stores/app'
 const appStore = useAppStore()
 
 function selectTheme(theme: Theme) {
-  appStore.applyTheme(theme)
+  appStore.applyTheme(theme, { custom: true })
+  appStore.toggleThemePanel()
+}
+
+// 放弃自己的选择：管理员设了全局主题就用全局的，没设就回到全新安装的默认主题
+function resetTheme() {
+  void appStore.resetTheme()
   appStore.toggleThemePanel()
 }
 </script>
@@ -69,7 +75,13 @@ function selectTheme(theme: Theme) {
           </button>
         </div>
 
-        <div class="mt-3 border-t border-gray-100 pt-3 text-center dark:border-gray-700">
+        <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-700">
+          <button
+            class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            @click="resetTheme"
+          >
+            恢复默认主题
+          </button>
           <button
             class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             @click="appStore.toggleThemePanel()"

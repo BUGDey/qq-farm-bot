@@ -2,6 +2,7 @@
 import type { LoginLog, Redemption } from '@/stores/user'
 import { onMounted, ref, watch } from 'vue'
 import AdminCardPanel from '@/components/admin/AdminCardPanel.vue'
+import AdminGlobalSettingsPanel from '@/components/admin/AdminGlobalSettingsPanel.vue'
 import AdminUserPanel from '@/components/admin/AdminUserPanel.vue'
 import { useToastStore } from '@/stores/toast'
 import { useUserStore } from '@/stores/user'
@@ -9,13 +10,14 @@ import { useUserStore } from '@/stores/user'
 const userStore = useUserStore()
 const toast = useToastStore()
 
-type TabKey = 'users' | 'cards' | 'redemptions' | 'logs'
+type TabKey = 'users' | 'cards' | 'redemptions' | 'logs' | 'settings'
 const tab = ref<TabKey>('users')
 const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'users', label: '用户管理', icon: 'i-carbon-user-multiple' },
   { key: 'cards', label: '卡密管理', icon: 'i-carbon-purchase' },
   { key: 'redemptions', label: '核销流水', icon: 'i-carbon-receipt' },
   { key: 'logs', label: '登录日志', icon: 'i-carbon-document' },
+  { key: 'settings', label: '全局设置', icon: 'i-carbon-settings' },
 ]
 
 const redemptions = ref<Redemption[]>([])
@@ -211,7 +213,7 @@ onMounted(() => {
     </div>
 
     <!-- 登录日志 -->
-    <div v-else class="ui-card overflow-hidden rounded-xl">
+    <div v-else-if="tab === 'logs'" class="ui-card overflow-hidden rounded-xl">
       <div class="flex items-center justify-between p-3">
         <span class="text-sm text-gray-600 dark:text-gray-300">最近 {{ logs.length }} 条</span>
         <button
@@ -277,6 +279,9 @@ onMounted(() => {
         </table>
       </div>
     </div>
+
+    <!-- 全局设置 -->
+    <AdminGlobalSettingsPanel v-else-if="tab === 'settings'" />
   </div>
 </template>
 

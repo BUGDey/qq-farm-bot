@@ -758,11 +758,18 @@ let accountFallbackConfig = (() => {
     return cfg;
 })();
 
+// 前端 8 主题的白名单，与 web/src/stores/app.ts 的 themes 键一一对应。
+// 必须定义在 loadGlobalConfig() 调用点之前（该函数在模块加载期间执行）。
+const UI_GLOBAL_THEMES = new Set([
+    'light-blue', 'light-green', 'light-pink',
+    'dark-blue', 'dark-purple', 'dark-teal', 'dark-orange', 'dark-red',
+]);
+
 const globalConfig = {
     accountConfigs: {},
     defaultAccountConfig: cloneAccountConfig(DEFAULT_ACCOUNT_CONFIG),
     userDefaultAccountPlans: {},
-    ui: { theme: 'light' },
+    ui: { theme: 'light', globalTheme: '' },
     offlineReminder: { ...DEFAULT_OFFLINE_REMINDER },
     userOfflineReminders: {},
     adminPasswordHash: '',
@@ -1032,6 +1039,10 @@ function loadGlobalConfig() {
         globalConfig.ui = { ...globalConfig.ui, ...data.ui || {} };
         const theme = String(globalConfig.ui.theme || '').toLowerCase();
         globalConfig.ui.theme = theme === 'light' ? 'light' : 'dark';
+        // 全局主题（管理员在后台设置的默认主题）；非法值一律清空
+        if (!UI_GLOBAL_THEMES.has(String(globalConfig.ui.globalTheme || ''))) {
+            globalConfig.ui.globalTheme = '';
+        }
 
         // 离线提醒
         globalConfig.offlineReminder = normalizeOfflineReminder(data.offlineReminder);
@@ -1587,6 +1598,20 @@ function getUI() {
     return { ...globalConfig.ui };
 }
 
+function getGlobalTheme() {
+    return String(globalConfig.ui.globalTheme || '');
+}
+
+function setGlobalTheme(theme) {
+    const raw = String(theme || '').trim();
+    if (raw && !UI_GLOBAL_THEMES.has(raw)) {
+        throw new Error(`未知的主题: ${raw}`);
+    }
+    globalConfig.ui.globalTheme = raw;
+    saveGlobalConfig();
+    return getGlobalTheme();
+}
+
 function setUITheme(theme) {
     const raw = String(theme || '').toLowerCase();
     return applyConfigSnapshot({ ui: { theme: raw === 'light' ? 'light' : 'dark' } });
@@ -2124,6 +2149,8 @@ module.exports = {
     getFertilizerBuyCheckIntervalMinutes,
     getUI,
     setUITheme,
+    getGlobalTheme,
+    setGlobalTheme,
     getOfflineReminder,
     setOfflineReminder,
     deleteUserOfflineReminder,
