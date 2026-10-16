@@ -274,6 +274,46 @@ async function getFriendsList(forceRefresh = false) {
   }
 }
 
+/**
+ * Backfill missing friend avatars from recent visitor records (matched by gid).
+ * Some server responses omit avatar_url in the friends list; visitor records
+ * often still carry avatars for the same people. Best-effort: never throws.
+ * Returns the number of avatars backfilled.
+ */
+async function backfillFriendAvatarsFromVisitors(friends) {
+  const missing = (Array.isArray(friends) ? friends : [])
+    .filter(friend => friend && !friend.avatarUrl && toNum(friend.gid) > 0);
+  if (missing.length === 0) return 0;
+
+  let records = [];
+  try {
+    const { getInteractRecords } = require('./interact');
+    if (typeof getInteractRecords !== 'function') return 0;
+    records = await getInteractRecords();
+  } catch {
+    return 0;
+  }
+
+  const avatarByGid = new Map();
+  for (const record of Array.isArray(records) ? records : []) {
+    const gid = toNum(record && record.visitorGid);
+    const avatarUrl = String((record && record.avatarUrl) || '').trim();
+    if (gid > 0 && avatarUrl && !avatarByGid.has(gid)) {
+      avatarByGid.set(gid, avatarUrl);
+    }
+  }
+
+  let backfilled = 0;
+  for (const friend of missing) {
+    const avatarUrl = avatarByGid.get(friend.gid);
+    if (avatarUrl) {
+      friend.avatarUrl = avatarUrl;
+      backfilled += 1;
+    }
+  }
+  return backfilled;
+}
+
 async function fetchFriendsList() {
   try {
     log('好友', '开始获取好友列表', {
@@ -328,6 +368,9 @@ async function fetchFriendsList() {
         return (a.gid || 0) - (b.gid || 0);
       });
 
+    const avatarBackfilled = await backfillFriendAvatarsFromVisitors(friends);
+    const avatarCount = friends.reduce((total, friend) => total + (friend.avatarUrl ? 1 : 0), 0);
+
     friendsListCache = friends;
 
     const cachedDogCount = dogInfoCache ? Object.keys(dogInfoCache).length : 0;
@@ -340,8 +383,22 @@ async function fetchFriendsList() {
         result: 'ok',
         count: friends.length,
         cachedDogInfoCount: cachedDogCount,
+        avatarCount,
+        avatarBackfilled,
       }
     );
+
+    if (friends.length > 0 && avatarCount === 0 && typeof logWarn === 'function') {
+      logWarn('好友',
+        `好友列表共 ${friends.length} 位好友，但服务器未下发任何头像（avatar_url 全为空）`,
+        {
+          module: 'friend',
+          event: '获取好友列表',
+          result: 'no_avatar',
+          count: friends.length,
+        }
+      );
+    }
 
     return friends;
   } catch (err) {

@@ -3,18 +3,26 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-function fixture(fetch) {
+function fixture(fetch, opts = {}) {
     let now = 1000;
     const exports = {};
+    const logs = [];
+    const warns = [];
+    const state = { interactCalls: 0 };
     const context = { module: { exports }, process: { env: {} }, Date: { now: () => now },
         require: name => {
             if (name === './friend-api') return { getAllFriends: fetch };
-            if (name === '../utils/utils') return { toNum: Number, log() {} };
+            if (name === './interact') return { getInteractRecords: async () => {
+                state.interactCalls++;
+                if (opts.interactThrows) throw Error('interact offline');
+                return opts.interactRecords || [];
+            } };
+            if (name === '../utils/utils') return { toNum: Number, log: (...a) => logs.push(a), logWarn: (...a) => warns.push(a) };
             if (name === '../utils/network') return { getUserState: () => ({ gid: 99 }) };
             return {};
         } };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/services/friend-land-analyzer.js'), 'utf8'), context);
-    return { ...context.module.exports, advance: ms => { now += ms; } };
+    return { ...context.module.exports, advance: ms => { now += ms; }, logs, warns, state };
 }
 test('shared list cache merges concurrent reads and refreshes after five minutes', async () => {
     let calls = 0;
@@ -32,6 +40,39 @@ test('empty and failed friend refreshes are rate limited but recover', async () 
         await f.getFriendsList(); await f.getFriendsList(); assert.equal(calls, 1);
         f.advance(300000); await f.getFriendsList(); assert.equal(calls, 2);
     }
+});
+
+test('missing friend avatars are backfilled from visitor records by gid', async () => {
+    const f = fixture(async () => ({ game_friends: [
+        { gid: 11, name: 'a', avatar_url: '' },
+        { gid: 12, name: 'b', avatar_url: 'https://q1.qlogo.cn/keep' },
+        { gid: 13, name: 'c' },
+    ] }), { interactRecords: [
+        { visitorGid: 11, avatarUrl: 'https://q1.qlogo.cn/a' },
+        { visitorGid: 12, avatarUrl: 'https://q1.qlogo.cn/should-not-override' },
+        { visitorGid: 11, avatarUrl: 'https://q1.qlogo.cn/a-later' },
+        { visitorGid: 14, avatarUrl: '' },
+    ] });
+    const friends = await f.getFriendsList(true);
+    const byGid = new Map(friends.map(friend => [friend.gid, friend.avatarUrl]));
+    assert.equal(byGid.get(11), 'https://q1.qlogo.cn/a');
+    assert.equal(byGid.get(12), 'https://q1.qlogo.cn/keep');
+    assert.equal(byGid.get(13), '');
+    assert.equal(f.state.interactCalls, 1);
+});
+
+test('avatar backfill is skipped when all friends have avatars and never breaks listing', async () => {
+    const full = fixture(async () => ({ game_friends: [{ gid: 11, name: 'a', avatar_url: 'https://x/a' }] }));
+    const fullFriends = await full.getFriendsList(true);
+    assert.equal(full.state.interactCalls, 0);
+    assert.equal(fullFriends[0].avatarUrl, 'https://x/a');
+    assert.equal(full.warns.length, 0);
+
+    const broken = fixture(async () => ({ game_friends: [{ gid: 11, name: 'a' }] }), { interactThrows: true });
+    const brokenFriends = await broken.getFriendsList(true);
+    assert.equal(brokenFriends.length, 1);
+    assert.equal(brokenFriends[0].avatarUrl, '');
+    assert.ok(broken.warns.some(args => String(args[1] || '').includes('avatar_url')));
 });
 
 test('empty visitor discovery retries after cooldown and keeps existing excluded GIDs', async () => {

@@ -417,8 +417,18 @@ function formatFriendGold(value: unknown) {
   return formatGoldAmount(gold)
 }
 
+// 腾讯头像 CDN 均支持 https；页面经 https 访问时 http 图片会被浏览器按 mixed content 拦截
+function normalizeAvatarUrl(url: unknown) {
+  const trimmed = String(url || '').trim()
+  if (!trimmed)
+    return ''
+  if (/^http:\/\/(?:[\w-]+\.)*(?:qlogo\.cn|qpic\.cn|qq\.com)(?:[/:]|$)/i.test(trimmed))
+    return `https://${trimmed.slice(7)}`
+  return trimmed
+}
+
 function getFriendAvatar(friend: any) {
-  const direct = String(friend?.avatarUrl || friend?.avatar_url || '').trim()
+  const direct = normalizeAvatarUrl(friend?.avatarUrl || friend?.avatar_url)
   if (direct)
     return direct
   const uin = String(friend?.uin || '').trim()
@@ -459,7 +469,7 @@ async function refreshInteractRecords() {
 }
 
 function getInteractAvatar(record: any) {
-  return String(record?.avatarUrl || '').trim()
+  return normalizeAvatarUrl(record?.avatarUrl)
 }
 
 function getInteractAvatarKey(record: any) {
