@@ -186,6 +186,8 @@ export const useStatusStore = defineStore('status', () => {
       path: '/socket.io',
       autoConnect: false,
       transports: ['websocket', 'polling'],
+      // websocket 握手失败时回退到 polling（EdgeOne/反代拦 Upgrade 时保底）
+      tryAllTransports: true,
       upgrade: true,
       timeout: 10000,
       reconnectionAttempts: 5,
