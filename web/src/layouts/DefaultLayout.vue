@@ -24,6 +24,7 @@ const { status, realtimeConnected } = storeToRefs(statusStore)
 
 const searchKeyword = ref('')
 const searchFocused = ref(false)
+const mobileSearchOpen = ref(false)
 
 // 原侧边栏的系统保活逻辑：ping、账号轮询、实时状态连接
 const wsErrorNotifiedAt = ref<Record<string, number>>({})
@@ -67,6 +68,10 @@ useIntervalFn(() => {
   accountStore.fetchAccounts()
 }, 10000)
 
+watch(() => router.currentRoute.value.path, () => {
+  mobileSearchOpen.value = false
+})
+
 watch(() => currentAccount.value?.id || currentAccount.value?.uin || '', () => {
   const accountRef = currentAccount.value?.id || currentAccount.value?.uin
   statusStore.connectRealtime(String(accountRef || ''))
@@ -103,6 +108,7 @@ const searchResults = computed(() => {
 function goTo(item: { path: string }) {
   searchKeyword.value = ''
   searchFocused.value = false
+  mobileSearchOpen.value = false
   router.push(item.path)
 }
 
@@ -120,32 +126,61 @@ function onSearchBlur() {
     <div class="dashboard-bg" />
 
     <main class="relative h-full min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
-      <!-- 顶栏：右侧搜索 / 主题 / 通知 / 账号 -->
-      <header class="relative z-30 flex shrink-0 items-center justify-end gap-4 px-3 pt-2 lg:px-8 sm:px-6 lg:pt-4 sm:pt-3">
+      <!-- 顶栏：移动端左侧搜索/GitHub/通知设置小圆标；PC 右侧搜索/GitHub/通知/账号 -->
+      <header class="relative z-30 flex shrink-0 items-center justify-between gap-2 px-3 pt-2 lg:justify-end lg:gap-4 lg:px-8 sm:px-6 lg:pt-4 sm:pt-3">
+        <!-- 移动端快捷图标（PC 由右侧大号按钮承担） -->
+        <div class="flex items-center gap-2 lg:hidden">
+          <button
+            class="icon-btn-sm"
+            title="搜索"
+            @click="mobileSearchOpen = !mobileSearchOpen"
+          >
+            <div class="i-carbon-search text-base text-gray-500" />
+          </button>
+          <a
+            class="icon-btn-sm"
+            href="https://github.com/BUGDey/qq-farm-bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="GitHub 项目主页"
+          >
+            <div class="i-carbon-logo-github text-base text-gray-500" />
+          </a>
+          <button
+            class="icon-btn-sm"
+            title="通知设置"
+            @click="router.push('/settings?tab=notification')"
+          >
+            <div class="i-carbon-notification text-base text-gray-500" />
+          </button>
+        </div>
+
         <div class="flex items-center gap-4">
-          <div class="search-box relative hidden lg:flex">
-            <div class="search-icon i-carbon-search" />
-            <input
-              v-model="searchKeyword"
-              type="text"
-              placeholder="搜索功能…"
-              @focus="searchFocused = true"
-              @blur="onSearchBlur"
-              @keydown.enter="searchResults[0] && goTo(searchResults[0])"
-            >
-            <div
-              v-if="searchFocused && searchKeyword && searchResults.length"
-              class="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden border border-white/60 rounded-2xl bg-white/95 p-1.5 shadow-xl backdrop-blur-md"
-            >
-              <button
-                v-for="item in searchResults"
-                :key="item.path"
-                class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-emerald-50 hover:text-emerald-600"
-                @mousedown.prevent="goTo(item)"
+          <div :class="mobileSearchOpen ? 'absolute inset-x-3 top-full z-40 mt-1' : 'relative hidden lg:block'">
+            <div class="search-box relative">
+              <div class="search-icon i-carbon-search" />
+              <input
+                v-model="searchKeyword"
+                type="text"
+                placeholder="搜索功能…"
+                @focus="searchFocused = true"
+                @blur="onSearchBlur"
+                @keydown.enter="searchResults[0] && goTo(searchResults[0])"
               >
-                <div :class="[item.icon]" class="text-base" />
-                <span>{{ item.label }}</span>
-              </button>
+              <div
+                v-if="searchFocused && searchKeyword && searchResults.length"
+                class="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden border border-white/60 rounded-2xl bg-white/95 p-1.5 shadow-xl backdrop-blur-md"
+              >
+                <button
+                  v-for="item in searchResults"
+                  :key="item.path"
+                  class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-emerald-50 hover:text-emerald-600"
+                  @mousedown.prevent="goTo(item)"
+                >
+                  <div :class="[item.icon]" class="text-base" />
+                  <span>{{ item.label }}</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -161,8 +196,8 @@ function onSearchBlur() {
 
           <button
             class="icon-btn hidden lg:flex"
-            title="活动"
-            @click="router.push('/activity')"
+            title="通知设置"
+            @click="router.push('/settings?tab=notification')"
           >
             <div class="i-carbon-notification text-lg text-gray-500" />
           </button>
@@ -249,12 +284,42 @@ function onSearchBlur() {
   background: #fff;
 }
 
-/* 移动端隐藏搜索框与通知按钮（scoped display 会覆盖 hidden 工具类，需显式隐藏） */
+/* 移动端隐藏搜索框与通知按钮（scoped display 会覆盖 hidden 工具类，需显式隐藏）。
+   .search-box 的显隐改由外层包裹容器（mobileSearchOpen）控制，不再在此隐藏。 */
 @media (max-width: 1023px) {
-  .search-box,
   .icon-btn {
     display: none;
   }
+
+  /* 展开的搜索层占满顶栏宽度 */
+  .search-box {
+    width: 100%;
+  }
+}
+
+/* 移动端顶栏小圆标：搜索 / GitHub / 通知设置 */
+.icon-btn-sm {
+  display: flex;
+  height: 40px;
+  width: 40px;
+  /* 压过全局 coarse-pointer 的 44px 按钮放大规则，三颗圆标与 GitHub 链接保持一致 */
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.icon-btn-sm:hover {
+  background: #fff;
 }
 
 /* Slide Fade Transition */
