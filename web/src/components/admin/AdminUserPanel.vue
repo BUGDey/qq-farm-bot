@@ -325,7 +325,7 @@ defineExpose({ load })
                   <span class="text-gray-900 font-medium dark:text-gray-100">{{ user.username }}</span>
                   <span
                     v-if="user.role !== 'user'"
-                    class="rounded px-1.5 py-0.5 text-[10px] text-white font-medium"
+                    class="chip-vertical text-white"
                     :class="user.role === 'super_admin' ? 'bg-purple-500' : 'bg-blue-500'"
                   >超管</span>
                 </div>
@@ -339,8 +339,8 @@ defineExpose({ load })
                   最后登录 {{ user.lastLoginAt ? formatUserTime(user.lastLoginAt) : '从未登录' }}
                 </div>
               </td>
-              <td class="px-3 py-2.5">
-                <span class="rounded-full px-2 py-0.5 text-[11px] font-medium" :class="statusBadge(user).cls">
+              <td class="px-2 py-2.5">
+                <span class="chip-vertical" :class="statusBadge(user).cls">
                   {{ statusBadge(user).text }}
                 </span>
               </td>
@@ -578,5 +578,19 @@ defineExpose({ load })
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: rgba(156, 163, 175, 0.35);
   border-radius: 3px;
+}
+/* 竖排徽章：窄表格列（手机端）下「正常/超管/已过期」统一为不折行的竖排色块 */
+.chip-vertical {
+  display: inline-block;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 3px;
+  padding: 5px 3px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 </style>
