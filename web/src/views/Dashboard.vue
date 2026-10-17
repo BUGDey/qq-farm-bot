@@ -73,7 +73,6 @@ const visibleLogs = computed(() => compactRuntimeLogs(filteredLogs.value))
 const homeLogContainer = ref<HTMLElement | null>(null)
 const homeLogAutoScroll = ref(true)
 const homeLogs = computed(() => compactRuntimeLogs(allLogs.value))
-const latestHomeLog = computed(() => homeLogs.value[homeLogs.value.length - 1] || null)
 
 function onHomeLogScroll() {
   const element = homeLogContainer.value
@@ -862,11 +861,12 @@ useIntervalFn(updateCountdowns, 1000)
 
       <!-- 运行日志面板 -->
       <div class="home-log-panel">
-        <div class="home-log-side">
+        <div class="home-log-head">
           <h3>运行日志</h3>
-          <p>
-            共 {{ homeLogs.length }} 条<span v-if="latestHomeLog"> · 最新 {{ latestHomeLog.tag }}</span>
-          </p>
+          <button class="home-log-latest" @click="scrollHomeLogToBottom">
+            最新
+            <span class="i-carbon-arrow-down" />
+          </button>
         </div>
         <div ref="homeLogContainer" class="home-log-list" @scroll="onHomeLogScroll">
           <div v-if="!homeLogs.length" class="home-log-empty">
@@ -883,10 +883,6 @@ useIntervalFn(updateCountdowns, 1000)
             <span class="home-log-msg" :class="getLogMsgClass(log.tag)">{{ log.msg }}<template v-if="(log.repeatCount || 1) > 1"> ×{{ log.repeatCount }}</template></span>
           </div>
         </div>
-        <button class="home-log-latest" @click="scrollHomeLogToBottom">
-          最新
-          <span class="i-carbon-arrow-down" />
-        </button>
       </div>
     </div>
 
@@ -1823,10 +1819,10 @@ useIntervalFn(updateCountdowns, 1000)
 /* 运行日志面板 */
 .home-log-panel {
   display: flex;
-  align-items: stretch;
-  gap: 14px;
-  min-height: 260px;
-  max-height: 320px;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 320px;
+  max-height: 440px;
   border-radius: 20px;
   padding: 16px 18px;
   background:
@@ -1841,15 +1837,14 @@ useIntervalFn(updateCountdowns, 1000)
   overflow: hidden;
 }
 
-.home-log-side {
+.home-log-head {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  flex-shrink: 0;
-  min-width: 110px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.home-log-side h3 {
+.home-log-head h3 {
   font-size: 20px;
   font-weight: 800;
   color: #166534;
@@ -1857,14 +1852,9 @@ useIntervalFn(updateCountdowns, 1000)
   letter-spacing: 1px;
 }
 
-.home-log-side p {
-  font-size: 12px;
-  color: #4d7c5f;
-  margin: 6px 0 0;
-}
-
 .home-log-list {
   flex: 1;
+  min-height: 0;
   min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1909,7 +1899,6 @@ useIntervalFn(updateCountdowns, 1000)
 }
 
 .home-log-latest {
-  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1982,17 +1971,13 @@ useIntervalFn(updateCountdowns, 1000)
   }
 
   .home-log-panel {
-    min-height: 220px;
-    max-height: 280px;
+    min-height: 260px;
+    max-height: 360px;
     gap: 10px;
     padding: 12px 14px;
   }
 
-  .home-log-side {
-    min-width: 88px;
-  }
-
-  .home-log-side h3 {
+  .home-log-head h3 {
     font-size: 17px;
   }
 
@@ -2077,23 +2062,15 @@ useIntervalFn(updateCountdowns, 1000)
   }
 
   .home-log-panel {
-    min-height: 200px;
-    max-height: 240px;
+    min-height: 240px;
+    max-height: 340px;
     border-radius: 16px;
     padding: 10px 12px;
     gap: 8px;
   }
 
-  .home-log-side {
-    min-width: 72px;
-  }
-
-  .home-log-side h3 {
+  .home-log-head h3 {
     font-size: 15px;
-  }
-
-  .home-log-side p {
-    font-size: 10px;
   }
 
   .home-log-row {
