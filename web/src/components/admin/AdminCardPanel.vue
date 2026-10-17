@@ -396,7 +396,7 @@ defineExpose({ load })
     <Teleport to="body">
       <div
         v-if="showCreateModal"
-        class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 p-4 backdrop-blur-2xl"
+        class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
         @click.self="closeCreateModal"
       >
         <div class="modal-glass max-h-[90vh] max-w-lg w-full overflow-y-auto rounded-xl p-5">

@@ -379,17 +379,13 @@ const filteredOperations = computed(() => {
   return result
 })
 
-/** 全期累计（从添加账号/启用统计起一直累加，不跨天重置） */
-const filteredOperationsTotal = computed(() => {
-  const totals = status.value?.operationsTotal || {}
-  const result: Record<string, number> = {}
-
-  for (const key of Object.keys(totals)) {
-    if (key !== 'upgrade' && key !== 'levelUp')
-      result[key] = totals[key]
-  }
-
-  return result
+/** 账号统计常驻展示全部统计项（没有数据显示 0），顺序按 OP_META 定义 */
+const operationStatItems = computed(() => {
+  const totals = (status.value?.operationsTotal || {}) as Record<string, number>
+  return Object.keys(OP_META).map(key => ({
+    key,
+    value: Number(totals[key]) || 0,
+  }))
 })
 
 function getEventLabel(event: string) {
@@ -901,18 +897,15 @@ useIntervalFn(updateCountdowns, 1000)
         <div class="home-log-head">
           <h3>账号统计</h3>
         </div>
-        <div v-if="!Object.keys(filteredOperationsTotal).length" class="home-stats-empty">
-          暂无数据，等待本轮巡查完成…
-        </div>
-        <div v-else class="home-stats-grid">
+        <div class="home-stats-grid">
           <div
-            v-for="(val, key) in filteredOperationsTotal"
-            :key="key"
+            v-for="item in operationStatItems"
+            :key="item.key"
             class="home-stat-item"
           >
-            <div class="home-stat-icon text-base" :class="getOpIcon(key)" />
-            <span class="home-stat-label" :title="getOpName(key)">{{ getOpName(key) }}</span>
-            <span class="home-stat-value-pill" :class="getOpPillClass(key)">{{ val }}</span>
+            <div class="home-stat-icon text-base" :class="getOpIcon(item.key)" />
+            <span class="home-stat-label" :title="getOpName(item.key)">{{ getOpName(item.key) }}</span>
+            <span class="home-stat-value-pill" :class="getOpPillClass(item.key)">{{ item.value }}</span>
           </div>
         </div>
       </div>

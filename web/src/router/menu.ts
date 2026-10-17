@@ -57,7 +57,7 @@ export const menuRoutes: MenuItem[] = [
     path: 'ranking',
     name: 'ranking',
     label: '本站排行',
-    icon: 'i-carbon-ranking',
+    icon: 'i-carbon-trophy',
     component: () => import('@/views/Ranking.vue'),
   },
   {

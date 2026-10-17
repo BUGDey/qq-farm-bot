@@ -295,6 +295,9 @@ defineExpose({ load })
                 用户
               </th>
               <th class="px-3 py-2.5 font-medium">
+                注册时间
+              </th>
+              <th class="px-3 py-2.5 font-medium">
                 状态
               </th>
               <th class="px-3 py-2.5 font-medium">
@@ -303,6 +306,9 @@ defineExpose({ load })
               <th class="px-3 py-2.5 font-medium">
                 额度
               </th>
+              <th class="px-3 py-2.5 font-medium">
+                最后登录
+              </th>
               <th class="px-3 py-2.5 text-right font-medium">
                 操作
               </th>
@@ -310,7 +316,7 @@ defineExpose({ load })
           </thead>
           <tbody>
             <tr v-if="filteredUsers.length === 0">
-              <td colspan="5" class="px-3 py-8 text-center text-gray-400">
+              <td colspan="7" class="px-3 py-8 text-center text-gray-400">
                 暂无用户
               </td>
             </tr>
@@ -332,12 +338,9 @@ defineExpose({ load })
                 <div class="text-[11px] text-gray-400">
                   农场账号 {{ user.accountCount ?? 0 }} 个
                 </div>
-                <div class="text-[11px] text-gray-400">
-                  注册 {{ formatUserTime(user.createdAt) }}
-                </div>
-                <div class="text-[11px] text-gray-400">
-                  最后登录 {{ user.lastLoginAt ? formatUserTime(user.lastLoginAt) : '从未登录' }}
-                </div>
+              </td>
+              <td class="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400">
+                {{ formatUserTime(user.createdAt) }}
               </td>
               <td class="px-2 py-2.5">
                 <span class="chip-vertical" :class="statusBadge(user).cls">
@@ -354,6 +357,9 @@ defineExpose({ load })
               </td>
               <td class="px-3 py-2.5 text-xs">
                 {{ user.accountLimit < 0 ? '不限' : `${user.accountCount ?? 0} / ${user.accountLimit}` }}
+              </td>
+              <td class="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400">
+                {{ user.lastLoginAt ? formatUserTime(user.lastLoginAt) : '从未登录' }}
               </td>
               <td class="px-3 py-2.5">
                 <div class="flex items-center justify-end gap-1">
@@ -388,10 +394,10 @@ defineExpose({ load })
     <!-- 弹窗 -->
     <div
       v-if="modal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-2xl"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
       @click.self="closeModal"
     >
-      <div class="modal-glass max-h-[85vh] max-w-lg w-full overflow-y-auto rounded-2xl p-5">
+      <div class="modal-glass max-h-[85vh] max-w-lg w-full overflow-y-auto rounded-xl p-5">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-base text-gray-900 font-semibold dark:text-gray-100">
             {{ modal === 'create' ? '新建用户' : modal === 'edit' ? `编辑用户 · ${activeUser?.username}` : modal === 'renew' ? `核销卡密 · ${activeUser?.username}` : `名下农场账号 · ${activeUser?.username}` }}

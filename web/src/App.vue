@@ -170,8 +170,8 @@ body {
   box-shadow:
     0 18px 44px rgba(31, 38, 80, 0.18),
     inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(24px) saturate(1.35);
-  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  backdrop-filter: blur(12px) saturate(1.35);
+  -webkit-backdrop-filter: blur(12px) saturate(1.35);
 }
 
 /* Scrollbar styling */

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import NavMoreMenu from '@/components/game/NavMoreMenu.vue'
 import { menuRoutes } from '@/router/menu'
@@ -29,82 +28,10 @@ const moreItems = menuRoutes
     label: item.label,
     icon: item.icon,
   }))
-
-/**
- * 移动端菜单栏自动隐藏：30 秒无操作隐藏；滚动到页面最顶部或最底部时重新显示并重新计时。
- * 仅在窄屏（<1024px）启用；页面不可滚动时保持常显，避免没有唤回手段。
- */
-const barVisible = ref(true)
-const HIDE_DELAY_MS = 30000
-const EDGE_THRESHOLD = 4
-let hideTimer: ReturnType<typeof setTimeout> | undefined
-const scrollContainers = new Set<HTMLElement>()
-const autoHideMedia = window.matchMedia('(max-width: 1023px)')
-
-function autoHideEnabled(el: HTMLElement | null) {
-  if (!autoHideMedia.matches || !el)
-    return false
-  // 页面内容不足一屏时没有滚动边界可以唤回菜单栏，保持常显
-  return el.scrollHeight > el.clientHeight + EDGE_THRESHOLD
-}
-
-function scheduleHide() {
-  clearTimeout(hideTimer)
-  hideTimer = undefined
-  const main = document.querySelector<HTMLElement>('.custom-scrollbar')
-  if (!autoHideEnabled(main))
-    return
-  hideTimer = setTimeout(() => {
-    barVisible.value = false
-  }, HIDE_DELAY_MS)
-}
-
-function showBar() {
-  barVisible.value = true
-  scheduleHide()
-}
-
-function handleScroll(event: Event) {
-  const el = event.target as HTMLElement | null
-  if (!el)
-    return
-  // 只要发生滚动（不分方向，含鼠标滚轮）就唤回菜单栏并重新计时
-  if (!autoHideEnabled(el))
-    return
-  showBar()
-}
-
-// 路由切换会重建滚动容器，旧引用会失效导致滚动唤不回菜单栏；每次都重新绑定
-function bindScrollContainers() {
-  for (const el of scrollContainers)
-    el.removeEventListener('scroll', handleScroll)
-  scrollContainers.clear()
-  document.querySelectorAll<HTMLElement>('.custom-scrollbar').forEach((el) => {
-    el.addEventListener('scroll', handleScroll, { passive: true })
-    scrollContainers.add(el)
-  })
-}
-
-onMounted(() => {
-  bindScrollContainers()
-  scheduleHide()
-})
-
-watch(() => route.path, () => nextTick(bindScrollContainers))
-
-onUnmounted(() => {
-  clearTimeout(hideTimer)
-  for (const el of scrollContainers)
-    el.removeEventListener('scroll', handleScroll)
-})
 </script>
 
 <template>
-  <div
-    class="mobile-tabbar"
-    :class="{ 'tabbar-hidden': !barVisible }"
-    @pointerdown="showBar"
-  >
+  <div class="mobile-tabbar">
     <div class="tabbar-glass">
       <RouterLink
         v-for="item in primaryItems"
@@ -144,14 +71,6 @@ onUnmounted(() => {
   gap: 10px;
   padding: 0 12px;
   pointer-events: none;
-  transition:
-    transform 0.3s ease,
-    opacity 0.3s ease;
-}
-
-.mobile-tabbar.tabbar-hidden {
-  transform: translateY(calc(100% + 20px));
-  opacity: 0;
 }
 
 .tabbar-glass {
