@@ -396,10 +396,10 @@ defineExpose({ load })
     <Teleport to="body">
       <div
         v-if="showCreateModal"
-        class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
+        class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 p-4 backdrop-blur-2xl"
         @click.self="closeCreateModal"
       >
-        <div class="modal-glass max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl p-5">
+        <div class="modal-glass max-h-[90vh] max-w-lg w-full overflow-y-auto rounded-xl p-5">
           <div class="mb-4 flex items-center justify-between">
             <h3 class="flex items-center gap-2 text-base text-gray-900 font-semibold dark:text-gray-100">
               <div class="i-carbon-add-alt" />

@@ -275,11 +275,11 @@ const featureCards = computed(() => [
     to: '/pet',
   },
   {
-    key: 'book',
-    title: '图鉴',
-    subtitle: '收集进度',
-    icon: '/dashboard/icon-book.png',
-    to: '/illustrated',
+    key: 'ranking',
+    title: '排行榜',
+    subtitle: '本站排行',
+    icon: '/dashboard/icon-ranking.svg',
+    to: '/ranking',
   },
   {
     key: 'shop',
@@ -374,6 +374,19 @@ const filteredOperations = computed(() => {
   for (const key of Object.keys(operations)) {
     if (key !== 'upgrade' && key !== 'levelUp')
       result[key] = operations[key]
+  }
+
+  return result
+})
+
+/** 全期累计（从添加账号/启用统计起一直累加，不跨天重置） */
+const filteredOperationsTotal = computed(() => {
+  const totals = status.value?.operationsTotal || {}
+  const result: Record<string, number> = {}
+
+  for (const key of Object.keys(totals)) {
+    if (key !== 'upgrade' && key !== 'levelUp')
+      result[key] = totals[key]
   }
 
   return result
@@ -535,6 +548,30 @@ async function refreshRuntimeLogs() {
   finally {
     refreshingLogs.value = false
   }
+}
+
+// UnoCSS 按需生成，动态拼接的类不会被提取，这里用字面量表
+const OP_PILL: Record<string, string> = {
+  harvest: 'bg-green-500',
+  water: 'bg-blue-500',
+  weed: 'bg-yellow-500',
+  bug: 'bg-red-500',
+  farming: 'bg-teal-500',
+  fertilize: 'bg-emerald-500',
+  plant: 'bg-lime-500',
+  steal: 'bg-orange-500',
+  helpWater: 'bg-blue-400',
+  goldenBugClear: 'bg-amber-500',
+  goldenBugPut: 'bg-yellow-500',
+  helpWeed: 'bg-yellow-400',
+  helpBug: 'bg-red-300',
+  taskClaim: 'bg-indigo-500',
+  sell: 'bg-pink-500',
+  tongQiGift: 'bg-rose-500',
+}
+
+function getOpPillClass(key: string | number) {
+  return OP_PILL[String(key)] || 'bg-gray-400'
 }
 
 function getOpName(key: string | number) {
@@ -859,23 +896,23 @@ useIntervalFn(updateCountdowns, 1000)
         </div>
       </div>
 
-      <!-- 今日统计卡片 -->
+      <!-- 账号统计卡片（全期累计） -->
       <div class="home-stats-panel">
         <div class="home-log-head">
-          <h3>今日统计</h3>
+          <h3>账号统计</h3>
         </div>
-        <div v-if="!Object.keys(filteredOperations).length" class="home-stats-empty">
+        <div v-if="!Object.keys(filteredOperationsTotal).length" class="home-stats-empty">
           暂无数据，等待本轮巡查完成…
         </div>
         <div v-else class="home-stats-grid">
           <div
-            v-for="(val, key) in filteredOperations"
+            v-for="(val, key) in filteredOperationsTotal"
             :key="key"
             class="home-stat-item"
           >
             <div class="home-stat-icon text-base" :class="getOpIcon(key)" />
             <span class="home-stat-label" :title="getOpName(key)">{{ getOpName(key) }}</span>
-            <span class="home-stat-value">{{ val }}</span>
+            <span class="home-stat-value-pill" :class="getOpPillClass(key)">{{ val }}</span>
           </div>
         </div>
       </div>
@@ -1918,12 +1955,19 @@ useIntervalFn(updateCountdowns, 1000)
   white-space: nowrap;
 }
 
-.home-stat-value {
+.home-stat-value-pill {
+  display: inline-flex;
   flex-shrink: 0;
-  color: #1f2937;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  border-radius: 999px;
+  padding: 4px 12px;
+  color: #fff;
   font-size: 14px;
   font-weight: 800;
   font-family: 'DM Mono', 'Courier New', monospace;
+  box-shadow: 0 3px 8px rgba(31, 38, 80, 0.18);
 }
 
 .home-log-head {

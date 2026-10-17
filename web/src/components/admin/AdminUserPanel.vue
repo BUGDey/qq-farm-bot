@@ -206,6 +206,15 @@ async function clearExpired() {
   await load()
 }
 
+function formatUserTime(ts?: number | null) {
+  const n = Number(ts)
+  if (!Number.isFinite(n) || n <= 0)
+    return '—'
+  const d = new Date(n)
+  const p = (v: number) => String(v).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
 function statusBadge(user: User) {
   // 超管身份由用户名旁的角色徽章展示，状态列只显示订阅状态，避免出现两个「超管」
   if (user.subscription?.enabled === false)
@@ -323,6 +332,12 @@ defineExpose({ load })
                 <div class="text-[11px] text-gray-400">
                   农场账号 {{ user.accountCount ?? 0 }} 个
                 </div>
+                <div class="text-[11px] text-gray-400">
+                  注册 {{ formatUserTime(user.createdAt) }}
+                </div>
+                <div class="text-[11px] text-gray-400">
+                  最后登录 {{ user.lastLoginAt ? formatUserTime(user.lastLoginAt) : '从未登录' }}
+                </div>
               </td>
               <td class="px-3 py-2.5">
                 <span class="rounded-full px-2 py-0.5 text-[11px] font-medium" :class="statusBadge(user).cls">
@@ -373,7 +388,7 @@ defineExpose({ load })
     <!-- 弹窗 -->
     <div
       v-if="modal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-2xl"
       @click.self="closeModal"
     >
       <div class="modal-glass max-h-[85vh] max-w-lg w-full overflow-y-auto rounded-2xl p-5">

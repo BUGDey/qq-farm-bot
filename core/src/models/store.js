@@ -768,6 +768,7 @@ const globalConfig = {
     defaultAccountConfig: cloneAccountConfig(DEFAULT_ACCOUNT_CONFIG),
     userDefaultAccountPlans: {},
     ui: { theme: 'light' },
+    usersSeeAllAccounts: false,
     offlineReminder: { ...DEFAULT_OFFLINE_REMINDER },
     userOfflineReminders: {},
     adminPasswordHash: '',
@@ -1611,6 +1612,16 @@ function getUI() {
     return { ...globalConfig.ui };
 }
 
+function getUsersSeeAllAccounts() {
+    return globalConfig.usersSeeAllAccounts === true;
+}
+
+function setUsersSeeAllAccounts(enabled) {
+    globalConfig.usersSeeAllAccounts = enabled === true;
+    saveGlobalConfig();
+    return getUsersSeeAllAccounts();
+}
+
 function setUITheme(theme) {
     const raw = String(theme || '').toLowerCase();
     return applyConfigSnapshot({ ui: { theme: raw === 'light' ? 'light' : 'dark' } });
@@ -2156,6 +2167,8 @@ module.exports = {
     getFertilizerBuyCheckIntervalMinutes,
     getUI,
     setUITheme,
+    getUsersSeeAllAccounts,
+    setUsersSeeAllAccounts,
     getOfflineReminder,
     setOfflineReminder,
     deleteUserOfflineReminder,

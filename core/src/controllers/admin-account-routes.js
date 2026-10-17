@@ -1,4 +1,5 @@
 const { getAccountOwner } = require("./admin-account-access");
+const { isElevatedRole } = require("../config/user-system");
 
 function createLogQuery(query) {
   return {
@@ -97,9 +98,15 @@ function registerAdminAccountRoutes({
         const accounts = provider.getAccounts();
         const allAccounts = accounts && Array.isArray(accounts.accounts) ? accounts.accounts : null;
         if (allAccounts) {
+          // 账号可见性开关（全局设置）：关闭时普通用户只能看到自己添加的账号；
+          // 管理员及以上不受限。默认关闭。
+          const canSeeAll = isElevatedRole(currentUser.role) || store.getUsersSeeAllAccounts();
+          const visibleAccounts = canSeeAll
+            ? allAccounts
+            : allAccounts.filter(account => getAccountOwner(account) === String(currentUser.username || '').trim());
           data = {
             ...accounts,
-            accounts: allAccounts.map((account) => ({
+            accounts: visibleAccounts.map((account) => ({
               ...account,
               owner: getAccountOwner(account),
             })),

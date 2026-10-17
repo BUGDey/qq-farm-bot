@@ -1,7 +1,63 @@
 /**
  * 当前登录用户相关接口
  */
+const fs = require('fs');
+const path = require('path');
 const { USER_SYSTEM_CONFIG, isElevatedRole } = require('../config/user-system');
+const { getAccountOwner } = require('./admin-account-access');
+
+/** 本站排行：聚合全部账号的日/周/月偷菜与赚取收益（登录用户可看，前端负责脱敏展示） */
+function registerRankingRoute({ app, requireAdminToken, store }) {
+  app.get('/api/ranking', requireAdminToken, (req, res) => {
+    try {
+      const period = ['daily', 'weekly', 'monthly'].includes(String(req.query.period || '')) ? String(req.query.period) : 'daily';
+      const type = ['earn', 'steal'].includes(String(req.query.type || '')) ? String(req.query.type) : 'earn';
+
+      const dataDir = process.env.FARM_DATA_DIR || path.join(__dirname, '../../data');
+      const statsDir = path.join(dataDir, 'stats');
+      const accounts = store.getAccounts();
+      const accountList = accounts && Array.isArray(accounts.accounts) ? accounts.accounts : [];
+      const byId = new Map();
+      for (const account of accountList) {
+        byId.set(String(account.id), {
+          name: String(account.name || account.username || ''),
+          avatar: String(account.avatar || ''),
+          platform: String(account.platform || 'qq'),
+          owner: getAccountOwner(account),
+        });
+      }
+
+      const rows = [];
+      if (fs.existsSync(statsDir)) {
+        for (const file of fs.readdirSync(statsDir)) {
+          if (!file.endsWith('.json')) continue;
+          try {
+            const raw = JSON.parse(fs.readFileSync(path.join(statsDir, file), 'utf8'));
+            const seg = raw && raw.rank && raw.rank[period];
+            if (!seg || typeof seg !== 'object') continue;
+            const accountId = file.replace(/\.json$/, '');
+            const meta = byId.get(accountId) || { name: '', avatar: '', platform: 'qq', owner: '' };
+            rows.push({
+              accountId,
+              name: meta.name,
+              avatar: meta.avatar,
+              platform: meta.platform,
+              owner: meta.owner,
+              steal: Number(seg.steal) || 0,
+              earn: Number(seg.earn) || 0,
+              savedAt: Number(raw.savedAt) || 0,
+            });
+          } catch {}
+        }
+      }
+
+      rows.sort((a, b) => (Number(b[type]) || 0) - (Number(a[type]) || 0));
+      res.json({ ok: true, data: { period, type, list: rows.slice(0, 50) } });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+}
 
 function requireCurrentUser(req, res) {
   const currentUser = req.currentUser;
@@ -19,6 +75,8 @@ function registerAdminCurrentUserRoutes({
   store,
   getAccountsForUser,
 }) {
+  registerRankingRoute({ app, requireAdminToken, store });
+
   app.get('/api/user/me', requireAdminToken, (req, res) => {
     try {
       const currentUser = requireCurrentUser(req, res);

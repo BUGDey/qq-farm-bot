@@ -269,16 +269,29 @@ test('所有登录用户可见全部账号，普通用户不能控制他人账�
     body: { name: 'bob的农场', platform: 'qq', uin: '20001' },
   });
 
-  // 所有登录用户可见全部账号（仅展示），返回结果带归一化的创建者字段
+  // 默认关闭「普通用户可见全部账号」：alice 只能看到自己的账号
   const list = await api('/api/accounts', { token: aliceToken });
   const listAccounts = list.body.data.accounts || [];
   const owners = new Set(listAccounts.map(item => item.username));
-  assert.ok(owners.has('alice'));
-  assert.ok(owners.has('bob'), '所有登录用户可见全部账号');
+  assert.ok(owners.has('alice'), '仍能看到自己的账号');
+  assert.ok(!owners.has('bob'), '默认关闭时普通用户看不到他人账号');
   assert.ok(listAccounts.every(item => item.owner));
 
-  // alice 不能操作 bob 的账号：删除、改名、编辑都被接口层拦下
-  const bobAccount = listAccounts.find(item => item.username === 'bob');
+  // 管理员开启开关后，普通用户可见全部账号（仅展示）
+  const enable = await api('/api/admin/account-visibility', {
+    method: 'POST', token: adminToken, body: { usersSeeAllAccounts: true },
+  });
+  assert.equal(enable.status, 200, JSON.stringify(enable.body));
+  assert.equal(enable.body.data.usersSeeAllAccounts, true);
+  const list2 = await api('/api/accounts', { token: aliceToken });
+  const owners2 = new Set((list2.body.data.accounts || []).map(item => item.username));
+  assert.ok(owners2.has('alice'));
+  assert.ok(owners2.has('bob'), '开启开关后可见全部账号');
+
+  // alice 不能操作 bob 的账号：删除、改名、编辑都被接口层拦下（id 从管理员视角获取）
+  const adminList = await api('/api/accounts', { token: adminToken });
+  const bobAccount = (adminList.body.data.accounts || []).find(item => item.username === 'bob');
+  assert.ok(bobAccount, '管理员可见 bob 的账号');
   const del = await api(`/api/accounts/${bobAccount.id}`, { method: 'DELETE', token: aliceToken });
   assert.equal(del.status, 403);
   const remark = await api('/api/account/remark', {
@@ -289,6 +302,12 @@ test('所有登录用户可见全部账号，普通用户不能控制他人账�
     method: 'POST', token: aliceToken, body: { id: String(bobAccount.id), name: '越权改名' },
   });
   assert.equal(edit.status, 403);
+
+  // 恢复关闭，避免影响后续用例
+  const disable = await api('/api/admin/account-visibility', {
+    method: 'POST', token: adminToken, body: { usersSeeAllAccounts: false },
+  });
+  assert.equal(disable.status, 200);
 });
 
 test('普通用户不能控制他人账号，提升为超级管理员后可以', async () => {
@@ -305,11 +324,13 @@ test('普通用户不能控制他人账号，提升为超级管理员后可以',
   });
   const daveToken = daveLogin.body.data.token;
 
-  // 普通用户可见全部账号
+  // 默认关闭：普通用户看不到他人账号（越权尝试用的 id 从管理员视角获取）
   const daveList = await api('/api/accounts', { token: daveToken });
   const daveAccounts = daveList.body.data.accounts || [];
-  const bobAccount = daveAccounts.find(item => item.username === 'bob');
-  assert.ok(bobAccount, '普通用户可见 bob 的账号');
+  assert.ok(!daveAccounts.some(item => item.username === 'bob'), '默认关闭时 dave 看不到 bob 的账号');
+  const adminList = await api('/api/accounts', { token: adminToken });
+  const bobAccount = (adminList.body.data.accounts || []).find(item => item.username === 'bob');
+  assert.ok(bobAccount, '管理员可见 bob 的账号');
 
   // 但不能删除/编辑/改名他人账号
   const del = await api(`/api/accounts/${bobAccount.id}`, { method: 'DELETE', token: daveToken });
@@ -335,6 +356,9 @@ test('普通用户不能控制他人账号，提升为超级管理员后可以',
     method: 'POST',
     body: { username: 'dave', password: 'Dave@12345' },
   });
+  // 提升为超级管理员后不受可见性开关限制，能看到全部账号
+  const superList = await api('/api/accounts', { token: superLogin.body.data.token });
+  assert.ok((superList.body.data.accounts || []).some(item => item.username === 'bob'), '超管可见全部账号');
   const superRemark = await api('/api/account/remark', {
     method: 'POST', token: superLogin.body.data.token, body: { id: String(bobAccount.id), remark: 'bob的农场' },
   });

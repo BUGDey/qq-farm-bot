@@ -178,6 +178,19 @@ function createRuntimeState(deps) {
                 }
             }
         }
+        let operationsTotal = {};
+        let rank = null;
+        {
+            const persisted = loadPersistedStats(aid);
+            if (persisted) {
+                if (persisted.totalOperations && typeof persisted.totalOperations === 'object') {
+                    operationsTotal = { ...persisted.totalOperations };
+                }
+                if (persisted.rank && typeof persisted.rank === 'object') {
+                    rank = persisted.rank;
+                }
+            }
+        }
 
         return {
             connection: { connected: false },
@@ -185,6 +198,8 @@ function createRuntimeState(deps) {
             uptime: 0,
             operations: ops,
             totalSteal,
+            operationsTotal,
+            rank,
             sessionExpGained: 0,
             sessionGoldGained: 0,
             sessionCouponGained: 0,

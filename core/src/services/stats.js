@@ -59,6 +59,48 @@ let tongQiGiftCount = 0;
 /** 当前日期键，跨天时自动重置 */
 let currentDateKey = null;
 
+/** 全期累计操作计数（跨天不重置，供「账号统计」展示） */
+const totalOperations = {};
+
+/** 排行累计（日/周/月的偷菜次数与赚取金币），键变化时自动重置 */
+const rank = {
+    daily: { key: '', steal: 0, earn: 0 },
+    weekly: { key: '', steal: 0, earn: 0 },
+    monthly: { key: '', steal: 0, earn: 0 },
+};
+
+/** 本周键：以本周一日期表示，避免周界歧义 */
+function getWeekKey(now = new Date()) {
+    const d = new Date(now);
+    const day = (d.getDay() + 6) % 7; // 周一=0
+    d.setDate(d.getDate() - day);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+}
+
+/** 累加排行计数；周期键变化（跨天/跨周/跨月）时自动重置对应段 */
+function bumpRank(stealDelta, earnDelta) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const dayKey = `${y}-${m}-${String(now.getDate()).padStart(2, '0')}`;
+    if (rank.daily.key !== dayKey)
+        rank.daily = { key: dayKey, steal: 0, earn: 0 };
+    if (rank.weekly.key !== getWeekKey(now))
+        rank.weekly = { key: getWeekKey(now), steal: 0, earn: 0 };
+    const monthKey = `${y}-${m}`;
+    if (rank.monthly.key !== monthKey)
+        rank.monthly = { key: monthKey, steal: 0, earn: 0 };
+    rank.daily.steal += stealDelta;
+    rank.daily.earn += earnDelta;
+    rank.weekly.steal += stealDelta;
+    rank.weekly.earn += earnDelta;
+    rank.monthly.steal += stealDelta;
+    rank.monthly.earn += earnDelta;
+}
+
 /** 上次记录的金币/经验/点券值（用于计算增量） */
 const lastState = {
   gold: -1,
@@ -96,6 +138,9 @@ function recordOperation(opType, count = 1) {
   checkAndResetDailyStats();
   if (operations[opType] !== undefined) {
     operations[opType] += count;
+    totalOperations[opType] = (totalOperations[opType] || 0) + count;
+    if (opType === 'steal')
+      bumpRank(count, 0);
     scheduleSave();
   }
 }
@@ -125,6 +170,7 @@ function checkAndResetDailyStats() {
     console.warn(`[统计] 检测到跨天，重置每日统计 (${currentDateKey} -> ${todayKey})`);
     Object.keys(operations).forEach(k => { operations[k] = 0; });
     tongQiGiftCount = 0;
+    rank.daily = { key: todayKey, steal: 0, earn: 0 };
   }
   currentDateKey = todayKey;
 }
@@ -147,6 +193,12 @@ function doSave() {
   const data = {
     date: todayKey,
     operations: ops,
+    totalOperations: { ...totalOperations },
+    rank: {
+      daily: { ...rank.daily },
+      weekly: { ...rank.weekly },
+      monthly: { ...rank.monthly }
+    },
     tongQiGiftCount,
     initialState: init,
     savedAt: Date.now()
@@ -208,6 +260,24 @@ function initStatsWithPersistence(accountId, gold, exp, coupon = 0) {
     });
     tongQiGiftCount = Number(persisted.tongQiGiftCount) || Number(operations.tongQiGift) || 0;
     operations.tongQiGift = tongQiGiftCount;
+    const savedTotals = persisted.totalOperations && typeof persisted.totalOperations === 'object' ? persisted.totalOperations : {};
+    Object.keys(totalOperations).forEach(k => { totalOperations[k] = 0; });
+    Object.keys(savedTotals).forEach((k) => {
+      totalOperations[k] = Number(savedTotals[k]) || 0;
+    });
+    const savedRank = persisted.rank && typeof persisted.rank === 'object' ? persisted.rank : null;
+    if (savedRank) {
+      for (const seg of ['daily', 'weekly', 'monthly']) {
+        const seg0 = savedRank[seg];
+        if (seg0 && typeof seg0 === 'object') {
+          rank[seg] = {
+            key: String(seg0.key || ''),
+            steal: Number(seg0.steal) || 0,
+            earn: Number(seg0.earn) || 0
+          };
+        }
+      }
+    }
     console.warn(`[统计] 已恢复今日统计数据: ${JSON.stringify(persisted.operations)}, 同气连枝礼包: ${tongQiGiftCount}`);
   } else if (persisted) {
     console.warn(`[统计] 日期已变更，重置统计 (${persisted.date} -> ${todayKey})`);
@@ -229,6 +299,7 @@ function updateStats(gold, exp) {
   // 金币增量
   if (gold > lastState.gold) {
     session.lastGoldGain = gold - lastState.gold;
+    bumpRank(0, gold - lastState.gold);
   } else if (gold < lastState.gold) {
     session.lastGoldGain = 0;
   }
@@ -330,6 +401,12 @@ function getStats(farmUser, userState, connected, limits) {
     },
     uptime: process.uptime(),
     operations: ops,
+    operationsTotal: { ...totalOperations },
+    rank: {
+      daily: { ...rank.daily },
+      weekly: { ...rank.weekly },
+      monthly: { ...rank.monthly }
+    },
     tongQiGiftCount,
     tongQiGiftLimit: null,
     sessionExpGained: session.expGained,

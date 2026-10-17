@@ -205,6 +205,29 @@ function registerAdminSystemRoutes({
     }
   });
 
+  // 普通用户是否可见全部农场账号（默认关闭：普通用户只能看到自己添加的账号）
+  app.get("/api/admin/account-visibility", requireAdminToken, requireAdminRole, (req, res) => {
+    try {
+      res.json({ ok: true, data: { usersSeeAllAccounts: store.getUsersSeeAllAccounts() } });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  app.post("/api/admin/account-visibility", requireAdminToken, requireAdminRole, (req, res) => {
+    try {
+      const enabled = (req.body || {}).usersSeeAllAccounts === true;
+      const saved = store.setUsersSeeAllAccounts(enabled);
+      logger.warn("更新账号可见性开关", {
+        admin: req.currentUser?.username || "",
+        usersSeeAllAccounts: saved,
+      });
+      res.json({ ok: true, data: { usersSeeAllAccounts: saved } });
+    } catch (error) {
+      res.status(400).json({ ok: false, error: error.message });
+    }
+  });
+
   app.post(
    "/api/admin/system-config",
     requireAdminToken,

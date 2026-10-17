@@ -37,10 +37,8 @@ const moreItems = menuRoutes
 const barVisible = ref(true)
 const HIDE_DELAY_MS = 30000
 const EDGE_THRESHOLD = 4
-const SHOW_ON_SCROLL_UP_DELTA = 2
 let hideTimer: ReturnType<typeof setTimeout> | undefined
 const scrollContainers = new Set<HTMLElement>()
-const lastScrollTop = new WeakMap<HTMLElement, number>()
 const autoHideMedia = window.matchMedia('(max-width: 1023px)')
 
 function autoHideEnabled(el: HTMLElement | null) {
@@ -70,16 +68,10 @@ function handleScroll(event: Event) {
   const el = event.target as HTMLElement | null
   if (!el)
     return
+  // 只要发生滚动（不分方向，含鼠标滚轮）就唤回菜单栏并重新计时
   if (!autoHideEnabled(el))
     return
-  const last = lastScrollTop.get(el) ?? el.scrollTop
-  const delta = el.scrollTop - last
-  lastScrollTop.set(el, el.scrollTop)
-  const atTop = el.scrollTop <= EDGE_THRESHOLD
-  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - EDGE_THRESHOLD
-  // 任意位置上滑、或滚动到上下边缘时唤回菜单栏；下滑只重置隐藏计时
-  if (delta < -SHOW_ON_SCROLL_UP_DELTA || atTop || atBottom)
-    showBar()
+  showBar()
 }
 
 // 路由切换会重建滚动容器，旧引用会失效导致滚动唤不回菜单栏；每次都重新绑定
