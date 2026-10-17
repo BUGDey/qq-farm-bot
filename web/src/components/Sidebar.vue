@@ -175,8 +175,6 @@ watch(
       appStore.closeSidebar()
   },
 )
-
-const showThemeDropdown = ref(false)
 </script>
 
 <template>
@@ -251,14 +249,6 @@ const showThemeDropdown = ref(false)
 
       <div class="mt-2 flex items-center justify-between border-t pt-2 text-xs opacity-80" style="border-color: color-mix(in srgb, var(--theme-text) 10%, transparent); color: var(--theme-text);">
         <span class="font-mono">{{ formattedTime }}</span>
-        <!-- 主题调色盘按钮 -->
-        <button
-          class="h-7 w-7 flex items-center justify-center rounded-lg transition-colors hover:bg-gray-200/60 dark:hover:bg-gray-700/60"
-          title="主题设置"
-          @click="showThemeDropdown = !showThemeDropdown"
-        >
-          <div class="i-carbon-color-palette text-sm" :style="{ color: 'var(--theme-primary)' }" />
-        </button>
       </div>
 
       <div class="mt-1 flex items-center justify-between text-xs font-mono opacity-70" style="color: var(--theme-text);">
@@ -270,37 +260,6 @@ const showThemeDropdown = ref(false)
           class="transition-opacity hover:opacity-70"
           title="打开 GitHub 项目主页"
         >xxxscarlxrd404</a>
-      </div>
-
-      <!-- 主题选择弹出面板 -->
-      <div
-        v-show="showThemeDropdown"
-        class="glass-panel absolute bottom-full left-0 right-0 z-50 grid grid-cols-4 mb-2 gap-1.5 rounded-lg p-2"
-      >
-        <button
-          v-for="(t, theme) in appStore.themes"
-          :key="theme"
-          class="group relative flex flex-col items-center justify-center gap-1 rounded-lg p-2 transition-colors"
-          :class="{
-            'ring-2 ring-offset-1': appStore.currentTheme === theme,
-          }"
-          :style="{
-            'background': t.gradient,
-            '--tw-ring-color': t.primary,
-            '--tw-ring-offset-color': 'var(--theme-bg)',
-          }"
-          :title="t.name"
-          @click="appStore.applyTheme(theme as any); showThemeDropdown = false"
-        >
-          <div :class="t.icon" class="text-base text-white" />
-          <span class="text-xs text-white font-medium leading-tight">{{ t.name }}</span>
-          <div
-            v-if="appStore.currentTheme === theme"
-            class="absolute right-1 top-1 h-3 w-3 flex items-center justify-center rounded-full bg-white shadow"
-          >
-            <div class="i-carbon-checkmark text-xs" :style="{ color: t.primary }" />
-          </div>
-        </button>
       </div>
     </div>
   </aside>

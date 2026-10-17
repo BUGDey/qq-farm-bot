@@ -1,21 +1,6 @@
 <script setup lang="ts">
-import type { Theme } from '@/stores/app'
-import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import ToastContainer from '@/components/ToastContainer.vue'
-import { useAppStore } from '@/stores/app'
-
-const appStore = useAppStore()
-
-// 立即应用保存的主题（在组件挂载前）
-const savedTheme = localStorage.getItem('ui_theme') as Theme
-if (savedTheme && appStore.themes[savedTheme]) {
-  appStore.applyTheme(savedTheme)
-}
-
-onMounted(() => {
-  appStore.fetchTheme()
-})
 </script>
 
 <template>

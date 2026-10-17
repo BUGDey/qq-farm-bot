@@ -6,7 +6,6 @@ import { useRouter } from 'vue-router'
 import api from '@/api'
 import MobileTabBar from '@/components/game/MobileTabBar.vue'
 import MysteryMerchantBanner from '@/components/shop/MysteryMerchantBanner.vue'
-import ThemeToggle from '@/components/ThemeToggle.vue'
 import TopAccountMenu from '@/components/TopAccountMenu.vue'
 import { menuRoutes } from '@/router/menu'
 import { useAccountStore } from '@/stores/account'
@@ -150,7 +149,15 @@ function onSearchBlur() {
             </div>
           </div>
 
-          <ThemeToggle />
+          <a
+            class="icon-btn"
+            href="https://github.com/BUGDey/qq-farm-bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="GitHub 项目主页"
+          >
+            <div class="i-carbon-logo-github text-lg text-gray-500" />
+          </a>
 
           <button
             class="icon-btn hidden lg:flex"

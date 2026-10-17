@@ -396,6 +396,19 @@ onMounted(() => {
         注册需使用加时卡激活账号；额度卡用于提升可添加农场账号数量。<br>
         忘记密码时可用已核销过的卡密验证身份。
       </p>
+
+      <div class="mt-4 flex justify-center">
+        <a
+          href="https://github.com/BUGDey/qq-farm-bot"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center gap-1.5 text-xs text-gray-500 transition-colors dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+          title="GitHub 项目主页"
+        >
+          <div class="i-carbon-logo-github text-base" />
+          <span>GitHub 开源项目</span>
+        </a>
+      </div>
     </div>
   </div>
 </template>

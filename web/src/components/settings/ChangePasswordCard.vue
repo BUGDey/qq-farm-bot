@@ -1,14 +1,15 @@
 <script setup lang="ts">
+import { useStorage } from '@vueuse/core'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useStorage } from '@vueuse/core'
-import api from '@/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import { useToastStore } from '@/stores/toast'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const toastStore = useToastStore()
+const userStore = useUserStore()
 
 const oldPassword = ref('')
 const newPassword = ref('')
@@ -36,19 +37,16 @@ async function handleChangePassword() {
 
   loading.value = true
   try {
-    const { data } = await api.post('/api/change-password', {
-      oldPassword: oldPassword.value,
-      newPassword: newPassword.value,
-    })
+    const result = await userStore.changePassword(oldPassword.value, newPassword.value)
 
-    if (data?.ok) {
+    if (result?.ok) {
       toastStore.success('密码修改成功')
       oldPassword.value = ''
       newPassword.value = ''
       confirmPassword.value = ''
     }
     else {
-      toastStore.error(data?.error || '密码修改失败')
+      toastStore.error(result?.error || '密码修改失败')
     }
   }
   catch (error: any) {
@@ -75,7 +73,7 @@ function handleLogout() {
         <div class="i-carbon-password" />
         <span>修改密码</span>
       </h3>
-      
+
       <BaseButton
         variant="danger"
         size="sm"

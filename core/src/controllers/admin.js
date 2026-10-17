@@ -85,7 +85,6 @@ const PUBLIC_API_PATHS = new Set([
   "/qr/check",
   "/game-version",
   "/public/login-links",
-  "/public/ui-theme",
   "/changelog",
   "/health",
   "/card-claim/status",

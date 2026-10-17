@@ -859,6 +859,27 @@ useIntervalFn(updateCountdowns, 1000)
         </div>
       </div>
 
+      <!-- 今日统计卡片 -->
+      <div class="home-stats-panel">
+        <div class="home-log-head">
+          <h3>今日统计</h3>
+        </div>
+        <div v-if="!Object.keys(filteredOperations).length" class="home-stats-empty">
+          暂无数据，等待本轮巡查完成…
+        </div>
+        <div v-else class="home-stats-grid">
+          <div
+            v-for="(val, key) in filteredOperations"
+            :key="key"
+            class="home-stat-item"
+          >
+            <div class="home-stat-icon text-base" :class="getOpIcon(key)" />
+            <span class="home-stat-label" :title="getOpName(key)">{{ getOpName(key) }}</span>
+            <span class="home-stat-value">{{ val }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 运行日志面板 -->
       <div class="home-log-panel">
         <div class="home-log-head">
@@ -1837,6 +1858,74 @@ useIntervalFn(updateCountdowns, 1000)
   overflow: hidden;
 }
 
+/* 今日统计卡片：与运行日志同风格的农场玻璃卡 */
+.home-stats-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 20px;
+  padding: 16px 18px;
+  background:
+    linear-gradient(180deg, rgba(186, 226, 248, 0.35) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(134, 214, 152, 0.4) 100%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.26) 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 10px 28px rgba(31, 38, 80, 0.12),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  overflow: hidden;
+}
+
+.home-stats-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.35);
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.home-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+}
+
+.home-stat-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.home-stat-icon {
+  flex-shrink: 0;
+}
+
+.home-stat-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: #4b5563;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-stat-value {
+  flex-shrink: 0;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: 'DM Mono', 'Courier New', monospace;
+}
+
 .home-log-head {
   display: flex;
   align-items: center;
@@ -2014,6 +2103,51 @@ useIntervalFn(updateCountdowns, 1000)
     font-size: 11px;
   }
 
+  /* 收窄头部（小图标 + 隐藏箭头），保证「普通肥/作物图鉴」等 4 字标签不截断 */
+  .resource-head {
+    gap: 3px;
+  }
+
+  .resource-card .resource-mini-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .resource-card .card-arrow {
+    display: none;
+  }
+
+  /* 计时器：缩小图标与数值，右侧插画让出宽度，避免 00:06:41 被截断 */
+  .farm-status-card {
+    gap: 8px;
+  }
+
+  .farm-scene {
+    width: 34%;
+  }
+
+  .farm-metrics {
+    gap: 8px;
+  }
+
+  .farm-metric {
+    gap: 6px;
+  }
+
+  .farm-metric-icon {
+    height: 24px;
+    width: 24px;
+    font-size: 12px;
+  }
+
+  .farm-metric-value {
+    font-size: 12px;
+  }
+
+  .farm-metric-label {
+    font-size: 10px;
+  }
+
   .resource-amount {
     font-size: 13px;
   }
@@ -2076,6 +2210,28 @@ useIntervalFn(updateCountdowns, 1000)
   .home-log-row {
     font-size: 12px;
     padding: 3px 4px;
+  }
+
+  .home-stats-panel {
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .home-stats-grid {
+    gap: 5px 8px;
+  }
+
+  .home-stat-item {
+    padding: 5px 6px;
+    gap: 6px;
+  }
+
+  .home-stat-label {
+    font-size: 12px;
+  }
+
+  .home-stat-value {
+    font-size: 13px;
   }
 }
 </style>
