@@ -7,6 +7,7 @@ web/node_modules/
 web/dist/
 web/stats.html
 dist/
+dist.bak*/
 build/
 coverage/
 .cache/

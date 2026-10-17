@@ -80,7 +80,7 @@ const form = reactive({
 // YYB 获取相关状态
 const yybLoading = ref(false)
 const yybError = ref('')
-const yybAccountName = ref('kwoky')
+const yybAccountName = ref('BUGDey')
 const yybCode = ref('')
 // YYB 入口开关：由「系统配置 → YY-GO 配置」里的开关控制，默认关闭不显示
 const yybEnabled = ref(false)
@@ -526,7 +526,7 @@ async function getYYBCode() {
 function resetYYBState() {
   yybLoading.value = false
   yybError.value = ''
-  yybAccountName.value = 'kwoky'
+  yybAccountName.value = 'BUGDey'
   yybCode.value = ''
 }
 
@@ -1018,7 +1018,7 @@ useModalFocus(() => props.show, modalSurface, close)
             <BaseInput
               v-model="form.name"
               label="账号备注（可选）"
-              placeholder="默认：kwoky"
+              placeholder="默认：BUGDey"
             />
 
             <BaseTextarea
