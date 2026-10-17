@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import NavMoreMenu from '@/components/game/NavMoreMenu.vue'
 import { menuRoutes } from '@/router/menu'
@@ -37,21 +37,24 @@ const moreItems = menuRoutes
 const barVisible = ref(true)
 const HIDE_DELAY_MS = 30000
 const EDGE_THRESHOLD = 4
+const SHOW_ON_SCROLL_UP_DELTA = 2
 let hideTimer: ReturnType<typeof setTimeout> | undefined
-let scrollContainer: HTMLElement | null = null
+const scrollContainers = new Set<HTMLElement>()
+const lastScrollTop = new WeakMap<HTMLElement, number>()
 const autoHideMedia = window.matchMedia('(max-width: 1023px)')
 
-function autoHideEnabled() {
-  if (!autoHideMedia.matches || !scrollContainer)
+function autoHideEnabled(el: HTMLElement | null) {
+  if (!autoHideMedia.matches || !el)
     return false
   // 页面内容不足一屏时没有滚动边界可以唤回菜单栏，保持常显
-  return scrollContainer.scrollHeight > scrollContainer.clientHeight + EDGE_THRESHOLD
+  return el.scrollHeight > el.clientHeight + EDGE_THRESHOLD
 }
 
 function scheduleHide() {
   clearTimeout(hideTimer)
   hideTimer = undefined
-  if (!autoHideEnabled())
+  const main = document.querySelector<HTMLElement>('.custom-scrollbar')
+  if (!autoHideEnabled(main))
     return
   hideTimer = setTimeout(() => {
     barVisible.value = false
@@ -63,25 +66,44 @@ function showBar() {
   scheduleHide()
 }
 
-function handleScroll() {
-  const el = scrollContainer
+function handleScroll(event: Event) {
+  const el = event.target as HTMLElement | null
   if (!el)
     return
+  if (!autoHideEnabled(el))
+    return
+  const last = lastScrollTop.get(el) ?? el.scrollTop
+  const delta = el.scrollTop - last
+  lastScrollTop.set(el, el.scrollTop)
   const atTop = el.scrollTop <= EDGE_THRESHOLD
   const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - EDGE_THRESHOLD
-  if (atTop || atBottom)
+  // 任意位置上滑、或滚动到上下边缘时唤回菜单栏；下滑只重置隐藏计时
+  if (delta < -SHOW_ON_SCROLL_UP_DELTA || atTop || atBottom)
     showBar()
 }
 
+// 路由切换会重建滚动容器，旧引用会失效导致滚动唤不回菜单栏；每次都重新绑定
+function bindScrollContainers() {
+  for (const el of scrollContainers)
+    el.removeEventListener('scroll', handleScroll)
+  scrollContainers.clear()
+  document.querySelectorAll<HTMLElement>('.custom-scrollbar').forEach((el) => {
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    scrollContainers.add(el)
+  })
+}
+
 onMounted(() => {
-  scrollContainer = document.querySelector<HTMLElement>('.custom-scrollbar')
-  scrollContainer?.addEventListener('scroll', handleScroll, { passive: true })
+  bindScrollContainers()
   scheduleHide()
 })
 
+watch(() => route.path, () => nextTick(bindScrollContainers))
+
 onUnmounted(() => {
   clearTimeout(hideTimer)
-  scrollContainer?.removeEventListener('scroll', handleScroll)
+  for (const el of scrollContainers)
+    el.removeEventListener('scroll', handleScroll)
 })
 </script>
 

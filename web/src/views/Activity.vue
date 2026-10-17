@@ -569,12 +569,12 @@ onUnmounted(() => {
             </h1>
             <span class="text-xs text-gray-400">{{ activityCards.length }} 个活动</span>
           </div>
-          <div class="inline-flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800" role="group" aria-label="活动状态筛选">
+          <div class="inline-flex rounded-lg border border-white/55 bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="活动状态筛选">
             <button
               v-for="filter in activityStatusFilters"
               :key="filter.key"
               class="rounded-md px-2.5 py-1 text-xs transition"
-              :class="activityStatusFilter === filter.key ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'"
+              :class="activityStatusFilter === filter.key ? 'bg-white/85 text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'"
               :aria-pressed="activityStatusFilter === filter.key"
               @click="activityStatusFilter = filter.key"
             >

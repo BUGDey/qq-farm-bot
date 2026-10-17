@@ -819,15 +819,14 @@ watch(() => props.currentAccountId, loadQixiFriends)
 </template>
 
 <style scoped>
-/* 账号设置里的功能配置弹窗：纯色不透明底。
-   全局 .bg-white 被 !important 改成半透明毛玻璃，这里用更高特异性改回纯色。 */
+/* 账号设置里的功能配置弹窗：与其他页面的磨砂玻璃统一，
+   用更高特异性压过全局 .bg-white 规则，白底更高保证密集文字可读。 */
 .bg-white.feature-config-modal {
-  background: #fff !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-.dark .bg-white.feature-config-modal {
-  background: #1f2937 !important;
+  background:
+    linear-gradient(180deg, rgba(186, 226, 248, 0.26) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(134, 214, 152, 0.3) 100%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.62) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(24px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.35) !important;
 }
 </style>

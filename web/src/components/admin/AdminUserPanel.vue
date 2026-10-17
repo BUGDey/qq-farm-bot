@@ -207,10 +207,11 @@ async function clearExpired() {
 }
 
 function statusBadge(user: User) {
-  if (user.role !== 'user')
-    return { text: '超管', cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' }
+  // 超管身份由用户名旁的角色徽章展示，状态列只显示订阅状态，避免出现两个「超管」
   if (user.subscription?.enabled === false)
     return { text: '已禁用', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' }
+  if (user.role !== 'user')
+    return { text: '正常', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
   if (user.isExpired)
     return { text: '已过期', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' }
   return { text: '正常', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }

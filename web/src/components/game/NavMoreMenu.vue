@@ -96,9 +96,9 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   padding: 6px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.65);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.48) 100%);
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
   box-shadow: 0 12px 32px rgba(31, 38, 80, 0.18);
 }
 

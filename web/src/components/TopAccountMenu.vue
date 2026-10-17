@@ -316,7 +316,7 @@ async function handleAccountSaved() {
         aria-label="账号列表与管理"
         @keydown.escape.stop.prevent="closeDropdown"
         @focusout="onMenuFocusout"
-        class="account-menu-surface fixed z-[9999] overflow-y-auto border border-gray-200/70 rounded-xl bg-white/95 py-1 shadow-xl backdrop-blur-sm dark:border-gray-700/70 dark:bg-gray-900/95"
+        class="account-menu-surface fixed z-[9999] overflow-y-auto border border-white/60 rounded-xl bg-white/60 py-1 shadow-xl backdrop-blur-xl backdrop-saturate-150"
         :style="{ top: `${dropdownPos.top}px`, left: `${dropdownPos.left}px`, width: `${dropdownPos.width}px`, maxHeight: `${dropdownPos.maxHeight}px` }"
       >
         <div class="custom-scrollbar max-h-72 overflow-y-auto">

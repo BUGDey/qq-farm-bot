@@ -551,7 +551,7 @@ onMounted(async () => {
         </div>
 
         <div v-else-if="activeTab === 'system'" class="space-y-5">
-          <div class="sticky top-0 z-10 flex items-center justify-between border border-gray-200 rounded-xl bg-white/95 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
+          <div class="sticky top-0 z-10 flex items-center justify-between border border-white/60 rounded-xl bg-white/62 p-4 shadow-sm backdrop-blur-xl backdrop-saturate-150">
             <div>
               <h3 class="text-lg text-gray-900 font-bold dark:text-gray-100">
                 系统配置
@@ -665,17 +665,21 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* 设置页整体改纯色不透明：全局 .bg-white 毛玻璃规则会让密集文字透出背景图。
-   用更高特异性覆盖，:deep 覆盖子组件（账号设置卡片、账号管理卡片等）里的白底块。 */
-.settings-solid.bg-white,
-.settings-solid :deep(.bg-white) {
-  background: #fff !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+/* 设置页与首页统一的磨砂玻璃：底部白 62% + 24px 模糊，密集文字仍可读。
+   容器带首页同款蓝→绿渐变色调；子组件里的白底块统一降为半透明毛玻璃。 */
+.settings-solid.bg-white {
+  background:
+    linear-gradient(180deg, rgba(186, 226, 248, 0.3) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(134, 214, 152, 0.34) 100%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.48) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(24px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.35) !important;
 }
 
-.dark .settings-solid.bg-white,
-.dark .settings-solid :deep(.bg-white) {
-  background: #1f2937 !important;
+.settings-solid :deep(.bg-white) {
+  background: rgba(255, 255, 255, 0.62) !important;
+  backdrop-filter: blur(20px) saturate(1.3) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.3) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
 }
 </style>
