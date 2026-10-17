@@ -373,10 +373,10 @@ defineExpose({ load })
     <!-- 弹窗 -->
     <div
       v-if="modal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
       @click.self="closeModal"
     >
-      <div class="modal-solid ui-card-elevated max-h-[85vh] max-w-lg w-full overflow-y-auto rounded-2xl p-5">
+      <div class="modal-glass max-h-[85vh] max-w-lg w-full overflow-y-auto rounded-2xl p-5">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-base text-gray-900 font-semibold dark:text-gray-100">
             {{ modal === 'create' ? '新建用户' : modal === 'edit' ? `编辑用户 · ${activeUser?.username}` : modal === 'renew' ? `核销卡密 · ${activeUser?.username}` : `名下农场账号 · ${activeUser?.username}` }}

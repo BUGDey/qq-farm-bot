@@ -160,6 +160,20 @@ body {
   background: var(--theme-gradient);
 }
 
+/* 管理后台弹窗统一磨砂：白底略高保证表单可读，遮罩由各弹窗自行用 bg-black/30+模糊 */
+.modal-glass {
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(186, 226, 248, 0.26) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(134, 214, 152, 0.3) 100%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.64) 100%);
+  box-shadow:
+    0 18px 44px rgba(31, 38, 80, 0.18),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
