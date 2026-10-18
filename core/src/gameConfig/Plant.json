@@ -9417,6 +9417,49 @@
     "fruit_alter": 0
   },
   {
+    "id": 1121072,
+    "mutant_effect_plant": null,
+    "name": "黄金·寒兰",
+    "seed_id": null,
+    "land_level_need": 1,
+    "seasons": 1,
+    "grow_phases": "种子:8640;发芽:8640;小叶子:8640;大叶子:8640;初熟:8640;成熟:0;",
+    "exp": 1680,
+    "special_fruit": "2026090100:1028:35",
+    "size": null,
+    "harvestRandom": null,
+    "harvestAllSpineRes": null,
+    "harvestAllOffsetPosition": null,
+    "harvestAniName": "anim_harvest_gold",
+    "all_state_spine": null,
+    "mature_effect": "effect/prefab/effect_plant_maturation",
+    "rare_plant_light_pos": null,
+    "exp_root": 1.6,
+    "exp_alter": 991,
+    "fruit_root": 0,
+    "fruit_alter": 0,
+    "fruit": {
+      "id": 1041072,
+      "count": 10
+    },
+    "offsetPosition": {
+      "x": 0,
+      "y": 0
+    },
+    "mutantEffectScale": {
+      "x": 1,
+      "y": 1
+    },
+    "harvestOffsetPosition": {
+      "x": -35,
+      "y": 5
+    },
+    "mature_effect_offset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
     "id": 1120263,
     "mutant_effect_plant": null,
     "name": "黄金·天竺葵",
@@ -11010,6 +11053,49 @@
     "asset_name": "Crop_1072"
   },
   {
+    "id": 1120516,
+    "mutant_effect_plant": null,
+    "name": "黄金·狗尾草",
+    "seed_id": null,
+    "land_level_need": 1,
+    "seasons": 1,
+    "grow_phases": "种子:8640;发芽:8640;小叶子:8640;大叶子:8640;初熟:8640;成熟:0;",
+    "exp": 1440,
+    "special_fruit": "2026090100:1028:30",
+    "size": null,
+    "harvestRandom": null,
+    "harvestAllSpineRes": null,
+    "harvestAllOffsetPosition": null,
+    "harvestAniName": "anim_harvest_gold",
+    "all_state_spine": null,
+    "mature_effect": "effect/prefab/effect_plant_maturation",
+    "rare_plant_light_pos": null,
+    "exp_root": 1.6,
+    "exp_alter": 850,
+    "fruit_root": 0,
+    "fruit_alter": 0,
+    "fruit": {
+      "id": 1040516,
+      "count": 10
+    },
+    "offsetPosition": {
+      "x": 0,
+      "y": 0
+    },
+    "mutantEffectScale": {
+      "x": 1,
+      "y": 1
+    },
+    "harvestOffsetPosition": {
+      "x": -35,
+      "y": 5
+    },
+    "mature_effect_offset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
     "id": 1020525,
     "mutant_effect_plant": "5:1120525:1",
     "name": "森野甜莓",
@@ -11054,6 +11140,49 @@
     "asset_name": "Crop_525"
   },
   {
+    "id": 1125995,
+    "mutant_effect_plant": null,
+    "name": "黄金·芦苇",
+    "seed_id": null,
+    "land_level_need": 1,
+    "seasons": 1,
+    "grow_phases": "种子:8640;发芽:8640;小叶子:8640;大叶子:8640;初熟:8640;成熟:0;",
+    "exp": 1680,
+    "special_fruit": "2026090100:1028:35",
+    "size": null,
+    "harvestRandom": null,
+    "harvestAllSpineRes": null,
+    "harvestAllOffsetPosition": null,
+    "harvestAniName": "anim_harvest_gold",
+    "all_state_spine": null,
+    "mature_effect": "effect/prefab/effect_plant_maturation",
+    "rare_plant_light_pos": null,
+    "exp_root": 1.6,
+    "exp_alter": 991,
+    "fruit_root": 0,
+    "fruit_alter": 0,
+    "fruit": {
+      "id": 1045995,
+      "count": 10
+    },
+    "offsetPosition": {
+      "x": 0,
+      "y": 0
+    },
+    "mutantEffectScale": {
+      "x": 1,
+      "y": 1
+    },
+    "harvestOffsetPosition": {
+      "x": -35,
+      "y": 5
+    },
+    "mature_effect_offset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
     "id": 1020526,
     "mutant_effect_plant": "5:1120526:1",
     "name": "森野白桃",
@@ -11096,6 +11225,49 @@
       "y": 0
     },
     "asset_name": "Crop_526"
+  },
+  {
+    "id": 1121625,
+    "mutant_effect_plant": null,
+    "name": "黄金·枸杞",
+    "seed_id": null,
+    "land_level_need": 1,
+    "seasons": 1,
+    "grow_phases": "种子:8640;发芽:8640;小叶子:8640;大叶子:8640;初熟:8640;成熟:0;",
+    "exp": 1680,
+    "special_fruit": "2026090100:1028:35",
+    "size": null,
+    "harvestRandom": null,
+    "harvestAllSpineRes": null,
+    "harvestAllOffsetPosition": null,
+    "harvestAniName": "anim_harvest_gold",
+    "all_state_spine": null,
+    "mature_effect": "effect/prefab/effect_plant_maturation",
+    "rare_plant_light_pos": null,
+    "exp_root": 1.6,
+    "exp_alter": 991,
+    "fruit_root": 0,
+    "fruit_alter": 0,
+    "fruit": {
+      "id": 1041625,
+      "count": 10
+    },
+    "offsetPosition": {
+      "x": 0,
+      "y": 0
+    },
+    "mutantEffectScale": {
+      "x": 1,
+      "y": 1
+    },
+    "harvestOffsetPosition": {
+      "x": -35,
+      "y": 5
+    },
+    "mature_effect_offset": {
+      "x": 0,
+      "y": 0
+    }
   },
   {
     "id": 1020527,
@@ -11890,6 +12062,49 @@
       "y": 0
     },
     "asset_name": "gold/Crop_435"
+  },
+  {
+    "id": 1126030,
+    "mutant_effect_plant": null,
+    "name": "黄金·月下美人",
+    "seed_id": null,
+    "land_level_need": 1,
+    "seasons": 1,
+    "grow_phases": "种子:8640;发芽:8640;小叶子:8640;大叶子:8640;花蕾:8640;盛开:0;",
+    "exp": 1680,
+    "special_fruit": null,
+    "size": null,
+    "harvestRandom": null,
+    "harvestAllSpineRes": null,
+    "harvestAllOffsetPosition": null,
+    "harvestAniName": "anim_harvest_zhenpin",
+    "all_state_spine": null,
+    "mature_effect": "effect/prefab/effect_plant_maturation",
+    "rare_plant_light_pos": null,
+    "exp_root": 1.6,
+    "exp_alter": 991,
+    "fruit_root": 0,
+    "fruit_alter": 0,
+    "fruit": {
+      "id": 1046030,
+      "count": 10
+    },
+    "offsetPosition": {
+      "x": 0,
+      "y": 0
+    },
+    "mutantEffectScale": {
+      "x": 1,
+      "y": 1
+    },
+    "harvestOffsetPosition": {
+      "x": -35,
+      "y": 5
+    },
+    "mature_effect_offset": {
+      "x": 0,
+      "y": 0
+    }
   },
   {
     "id": 1020165,

@@ -72,11 +72,11 @@ function findSettingsFile(root) {
 }
 
 function remoteBundleNames(settings) {
-  return [...new Set([
-    ...(settings?.assets?.remoteBundles || []),
-    ...(settings?.assets?.projectBundles || []),
-  ])].filter(bundle => !['resources', 'internal', 'main'].includes(bundle)
-    && settings?.assets?.bundleVers?.[bundle]);
+  // 只认 remoteBundles：projectBundles 是随包本地下发的（如 mcboot），
+  // 即使 bundleVers 里有版本号，CDN 上也没有对应 config，拉了只会 404。
+  return [...new Set(settings?.assets?.remoteBundles || [])]
+    .filter(bundle => !['resources', 'internal', 'main'].includes(bundle)
+      && settings?.assets?.bundleVers?.[bundle]);
 }
 
 function parseConfigRows(serialized) {
