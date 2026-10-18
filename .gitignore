@@ -32,3 +32,7 @@ temp/
 
 # 配置合并脚本产生的备份
 *.bak
+
+# 本地工作目录：技能包以 zip 形式分发，不进版本库
+# （内含凭据处理脚本与运行产物，见 .workbuddy/.gitignore）
+/.workbuddy/
