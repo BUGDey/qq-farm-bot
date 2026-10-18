@@ -239,7 +239,7 @@ async function startDetection() {
         <div
           v-for="v in filteredVisitors"
           :key="v.gid"
-          class="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-2.5"
+          class="flex flex-col items-stretch gap-2 px-4 py-2.5 sm:grid sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3"
           :title="metricsTitle(v)"
         >
           <div class="flex min-w-0 items-center gap-3">
@@ -258,7 +258,7 @@ async function startDetection() {
                 </span>
               </div>
               <div class="flex flex-wrap items-center gap-1.5">
-                <span class="truncate text-[11px] text-gray-400">{{ metricsTitle(v) }}</span>
+                <span class="text-[11px] text-gray-400 sm:truncate">{{ metricsTitle(v) }}</span>
                 <span
                   v-for="tag in statusTags(v)"
                   :key="tag.label"
@@ -279,7 +279,7 @@ async function startDetection() {
               @click="toggleBlack(v)"
             >
               <span class="i-carbon-close block text-[13px]" />
-              <span class="hidden sm:inline">{{ blacklistedGids.has(Number(v.gid)) ? '取消拉黑' : '拉黑' }}</span>
+              <span>{{ blacklistedGids.has(Number(v.gid)) ? '取消拉黑' : '拉黑' }}</span>
             </button>
             <button
               class="row-action-btn row-action-btn-danger"
@@ -288,7 +288,7 @@ async function startDetection() {
               @click="removeFriend(v)"
             >
               <span class="i-carbon-trash-can block text-[13px]" />
-              <span class="hidden sm:inline">删除</span>
+              <span>删除</span>
             </button>
             <span
               class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold"
