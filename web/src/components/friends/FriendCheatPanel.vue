@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { computed, onMounted, ref } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAccountStore } from '@/stores/account'
 import { useFriendStore } from '@/stores/friend'
@@ -68,7 +68,8 @@ function avatarUrl(v: any) {
 }
 
 function levelLabel(v: any) {
-  if (v.protected) return '护主犬'
+  if (v.protected)
+    return '护主犬'
   return v.level === 'danger' ? '建议清洗' : v.level === 'warn' ? '关注' : '正常'
 }
 
@@ -110,9 +111,11 @@ function metricsParts(v: any) {
     parts.push({ label: '间隔变异', value: String(m.regularityCv) })
   if (m.singleAction)
     parts.push({ label: '', value: '行为单一' })
-  parts.push({ label: '活跃跨度', value: `${(m.spanHours ?? 0).toFixed(1)}h` })
+  parts.push({ label: '24h 在线', value: `${v.activeHours24 ?? 0} 小时` })
   parts.push({ label: '帮忙', value: String(m.helpCount ?? 0) })
   parts.push({ label: '偷菜', value: `${m.stealCount ?? 0}（价值 ${m.stealValue ?? 0}）` })
+  if ((m.fastStealCount ?? 0) > 0)
+    parts.push({ label: '秒偷', value: `${m.fastStealCount} 次` })
   return parts
 }
 
@@ -127,7 +130,11 @@ function statusTags(v: any) {
       tags.push({ label: '可疑', cls: 'status-tag-amber' })
   }
   if (v.highActive)
-    tags.push({ label: '高活跃', cls: 'status-tag-red' })
+    tags.push({ label: '长时间在线', cls: 'status-tag-red' })
+  if ((v.metrics?.fastStealCount ?? 0) >= 2)
+    tags.push({ label: '踩点秒偷', cls: 'status-tag-red' })
+  else if ((v.activeHours24 ?? 0) >= 4 && (v.activeHours24 ?? 0) < 6)
+    tags.push({ label: '在线偏长', cls: 'status-tag-amber' })
   if ((v.metrics?.helpCount ?? 0) >= 5)
     tags.push({ label: '帮助值高', cls: 'status-tag-green' })
   if ((v.metrics?.stealValue ?? 0) >= 30)
@@ -170,7 +177,7 @@ async function toggleBlack(v: any) {
 async function removeFriend(v: any) {
   if (!currentAccountId.value || actionBusy.value[v.gid])
     return
-  // eslint-disable-next-line no-alert
+
   if (!window.confirm(`确定删除好友「${displayName(v)}」吗？删除后无法恢复。`))
     return
   actionBusy.value[v.gid] = true
@@ -202,7 +209,7 @@ async function startDetection() {
 
 <template>
   <div class="space-y-4">
-    <div class="border border-white/60 rounded-xl bg-white/55 p-4 text-sm leading-relaxed text-gray-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10 dark:text-gray-200">
+    <div class="border border-white/60 rounded-xl bg-white/55 p-4 text-sm text-gray-700 leading-relaxed shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10 dark:text-gray-200">
       {{ description }}
     </div>
 
@@ -224,7 +231,7 @@ async function startDetection() {
       <span v-else-if="!cheatLoading" class="text-xs text-gray-400">
         点击「开始检测」拉取最新访客记录并分析
       </span>
-      <span v-if="actionMsg" class="text-xs font-medium text-[var(--theme-primary)]">
+      <span v-if="actionMsg" class="text-xs text-[var(--theme-primary)] font-medium">
         {{ actionMsg }}
       </span>
     </div>
@@ -248,29 +255,29 @@ async function startDetection() {
       </button>
     </div>
 
-    <div v-if="cheatAnalysis" class="overflow-hidden rounded-xl border border-white/60 bg-white/55 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
-      <div class="grid grid-cols-[1fr_auto] gap-2 border-b border-white/50 px-4 py-2.5 text-xs font-semibold text-gray-500 dark:border-white/10 dark:text-gray-400">
+    <div v-if="cheatAnalysis" class="overflow-hidden border border-white/60 rounded-xl bg-white/55 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
+      <div class="grid grid-cols-[1fr_auto] gap-2 border-b border-white/50 px-4 py-2.5 text-xs text-gray-500 font-semibold dark:border-white/10 dark:text-gray-400">
         <span>好友</span>
         <span>嫌疑分</span>
       </div>
-      <div class="max-h-[480px] divide-y divide-white/40 overflow-y-auto dark:divide-white/10">
+      <div class="max-h-[480px] overflow-y-auto divide-y divide-white/40 dark:divide-white/10">
         <div
           v-for="v in filteredVisitors"
           :key="v.gid"
           class="flex flex-col items-stretch gap-2 px-4 py-2.5 sm:grid sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3"
           :title="metricsTitle(v)"
         >
-          <div class="flex min-w-0 items-center gap-3">
+          <div class="min-w-0 flex items-center gap-3">
             <div class="h-9 w-9 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
               <img v-if="avatarUrl(v)" :src="avatarUrl(v)" class="h-full w-full object-cover">
               <span v-else class="i-carbon-user text-gray-400" />
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-1.5">
-                <span class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ displayName(v) }}</span>
+                <span class="truncate text-sm text-gray-900 font-medium dark:text-gray-100">{{ displayName(v) }}</span>
                 <span
                   v-if="v.protected"
-                  class="inline-flex shrink-0 items-center rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                  class="inline-flex shrink-0 items-center rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] text-purple-700 font-bold dark:bg-purple-900/30 dark:text-purple-300"
                 >
                   护主犬
                 </span>

@@ -73,6 +73,10 @@ async function runFarmOperation(opType) {
 
   const lands = landsReply.lands;
   const analysis = analyzeLands(lands, isFirstFarmCheck);
+  // 外挂检测：巡田时记录我方各地块成熟时刻，供「秒偷」判定使用
+  try {
+    require('./cheat-detect').recordOwnMaturityHistory(lands);
+  } catch { }
   await require('./capital-mode').prepareForFarmOperation({ lands, analysis, opType });
   const labels = [];
 
