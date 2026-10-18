@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { FriendTabKey } from './FriendsTabs.vue'
+import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
+import { useFriendStore } from '@/stores/friend'
 
-defineProps<{
+const props = defineProps<{
   activeTab: FriendTabKey
   friendsCount: number
   filteredFriendsCount: number
@@ -10,15 +13,23 @@ defineProps<{
   filteredInteractRecordsCount: number
 }>()
 
+const friendStore = useFriendStore()
+const { cheatAnalysis } = storeToRefs(friendStore)
+const cheatSuspiciousCount = computed(() =>
+  cheatAnalysis.value ? `${cheatAnalysis.value.suspiciousCount}/${cheatAnalysis.value.visitorCount}` : '0')
+
 const searchKeyword = defineModel<string>('searchKeyword', { required: true })
+void props
 </script>
 
 <template>
   <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h2 class="flex items-center gap-2 text-2xl font-bold">
-        <div class="i-carbon-user-multiple" />
-        好友
+        <span class="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/55 px-4 py-2 text-xl shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
+          <span class="text-[var(--theme-primary)]"><span class="i-carbon-user-multiple block" /></span>
+          好友
+        </span>
       </h2>
     </div>
     <div class="flex items-center gap-3">
@@ -33,6 +44,9 @@ const searchKeyword = defineModel<string>('searchKeyword', { required: true })
       </div>
       <div v-if="activeTab === 'friends' && friendsCount" class="text-sm font-medium text-gray-900 dark:text-gray-100">
         共 {{ filteredFriendsCount }}/{{ friendsCount }} 名好友
+      </div>
+      <div v-else-if="activeTab === 'cheat'" class="text-sm font-medium text-gray-900 dark:text-gray-100">
+        共 {{ cheatSuspiciousCount }} 人嫌疑
       </div>
       <div v-if="activeTab === 'blacklist'" class="text-sm font-medium text-gray-900 dark:text-gray-100">
         共 {{ blacklistCount }} 人

@@ -25,6 +25,9 @@ export const useFriendStore = defineStore('friend', () => {
   const interactRecords = ref<any[]>([])
   const interactLoading = ref(false)
   const interactError = ref('')
+  const cheatAnalysis = ref<any | null>(null)
+  const cheatLoading = ref(false)
+  const cheatError = ref('')
 
   const knownFriendGids = ref<number[]>([])
   const knownFriendGidSyncCooldownSec = ref(600)
@@ -39,6 +42,8 @@ export const useFriendStore = defineStore('friend', () => {
     blacklist.value = []
     interactRecords.value = []
     interactError.value = ''
+    cheatAnalysis.value = null
+    cheatError.value = ''
     knownFriendGids.value = []
     knownFriendGidSyncCooldownSec.value = 600
     friendsListCacheTtlSec.value = 60
@@ -192,6 +197,41 @@ export const useFriendStore = defineStore('friend', () => {
     }
     finally {
       interactLoading.value = false
+    }
+  }
+
+  /** 外挂检测：先拉一次最新访客记录（累积样本），再取行为分析结果 */
+  async function fetchCheatAnalysis(accountId: string) {
+    if (!accountId)
+      return
+    const requestedId = String(accountId)
+    cheatLoading.value = true
+    cheatError.value = ''
+
+    try {
+      // 拉最新访客记录（getInteractRecords 内部会累积 72 小时样本），失败不阻塞分析
+      try {
+        await api.get('/api/interact-records', { headers: { 'x-account-id': accountId } })
+      }
+      catch { }
+
+      const res = await api.get('/api/friend-cheat-analysis', {
+        headers: { 'x-account-id': accountId },
+      })
+      if (!isCurrentAccount(requestedId))
+        return
+      if (res.data.ok) {
+        cheatAnalysis.value = res.data.data
+      }
+      else {
+        cheatError.value = res.data.error || '外挂检测失败'
+      }
+    }
+    catch (error: any) {
+      cheatError.value = error?.response?.data?.error || error?.message || '外挂检测失败'
+    }
+    finally {
+      cheatLoading.value = false
     }
   }
 
@@ -377,6 +417,9 @@ export const useFriendStore = defineStore('friend', () => {
     interactRecords,
     interactLoading,
     interactError,
+    cheatAnalysis,
+    cheatLoading,
+    cheatError,
     knownFriendGids,
     knownFriendGidSyncCooldownSec,
     friendsListCacheTtlSec,
@@ -389,6 +432,7 @@ export const useFriendStore = defineStore('friend', () => {
     fetchBlacklist,
     toggleBlacklist,
     fetchInteractRecords,
+    fetchCheatAnalysis,
     fetchFriendLands,
     operate,
     fetchKnownFriendSettings,

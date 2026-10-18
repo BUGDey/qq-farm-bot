@@ -224,6 +224,12 @@ async function checkFriends(options = {}) {
   isCheckingFriends = true;
   checkDailyReset();
 
+  // 外挂检测：挂机过程中节流累积访客互动样本（默认 30 分钟一次，不阻塞主流程）
+  require('./cheat-detect').collectSamplesThrottled(
+    accountId,
+    () => require('./interact').getInteractRecords()
+  ).catch(() => { });
+
   try {
     const allFriendsReply = await getAllFriends();
     const rawFriends = extractReplyFriends(allFriendsReply);

@@ -563,18 +563,20 @@ onUnmounted(() => {
     <section v-if="!selectedActivity" class="space-y-4">
       <header class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-baseline gap-2">
-            <h1 class="text-lg text-gray-900 font-semibold dark:text-white">
+          <h1 class="text-lg text-gray-900 font-semibold dark:text-white">
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/55 px-4 py-2 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
+              <span class="text-base text-[var(--theme-primary)]"><span class="i-carbon-events block" /></span>
               活动中心
-            </h1>
-            <span class="text-xs text-gray-400">{{ activityCards.length }} 个活动</span>
-          </div>
-          <div class="inline-flex rounded-lg border border-white/55 bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="活动状态筛选">
+            </span>
+          </h1>
+          <span class="text-xs text-gray-400">{{ activityCards.length }} 个活动</span>
+          <div class="inline-flex rounded-full border border-white/55 bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="活动状态筛选">
             <button
               v-for="filter in activityStatusFilters"
               :key="filter.key"
-              class="rounded-md px-2.5 py-1 text-xs transition"
-              :class="activityStatusFilter === filter.key ? 'bg-white/85 text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+              class="rounded-full px-3 py-1.5 text-xs font-medium transition"
+              :class="activityStatusFilter === filter.key ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+              :style="activityStatusFilter === filter.key ? { backgroundColor: 'var(--theme-primary)' } : {}"
               :aria-pressed="activityStatusFilter === filter.key"
               @click="activityStatusFilter = filter.key"
             >

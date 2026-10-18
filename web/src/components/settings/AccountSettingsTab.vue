@@ -147,14 +147,14 @@ function accountAvatar(acc: any) {
           : {}"
         @click="emit('select', acc)"
       >
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div class="flex items-center justify-between gap-3 sm:items-start sm:gap-4">
           <div class="min-w-0 flex flex-1 items-center gap-3">
-            <div class="h-12 w-12 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+            <div class="h-12 w-12 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 lt-sm:h-14 lt-sm:w-14 dark:bg-gray-700">
               <img v-if="accountAvatar(acc)" :src="accountAvatar(acc)" class="h-full w-full object-cover">
               <div v-else class="i-carbon-user text-2xl text-gray-400" />
             </div>
             <div class="min-w-0 flex-1">
-              <h4 class="truncate text-lg font-bold">
+              <h4 class="truncate text-lg font-bold lt-sm:text-xl">
                 {{ acc.name || acc.nick || acc.id }}
               </h4>
               <div class="mt-1 flex flex-wrap items-center gap-1.5">
@@ -174,8 +174,8 @@ function accountAvatar(acc: any) {
               </div>
             </div>
           </div>
-          <div class="flex items-center justify-end gap-2 sm:flex-col sm:items-end">
-            <span class="flex items-center gap-1 text-sm text-gray-500 sm:hidden">
+          <div class="flex shrink-0 flex-col items-end gap-1.5 sm:gap-2">
+            <span class="flex items-center gap-1 text-sm text-gray-500 sm:text-xs">
               <div class="h-2 w-2 rounded-full" :class="acc.running ? 'bg-green-500' : 'bg-gray-300'" />
               {{ acc.running ? '运行中' : '已停止' }}
             </span>

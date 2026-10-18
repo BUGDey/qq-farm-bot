@@ -819,14 +819,30 @@ watch(() => props.currentAccountId, loadQixiFriends)
 </template>
 
 <style scoped>
-/* 账号设置里的功能配置弹窗：与其他页面的磨砂玻璃统一，
+/* 账号设置里的功能配置弹窗：与其他页面统一为半透明白色（不再叠加蓝→绿渐变色调），
    用更高特异性压过全局 .bg-white 规则，白底更高保证密集文字可读。 */
 .bg-white.feature-config-modal {
-  background:
-    linear-gradient(180deg, rgba(186, 226, 248, 0.26) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(134, 214, 152, 0.3) 100%),
-    linear-gradient(165deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.62) 100%) !important;
+  background: rgba(255, 255, 255, 0.78) !important;
   border-color: rgba(255, 255, 255, 0.65) !important;
-  backdrop-filter: blur(24px) saturate(1.35) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(1.35) !important;
+  backdrop-filter: blur(24px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.2) !important;
+}
+
+/* 弹窗内所有配置分组块（基础功能/选种策略/日常任务/节令小札/奶茶热销中等）
+   原本灰底、彩底混杂，统一为半透明白色（用 space-y 特征精准命中分组块，
+   避免误伤内部选项 chip 的选中高亮背景） */
+.feature-config-modal div[class*="space-y-"] {
+  background: rgba(255, 255, 255, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.65) !important;
+}
+
+/* 暗色模式：分组块改用深色半透明，保证浅色文字可读 */
+:global(.dark) .bg-white.feature-config-modal {
+  background: rgba(31, 41, 55, 0.82) !important;
+}
+
+:global(.dark) .feature-config-modal div[class*="space-y-"] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
 }
 </style>

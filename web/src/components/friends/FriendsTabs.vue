@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export type FriendTabKey = 'friends' | 'blacklist' | 'visitors'
+export type FriendTabKey = 'friends' | 'cheat' | 'blacklist' | 'visitors'
 
 export interface FriendTabItem {
   key: FriendTabKey
@@ -16,15 +16,15 @@ const activeTab = defineModel<FriendTabKey>('activeTab', { required: true })
 </script>
 
 <template>
-  <div class="mb-4 flex border-b border-gray-200 dark:border-gray-700">
+  <div class="mb-4 flex flex-wrap gap-2">
     <button
       v-for="tab in tabs"
       :key="tab.key"
-      class="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors sm:gap-2 sm:px-4 sm:py-3"
+      class="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium backdrop-blur-md transition-all sm:gap-2 sm:px-4"
       :class="activeTab === tab.key
-        ? 'border-b-2'
-        : 'text-gray-800 hover:text-gray-950 dark:text-gray-400 dark:hover:text-gray-300'"
-      :style="{ borderColor: activeTab === tab.key ? 'var(--theme-primary)' : 'transparent', color: activeTab === tab.key ? 'var(--theme-primary)' : undefined }"
+        ? 'border-transparent text-white shadow-md'
+        : 'border-white/60 bg-white/55 text-gray-700 hover:bg-white/80 dark:border-white/10 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/20'"
+      :style="activeTab === tab.key ? { backgroundColor: 'var(--theme-primary)' } : {}"
       @click="activeTab = tab.key"
     >
       <div :class="tab.icon" />

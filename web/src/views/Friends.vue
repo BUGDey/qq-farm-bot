@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import api from '@/api'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import FriendCheatPanel from '@/components/friends/FriendCheatPanel.vue'
 import FriendsFriendList from '@/components/friends/FriendsFriendList.vue'
 import FriendsPageHeader from '@/components/friends/FriendsPageHeader.vue'
 import FriendsSyncSettings from '@/components/friends/FriendsSyncSettings.vue'
@@ -42,6 +43,7 @@ const { status, loading: statusLoading, realtimeConnected, currentStatusReady } 
 
 const TABS = [
   { key: 'friends', label: '好友列表', icon: 'i-carbon-user-multiple' },
+  { key: 'cheat', label: '外挂检测', icon: 'i-carbon-warning-alt' },
   { key: 'blacklist', label: '好友黑名单', icon: 'i-carbon-list-blocked' },
   { key: 'visitors', label: '最近访客', icon: 'i-carbon-user-activity' },
 ] as const
@@ -782,6 +784,10 @@ async function handleBatchAddKnownFriendGids() {
             @friend-avatar-error="handleFriendAvatarError"
           />
         </template>
+      </div>
+
+      <div v-else-if="activeTab === 'cheat'" class="space-y-4">
+        <FriendCheatPanel />
       </div>
 
       <div v-else-if="activeTab === 'blacklist'" class="space-y-4">

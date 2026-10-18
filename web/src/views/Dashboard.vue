@@ -72,7 +72,45 @@ const visibleLogs = computed(() => compactRuntimeLogs(filteredLogs.value))
 // ===== 首页运行日志面板（game-home 区，不受下方筛选条件影响） =====
 const homeLogContainer = ref<HTMLElement | null>(null)
 const homeLogAutoScroll = ref(true)
-const homeLogs = computed(() => compactRuntimeLogs(allLogs.value))
+
+/** 首页运行日志筛选（模块/事件/级别/关键词） */
+const homeLogFilter = reactive({ module: '', event: '', level: '', keyword: '' })
+const homeLogEvents = computed(() => {
+  const set = new Set<string>()
+  for (const log of allLogs.value) {
+    if (log.event)
+      set.add(log.event)
+  }
+  return [{ label: '全部事件', value: '' }, ...[...set].sort().map(e => ({ label: e, value: e }))]
+})
+const homeLogLevels = [
+  { label: '全部级别', value: '' },
+  { label: '信息', value: 'info' },
+  { label: '警告', value: 'warn' },
+  { label: '错误', value: 'error' },
+]
+const hasHomeLogFilter = computed(() =>
+  !!(homeLogFilter.module || homeLogFilter.event || homeLogFilter.level || homeLogFilter.keyword.trim()))
+
+function resetHomeLogFilter() {
+  homeLogFilter.module = ''
+  homeLogFilter.event = ''
+  homeLogFilter.level = ''
+  homeLogFilter.keyword = ''
+}
+
+const homeLogs = computed(() => compactRuntimeLogs(allLogs.value.filter((log) => {
+  if (homeLogFilter.module && log.module !== homeLogFilter.module)
+    return false
+  if (homeLogFilter.event && log.event !== homeLogFilter.event)
+    return false
+  if (homeLogFilter.level && log.level !== homeLogFilter.level)
+    return false
+  const kw = homeLogFilter.keyword.trim().toLowerCase()
+  if (kw && !`${log.tag} ${log.event || ''} ${log.msg}`.toLowerCase().includes(kw))
+    return false
+  return true
+})))
 
 function onHomeLogScroll() {
   const element = homeLogContainer.value
@@ -911,15 +949,37 @@ useIntervalFn(updateCountdowns, 1000)
       </div>
 
       <!-- 运行日志面板 -->
-      <div class="home-log-panel">
-        <div class="home-log-head">
-          <h3>运行日志</h3>
-          <button class="home-log-latest" @click="scrollHomeLogToBottom">
-            最新
-            <span class="i-carbon-arrow-down" />
-          </button>
-        </div>
-        <div ref="homeLogContainer" class="home-log-list" @scroll="onHomeLogScroll">
+  <div class="home-log-panel">
+    <div class="home-log-head">
+      <h3>运行日志</h3>
+      <button class="home-log-latest" @click="scrollHomeLogToBottom">
+        最新
+        <span class="i-carbon-arrow-down" />
+      </button>
+    </div>
+    <div class="home-log-filters">
+      <select v-model="homeLogFilter.module" class="home-log-filter-item" title="按模块筛选">
+        <option v-for="m in modules" :key="`hm-${m.value}`" :value="m.value">
+          {{ m.label }}
+        </option>
+      </select>
+      <select v-model="homeLogFilter.event" class="home-log-filter-item" title="按事件筛选">
+        <option v-for="e in homeLogEvents" :key="`he-${e.value}`" :value="e.value">
+          {{ e.label }}
+        </option>
+      </select>
+      <select v-model="homeLogFilter.level" class="home-log-filter-item" title="按级别筛选">
+        <option v-for="l in homeLogLevels" :key="`hl-${l.value}`" :value="l.value">
+          {{ l.label }}
+        </option>
+      </select>
+      <input v-model="homeLogFilter.keyword" class="home-log-filter-item home-log-keyword" placeholder="关键词...">
+      <button v-if="hasHomeLogFilter" class="home-log-filter-item home-log-clear" title="清空筛选条件" @click="resetHomeLogFilter">
+        <span class="i-carbon-trash-can" />
+        清空
+      </button>
+    </div>
+    <div ref="homeLogContainer" class="home-log-list" @scroll="onHomeLogScroll">
           <div v-if="!homeLogs.length" class="home-log-empty">
             暂无日志
           </div>
@@ -1976,6 +2036,58 @@ useIntervalFn(updateCountdowns, 1000)
   color: #166534;
   margin: 0;
   letter-spacing: 1px;
+}
+
+.home-log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-log-filter-item {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.4;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.home-log-filter-item:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 18%, transparent);
+}
+
+select.home-log-filter-item {
+  max-width: 128px;
+  cursor: pointer;
+}
+
+.home-log-keyword {
+  flex: 1;
+  min-width: 96px;
+}
+
+.home-log-keyword::placeholder {
+  color: #9ca3af;
+}
+
+.home-log-clear {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: #b91c1c;
+}
+
+.home-log-clear:hover {
+  background: rgba(254, 226, 226, 0.9);
 }
 
 .home-log-list {

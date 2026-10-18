@@ -208,7 +208,7 @@ async function getInteractRecords() {
   const reply = await fetchInteractReply();
   const records = Array.isArray(reply && reply.records) ? reply.records : [];
 
-  return records
+  const normalized = records
     .map((raw, idx) => normalizeInteractRecord(raw, idx))
     .sort(
       (a, b) =>
@@ -216,6 +216,16 @@ async function getInteractRecords() {
         b.visitorGid - a.visitorGid ||
         b.actionType - a.actionType
     );
+
+  // 外挂检测：把访客互动记录持续累积到 72 小时滚动样本库（挂机过程中持续积累）
+  try {
+    const accountId = String(process.env.FARM_ACCOUNT_ID || '');
+    if (accountId) {
+      require('./cheat-detect').recordInteractSamples(accountId, normalized);
+    }
+  } catch { }
+
+  return normalized;
 }
 
 module.exports = {

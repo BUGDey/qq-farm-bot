@@ -441,7 +441,10 @@ onMounted(async () => {
   <div class="settings-page">
     <div class="mb-4">
       <h1 class="text-2xl text-gray-900 font-bold dark:text-gray-100">
-        设置
+        <span class="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/55 px-4 py-2 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
+          <span class="text-lg text-[var(--theme-primary)]"><span class="i-carbon-settings block" /></span>
+          设置
+        </span>
       </h1>
     </div>
 
@@ -665,21 +668,19 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* 设置页与首页统一的磨砂玻璃：底部白 62% + 24px 模糊，密集文字仍可读。
-   容器带首页同款蓝→绿渐变色调；子组件里的白底块统一降为半透明毛玻璃。 */
+/* 设置页磨砂玻璃：统一为半透明白色（不再叠加蓝→绿渐变色调，避免同页卡片颜色不统一）。
+   子组件里的白底块统一降为半透明毛玻璃。 */
 .settings-solid.bg-white {
-  background:
-    linear-gradient(180deg, rgba(186, 226, 248, 0.3) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(134, 214, 152, 0.34) 100%),
-    linear-gradient(165deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.48) 100%) !important;
+  background: rgba(255, 255, 255, 0.66) !important;
   border-color: rgba(255, 255, 255, 0.65) !important;
-  backdrop-filter: blur(24px) saturate(1.35) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(1.35) !important;
+  backdrop-filter: blur(24px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.2) !important;
 }
 
 .settings-solid :deep(.bg-white) {
   background: rgba(255, 255, 255, 0.62) !important;
-  backdrop-filter: blur(20px) saturate(1.3) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(1.3) !important;
+  backdrop-filter: blur(20px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
   border-color: rgba(255, 255, 255, 0.6) !important;
 }
 </style>

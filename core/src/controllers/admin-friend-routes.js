@@ -128,6 +128,19 @@ function registerAdminFriendRoutes({
     }
   });
 
+  /** 外挂检测：基于访客互动样本的行为分析（72 小时窗口，挂机过程中持续积累） */
+  app.get("/api/friend-cheat-analysis", async (req, res) => {
+    const accountId = getAccountOrRespond(req, res, access);
+    if (!accountId) return;
+
+    try {
+      const cheatDetect = require("../services/cheat-detect");
+      res.json({ ok: true, data: cheatDetect.analyzeFriendCheat(accountId) });
+    } catch (error) {
+      sendProviderError(res, error);
+    }
+  });
+
   app.get("/api/friend/:gid/lands", async (req, res) => {
     const accountId = getAccountOrRespond(req, res, {
       ...access,

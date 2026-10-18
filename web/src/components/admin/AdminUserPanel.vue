@@ -391,12 +391,13 @@ defineExpose({ load })
       </div>
     </div>
 
-    <!-- 弹窗 -->
-    <div
-      v-if="modal"
-      class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
-      @click.self="closeModal"
-    >
+    <!-- 弹窗：Teleport 到 body，避免被 Settings 面板祖先的 backdrop-filter 限制成局部模糊 -->
+    <Teleport to="body">
+      <div
+        v-if="modal"
+        class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
+        @click.self="closeModal"
+      >
       <div class="modal-glass max-h-[85vh] max-w-lg w-full overflow-y-auto rounded-xl p-5">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-base text-gray-900 font-semibold dark:text-gray-100">
@@ -522,7 +523,8 @@ defineExpose({ load })
           </template>
         </div>
       </div>
-    </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
