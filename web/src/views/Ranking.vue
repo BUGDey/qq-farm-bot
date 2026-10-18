@@ -110,8 +110,8 @@ onMounted(fetchRanking)
   <div class="ranking-page">
     <div class="game-card ranking-card">
       <div class="mb-4 flex items-center gap-3">
-        <img src="/dashboard/icon-ranking.svg" alt="本站排行" class="h-9 w-9">
-        <h1 class="text-xl text-gray-900 font-bold">
+        <img src="/dashboard/icon-ranking.svg" alt="本站排行" class="h-9 w-9 sm:h-10 sm:w-10">
+        <h1 class="rank-title text-gray-900 font-bold">
           本站排行
         </h1>
       </div>
@@ -120,7 +120,7 @@ onMounted(fetchRanking)
         <button
           v-for="p in periods"
           :key="p.key"
-          class="rounded-md px-3 py-1.5 text-sm transition"
+          class="period-btn rounded-md transition"
           :class="period === p.key ? 'bg-emerald-500 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'"
           :aria-pressed="period === p.key"
           @click="switchPeriod(p.key)"
@@ -131,7 +131,7 @@ onMounted(fetchRanking)
 
       <div class="mb-4 type-group flex items-center gap-2">
         <button
-          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition"
+          class="type-btn inline-flex items-center gap-1.5 rounded-full font-medium transition"
           :class="type === 'earn' ? 'bg-amber-100 text-amber-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'"
           :aria-pressed="type === 'earn'"
           @click="switchType('earn')"
@@ -139,7 +139,7 @@ onMounted(fetchRanking)
           <span class="h-2 w-2 rounded-full bg-amber-400" /> 收益
         </button>
         <button
-          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition"
+          class="type-btn inline-flex items-center gap-1.5 rounded-full font-medium transition"
           :class="type === 'steal' ? 'bg-orange-100 text-orange-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'"
           :aria-pressed="type === 'steal'"
           @click="switchType('steal')"
@@ -154,7 +154,7 @@ onMounted(fetchRanking)
       <div v-else-if="!rankedList.length" class="py-14 text-center text-sm text-gray-400">
         暂无排行数据，等农场跑起来再来～
       </div>
-      <div v-else class="space-y-2.5">
+      <div v-else class="rank-list">
         <div
           v-for="row in rankedList"
           :key="row.accountId"
@@ -167,12 +167,12 @@ onMounted(fetchRanking)
           <img :src="row.avatar || '/default-avatar.png'" alt="" class="rank-avatar">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
-              <span class="rank-name truncate text-sm text-gray-900 font-bold">{{ maskName(row.name) }}</span>
-              <span class="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700 font-medium">{{ platformLabel(row.platform) }}</span>
+              <span class="rank-name truncate text-gray-900 font-bold">{{ maskName(row.name) }}</span>
+              <span class="rank-platform">{{ platformLabel(row.platform) }}</span>
             </div>
-            <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-400">
+            <div class="rank-meta mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-gray-400">
               <span class="flex items-center gap-1">
-                <span class="i-carbon-user text-xs" />
+                <span class="i-carbon-user" />
                 <span>{{ maskOwner(row.owner) }}</span>
               </span>
               <span class="rank-sub">{{ secondaryValue(row) }}</span>
@@ -188,15 +188,17 @@ onMounted(fetchRanking)
 </template>
 
 <style scoped>
+/* 宽度与字号随视口流体放大：宽屏不再两边留大片空白，窄屏保持紧凑 */
 .ranking-page {
-  max-width: 760px;
+  width: 100%;
+  max-width: min(1000px, 100%);
   margin: 0 auto;
 }
 
 .ranking-card {
-  border-radius: 20px;
+  border-radius: clamp(18px, 1.6vw, 26px);
   border: 1.5px solid rgba(255, 255, 255, 0.65);
-  padding: 20px;
+  padding: clamp(18px, 1.8vw, 30px);
   background:
     linear-gradient(180deg, rgba(186, 226, 248, 0.35) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(134, 214, 152, 0.4) 100%),
     linear-gradient(165deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.26) 100%);
@@ -207,12 +209,32 @@ onMounted(fetchRanking)
   -webkit-backdrop-filter: blur(24px) saturate(1.35);
 }
 
+.rank-title {
+  font-size: clamp(19px, 1.5vw, 25px);
+}
+
+.period-btn {
+  padding: clamp(7px, 0.7vw, 11px) clamp(11px, 1vw, 18px);
+  font-size: clamp(13px, 0.95vw, 16px);
+}
+
+.type-btn {
+  padding: clamp(7px, 0.75vw, 11px) clamp(12px, 1.1vw, 19px);
+  font-size: clamp(13px, 0.95vw, 16px);
+}
+
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(9px, 0.85vw, 15px);
+}
+
 .rank-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 14px;
+  gap: clamp(11px, 1vw, 19px);
+  padding: clamp(10px, 0.95vw, 17px) clamp(12px, 1.1vw, 21px);
+  border-radius: clamp(13px, 1vw, 19px);
   border: 1px solid rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.62);
   backdrop-filter: blur(12px);
@@ -221,19 +243,19 @@ onMounted(fetchRanking)
 
 .rank-medal {
   display: flex;
-  width: 34px;
+  width: clamp(32px, 2.4vw, 48px);
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: clamp(19px, 1.5vw, 27px);
   font-weight: 800;
   color: #6b7280;
   font-family: 'DM Mono', 'Courier New', monospace;
 }
 
 .rank-avatar {
-  height: 42px;
-  width: 42px;
+  height: clamp(42px, 3vw, 58px);
+  width: clamp(42px, 3vw, 58px);
   flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
@@ -242,9 +264,30 @@ onMounted(fetchRanking)
   background: #fff;
 }
 
+.rank-name {
+  font-size: clamp(14px, 1.05vw, 18px);
+}
+
+.rank-platform {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: clamp(10px, 0.72vw, 12px);
+  font-weight: 500;
+}
+
+.rank-meta {
+  font-size: clamp(11px, 0.85vw, 14px);
+}
+
+.rank-meta .i-carbon-user {
+  font-size: 1em;
+}
+
 .rank-value {
   flex-shrink: 0;
-  font-size: 16px;
+  font-size: clamp(16px, 1.25vw, 22px);
   font-weight: 800;
   font-family: 'DM Mono', 'Courier New', monospace;
 }
@@ -261,18 +304,8 @@ onMounted(fetchRanking)
   color: #9ca3af;
 }
 
-/* 窄屏（含平板竖屏 / 手机横屏，与全站移动端断点一致）：卡片铺满、信息放大、间距放宽 */
+/* 窄屏（与全站移动端断点一致）：周期/类型按钮等分拉伸，手指好点 */
 @media (max-width: 1023px) {
-  .ranking-page {
-    max-width: 100%;
-    padding: 0 2px;
-  }
-
-  .ranking-card {
-    padding: 16px 14px;
-    border-radius: 18px;
-  }
-
   .period-group,
   .type-group {
     width: 100%;
@@ -282,49 +315,10 @@ onMounted(fetchRanking)
     display: flex;
   }
 
-  .period-group button {
-    flex: 1;
-    padding: 9px 6px;
-    font-size: 15px;
-  }
-
+  .period-group button,
   .type-group button {
     flex: 1;
     justify-content: center;
-    padding: 10px 8px;
-    font-size: 15px;
-  }
-
-  .rank-row {
-    gap: 14px;
-    padding: 13px 14px;
-    border-radius: 16px;
-  }
-
-  .rank-medal {
-    width: 40px;
-    font-size: 24px;
-  }
-
-  .rank-avatar {
-    height: 50px;
-    width: 50px;
-  }
-
-  .rank-name {
-    font-size: 15px;
-  }
-
-  .rank-row .text-xs {
-    font-size: 12px;
-  }
-
-  .rank-sub {
-    font-size: 12px;
-  }
-
-  .rank-value {
-    font-size: 20px;
   }
 }
 </style>
