@@ -263,6 +263,18 @@ export const useFriendStore = defineStore('friend', () => {
     }
   }
 
+  async function deleteFriend(accountId: string, gid: number) {
+    if (!accountId || !gid)
+      return
+    const res = await api.post(`/api/friend/${gid}/delete`, {}, {
+      headers: { 'x-account-id': accountId },
+    })
+    if (!res.data?.ok)
+      throw new Error(res.data?.error || '删除好友失败')
+    // 本地同步移除，避免头像/昵称映射残留
+    friends.value = friends.value.filter(f => Number(f?.gid) !== Number(gid))
+  }
+
   async function fetchFriendLands(accountId: string, friendId: string) {
     if (!accountId || !friendId)
       return
@@ -431,6 +443,7 @@ export const useFriendStore = defineStore('friend', () => {
     fetchFriendDogInfo,
     fetchBlacklist,
     toggleBlacklist,
+    deleteFriend,
     fetchInteractRecords,
     fetchCheatAnalysis,
     fetchFriendLands,

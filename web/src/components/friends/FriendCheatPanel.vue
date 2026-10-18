@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAccountStore } from '@/stores/account'
@@ -8,7 +8,7 @@ import { useFriendStore } from '@/stores/friend'
 const friendStore = useFriendStore()
 const accountStore = useAccountStore()
 const { currentAccountId } = storeToRefs(accountStore)
-const { cheatAnalysis, cheatLoading, cheatError, friends } = storeToRefs(friendStore)
+const { cheatAnalysis, cheatLoading, cheatError, friends, blacklist } = storeToRefs(friendStore)
 
 const filter = ref('all')
 const FILTERS = [
@@ -20,6 +20,10 @@ const FILTERS = [
   { key: 'highSteal', label: '偷价值高' },
   { key: 'dog', label: '护主犬' },
 ] as const
+
+// 行内操作状态（拉黑/删除进行中的 gid）
+const actionBusy = ref<Record<number, boolean>>({})
+const actionMsg = ref('')
 
 const description = computed(() =>
   `基于访客互动记录的行为分析：操作间隔规律性 / 在线时长 / 凌晨活跃占比 / 日均频率 / 行为单一性，综合评出 0-100 嫌疑分。样本在挂机过程中持续积累（${cheatAnalysis.value?.windowHours ?? 72} 小时窗口），护主犬好友自动加分保护。`)
@@ -94,10 +98,87 @@ function metricsTitle(v: any) {
   return parts.join(' · ')
 }
 
+// ---- 状态胶囊（高嫌疑/可疑/高活跃/帮助值高/偷价值高） ----
+
+function statusTags(v: any) {
+  const tags: { label: string, cls: string }[] = []
+  if (!v.protected) {
+    if (v.level === 'danger')
+      tags.push({ label: '高嫌疑', cls: 'status-tag-red' })
+    else if (v.level === 'warn')
+      tags.push({ label: '可疑', cls: 'status-tag-amber' })
+  }
+  if (v.highActive)
+    tags.push({ label: '高活跃', cls: 'status-tag-red' })
+  if ((v.metrics?.helpCount ?? 0) >= 5)
+    tags.push({ label: '帮助值高', cls: 'status-tag-green' })
+  if ((v.metrics?.stealValue ?? 0) >= 30)
+    tags.push({ label: '偷价值高', cls: 'status-tag-green' })
+  return tags
+}
+
+// ---- 拉黑 / 删除 ----
+
+const blacklistedGids = computed(() => new Set((blacklist.value || []).map(b => Number(b.gid))))
+
+async function ensureBlacklist() {
+  if (currentAccountId.value && (blacklist.value || []).length === 0)
+    await friendStore.fetchBlacklist(String(currentAccountId.value))
+}
+
+onMounted(() => {
+  ensureBlacklist()
+})
+
+async function toggleBlack(v: any) {
+  if (!currentAccountId.value || actionBusy.value[v.gid])
+    return
+  actionBusy.value[v.gid] = true
+  actionMsg.value = ''
+  try {
+    await friendStore.toggleBlacklist(String(currentAccountId.value), Number(v.gid))
+    actionMsg.value = blacklistedGids.value.has(Number(v.gid))
+      ? `已拉黑 ${displayName(v)}`
+      : `已取消拉黑 ${displayName(v)}`
+  }
+  catch (err: any) {
+    actionMsg.value = err?.message || '拉黑操作失败'
+  }
+  finally {
+    actionBusy.value[v.gid] = false
+  }
+}
+
+async function removeFriend(v: any) {
+  if (!currentAccountId.value || actionBusy.value[v.gid])
+    return
+  // eslint-disable-next-line no-alert
+  if (!window.confirm(`确定删除好友「${displayName(v)}」吗？删除后无法恢复。`))
+    return
+  actionBusy.value[v.gid] = true
+  actionMsg.value = ''
+  try {
+    await friendStore.deleteFriend(String(currentAccountId.value), Number(v.gid))
+    actionMsg.value = `已删除好友 ${displayName(v)}`
+    // 删除后刷新检测结果，把该访客从列表移除
+    await friendStore.fetchCheatAnalysis(String(currentAccountId.value))
+  }
+  catch (err: any) {
+    actionMsg.value = err?.message || '删除好友失败'
+  }
+  finally {
+    actionBusy.value[v.gid] = false
+  }
+}
+
 async function startDetection() {
   if (!currentAccountId.value)
     return
-  await friendStore.fetchCheatAnalysis(String(currentAccountId.value))
+  actionMsg.value = ''
+  await Promise.all([
+    friendStore.fetchCheatAnalysis(String(currentAccountId.value)),
+    ensureBlacklist(),
+  ])
 }
 </script>
 
@@ -124,6 +205,9 @@ async function startDetection() {
       </span>
       <span v-else-if="!cheatLoading" class="text-xs text-gray-400">
         点击「开始检测」拉取最新访客记录并分析
+      </span>
+      <span v-if="actionMsg" class="text-xs font-medium text-[var(--theme-primary)]">
+        {{ actionMsg }}
       </span>
     </div>
 
@@ -173,12 +257,49 @@ async function startDetection() {
                   护主犬
                 </span>
               </div>
-              <div class="truncate text-[11px] text-gray-400">
-                {{ metricsTitle(v) }}
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="truncate text-[11px] text-gray-400">{{ metricsTitle(v) }}</span>
+                <span
+                  v-for="tag in statusTags(v)"
+                  :key="tag.label"
+                  class="status-tag shrink-0"
+                  :class="tag.cls"
+                >
+                  {{ tag.label }}
+                </span>
               </div>
             </div>
           </div>
-          <div class="flex shrink-0 items-center gap-2">
+          <div class="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+            <button
+              class="row-action-btn"
+              :class="blacklistedGids.has(Number(v.gid)) ? 'row-action-btn-blacklisted' : ''"
+              :disabled="!!actionBusy[v.gid]"
+              :title="blacklistedGids.has(Number(v.gid)) ? '取消拉黑' : '一键拉黑当前好友'"
+              @click="toggleBlack(v)"
+            >
+              <span class="i-carbon-close block text-[13px]" />
+              <span class="hidden sm:inline">{{ blacklistedGids.has(Number(v.gid)) ? '取消拉黑' : '拉黑' }}</span>
+            </button>
+            <button
+              class="row-action-btn row-action-btn-danger"
+              :disabled="!!actionBusy[v.gid]"
+              title="一键删除当前好友"
+              @click="removeFriend(v)"
+            >
+              <span class="i-carbon-trash-can block text-[13px]" />
+              <span class="hidden sm:inline">删除</span>
+            </button>
+            <span
+              class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold"
+              :class="v.highActive
+                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300'
+                : 'bg-white/70 text-gray-500 dark:bg-white/10 dark:text-gray-400'"
+              :title="`近 24 小时内帮助/偷菜操作覆盖 ${v.activeHours24 ?? 0} 个小时（${v.highActive ? '高活跃' : '普通活跃'}）`"
+            >
+              <span class="i-carbon-time block text-[12px]" />
+              {{ v.activeHours24 ?? 0 }}/24
+            </span>
             <span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="levelClass(v)">
               {{ v.score }} · {{ levelLabel(v) }}
             </span>
@@ -191,3 +312,110 @@ async function startDetection() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 状态胶囊：高嫌疑/可疑/高活跃 = 红/琥珀，帮助值高/偷价值高 = 绿 */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.status-tag-red {
+  background: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+}
+
+.status-tag-amber {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+.status-tag-green {
+  background: rgba(46, 204, 113, 0.16);
+  color: #15803d;
+}
+
+:global(.dark) .status-tag-red {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+}
+
+:global(.dark) .status-tag-amber {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fcd34d;
+}
+
+:global(.dark) .status-tag-green {
+  background: rgba(46, 204, 113, 0.22);
+  color: #6ee7b7;
+}
+
+/* 行内操作按钮（拉黑/删除）：小号描边按钮，移动端重置全局 44px 强制尺寸 */
+.row-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+  color: #52525b;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.row-action-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+  color: #18181b;
+}
+
+.row-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.row-action-btn-blacklisted {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #dc2626;
+}
+
+.row-action-btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+:global(.dark) .row-action-btn {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: #d4d4d8;
+}
+
+:global(.dark) .row-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fafafa;
+}
+
+:global(.dark) .row-action-btn-blacklisted {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+@media (max-width: 640px) {
+  .row-action-btn {
+    padding: 5px 7px;
+  }
+}
+</style>

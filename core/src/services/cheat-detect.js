@@ -185,17 +185,23 @@ function analyzeFriendCheat(accountId, now = Date.now()) {
     dogCache = readFriendDogInfoCache(accountId) || {};
   } catch { }
 
-  // 按访客分组
+  // 按访客分组；同时统计近 24 小时内「帮助/偷菜」操作覆盖的小时数（活跃度 X/24）
+  const dayCutoffMs = now - 24 * 60 * 60 * 1000;
   const byVisitor = new Map();
   for (const [ts, gid, action, cropCount, nick] of rawSamples) {
     if (!byVisitor.has(gid)) {
-      byVisitor.set(gid, { tsList: [], actions: [], cropCount: 0, nick: '' });
+      byVisitor.set(gid, { tsList: [], actions: [], cropCount: 0, nick: '', recentOpHours: new Set() });
     }
     const entry = byVisitor.get(gid);
-    entry.tsList.push(Number(ts) * 1000);
+    const tsMs = Number(ts) * 1000;
+    entry.tsList.push(tsMs);
     entry.actions.push(Number(action) || 0);
     entry.cropCount += Number(cropCount) || 0;
     if (nick) entry.nick = nick;
+    // 近 24h 活跃度：只统计帮助(2)/偷菜(1)两类真实操作所在的小时桶
+    if (tsMs >= dayCutoffMs && (action === 1 || action === 2)) {
+      entry.recentOpHours.add(Math.floor(tsMs / 3600000));
+    }
   }
 
   const visitors = [];
@@ -249,6 +255,9 @@ function analyzeFriendCheat(accountId, now = Date.now()) {
       // >=60 嫌疑（建议清洗）/ >=30 关注 / 其余正常
       level: score >= 60 ? 'danger' : score >= 30 ? 'warn' : 'safe',
       protected: isGuardDog,
+      // 近 24 小时活跃度（覆盖的小时数 / 24），>= 12 小时视为高活跃账号
+      activeHours24: entry.recentOpHours.size,
+      highActive: entry.recentOpHours.size >= 12,
       metrics: {
         count: total,
         perDay,
