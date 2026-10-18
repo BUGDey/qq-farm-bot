@@ -60,7 +60,7 @@
 ### 把农场跑起来
 
 ```bash
-git clone https://github.com/BUGDey/qq-farm-bot.git
+git clone <你的fork地址>
 cd qq-farm-bot
 
 corepack enable
@@ -82,7 +82,7 @@ pnpm dev:web
 项目根目录的 `start.sh` 是统一入口，会自动装依赖、构建前端并启动服务：
 
 ```bash
-git clone https://github.com/BUGDey/qq-farm-bot.git
+git clone <你的fork地址>
 cd qq-farm-bot
 ./start.sh
 ```
@@ -106,7 +106,7 @@ cd qq-farm-bot
 > 更省事的做法是直接 `./start.sh`，它会自动生成随机密码并写入 `.env`。
 
 ```bash
-git clone https://github.com/BUGDey/qq-farm-bot.git
+git clone <你的fork地址>
 cd qq-farm-bot
 cp .env.compose.example .env    # 然后编辑 .env，填入 FARM_ADMIN_PASSWORD
 docker compose up -d --build
@@ -159,7 +159,7 @@ CAPTURE_ADVERTISE_IPS=192.168.1.100,100.64.0.2
 ### 1. 备份（建议每次都做）
 
 ```bash
-cd /root/qq-farm-bot
+cd <部署目录>
 TS=$(date +%Y%m%d-%H%M%S)
 [ -d data ] && cp -a data "data.bak.$TS"
 [ -d core/data ] && cp -a core/data "core-data.bak.$TS"
@@ -171,7 +171,7 @@ TS=$(date +%Y%m%d-%H%M%S)
 当初用 `git clone` 部署的（推荐，后续更新最省事）：
 
 ```bash
-cd /root/qq-farm-bot
+cd <部署目录>
 git pull
 ```
 
@@ -193,7 +193,7 @@ git stash pop                      # 再放回来，按提示合并冲突
 Docker 模式（含 QQ 登录版）：
 
 ```bash
-cd /root/qq-farm-bot
+cd <部署目录>
 docker compose up -d --build          # 重新构建镜像并启动
 docker compose ps                     # 确认容器为 Up
 docker compose logs -f --tail=100     # 看启动日志
@@ -202,7 +202,7 @@ docker compose logs -f --tail=100     # 看启动日志
 Node 直跑 / systemd 模式：
 
 ```bash
-cd /root/qq-farm-bot
+cd <部署目录>
 pnpm -C core install --prod --frozen-lockfile   # 依赖有更新时执行
 pnpm -C web install --frozen-lockfile           # 依赖有更新时执行
 pnpm -C web build                               # 必须重新构建前端
