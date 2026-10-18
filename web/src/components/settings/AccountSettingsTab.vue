@@ -138,13 +138,8 @@ function accountAvatar(acc: any) {
       <div
         v-for="acc in accounts"
         :key="acc.id"
-        class="cursor-pointer border rounded-lg bg-white p-4 shadow transition-all duration-200 dark:bg-gray-800"
-        :class="String(currentAccountId) === String(acc.id)
-          ? 'ring-2'
-          : 'border-transparent'"
-        :style="String(currentAccountId) === String(acc.id)
-          ? { borderColor: 'var(--theme-primary)', backgroundColor: 'rgba(var(--theme-primary-rgb, 59, 130, 246), 0.1)' }
-          : {}"
+        class="account-card cursor-pointer border rounded-lg bg-white p-4 shadow transition-all duration-200 dark:bg-gray-800"
+        :class="String(currentAccountId) === String(acc.id) ? 'account-card-current' : 'border-transparent'"
         @click="emit('select', acc)"
       >
         <div class="flex items-center justify-between gap-3 sm:items-start sm:gap-4">
@@ -154,8 +149,15 @@ function accountAvatar(acc: any) {
               <div v-else class="i-carbon-user text-2xl text-gray-400" />
             </div>
             <div class="min-w-0 flex-1">
-              <h4 class="truncate text-lg font-bold lt-sm:text-xl">
-                {{ acc.name || acc.nick || acc.id }}
+              <h4 class="flex items-center gap-1.5 truncate text-lg font-bold lt-sm:text-xl">
+                <span class="truncate">{{ acc.name || acc.nick || acc.id }}</span>
+                <span
+                  v-if="String(currentAccountId) === String(acc.id)"
+                  class="current-badge shrink-0"
+                >
+                  <div class="i-carbon-checkmark text-[11px]" />
+                  当前账号
+                </span>
               </h4>
               <div class="mt-1 flex flex-wrap items-center gap-1.5">
                 <span
@@ -309,3 +311,28 @@ function accountAvatar(acc: any) {
     />
   </div>
 </template>
+
+<style scoped>
+/* 当前账号卡片：主题色描边框起，视觉上明确圈出（背景交给 settings-solid 统一磨砂） */
+.account-card-current {
+  border-color: var(--theme-primary) !important;
+  box-shadow:
+    0 0 0 2px var(--theme-primary),
+    0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+/* 「当前账号」徽章 */
+.current-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--theme-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+</style>
