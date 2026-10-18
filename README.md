@@ -339,6 +339,13 @@ qq-farm-bot/
 - [TSDK/WASM 更新手册](core/docs/tsdk-update-runbook.md)
 - [TSDK/ACE 运行机制](core/docs/tsdk-ace-runtime.md)
 
+## 👥 贡献者
+
+- [xxxscarlxrd404](https://github.com/xxxscarlxrd404) — 项目原作者
+- [BUGDey](https://github.com/BUGDey) — 二次开发与当前维护（多用户与卡密体系、好友外挂检测、限时活动适配、Windows 平台适配、面板体验优化等）
+
+完整提交者名单见 [Contributors 图表](https://github.com/BUGDey/qq-farm-bot/graphs/contributors)。
+
 ## 🔒 数据与安全
 
 `core/data/` 及 Docker 持久化目录可能包含账号、用户、登录日志、好友缓存和统计数据。请妥善备份，并避免提交到公开仓库。

@@ -1,0 +1,115 @@
+name: Release
+
+# 自动发行版：打包当前仓库源码为 tar.gz + zip，并创建 GitHub Release
+# 触发方式：
+#   1) 推送标签：git tag v2.8.1 && git push origin v2.8.1
+#   2) 手动触发：GitHub → Actions → Release → Run workflow，填 tag（如 v2.8.1）
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '发行版本号（如 v2.8.1）'
+        required: true
+      prerelease:
+        description: '是否为预发布版本'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 解析版本号
+        id: tag
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then TAG="${GITHUB_REF_NAME}"; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "版本号：$TAG"
+
+      - name: 打包源码
+        run: |
+          set -e
+          TAG="${{ steps.tag.outputs.tag }}"
+          mkdir -p release
+          # 排除：版本库元数据、依赖、构建产物、运行数据与本地工作目录
+          EXCLUDES=(
+            --exclude='./.git'
+            --exclude='./.github'
+            --exclude='./node_modules'
+            --exclude='*/node_modules'
+            --exclude='./web/dist'
+            --exclude='./core/data'
+            --exclude='./data'
+            --exclude='./.workbuddy'
+            --exclude='./.env'
+            --exclude='*.log'
+          )
+          tar "${EXCLUDES[@]}" -czf "release/qq-farm-bot-${TAG}.tar.gz" -C . .
+          if command -v zip >/dev/null 2>&1; then
+            zip -r -q "release/qq-farm-bot-${TAG}.zip" . \
+              -x '.git/*' '.github/*' 'node_modules/*' '*/node_modules/*' \
+              'web/dist/*' 'core/data/*' 'data/*' '.workbuddy/*' '.env' '*.log'
+          fi
+          ls -lh release/
+
+      - name: 生成更新说明
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          PREV=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
+          {
+            echo "## 更新内容"
+            echo
+            if [ -n "$PREV" ]; then
+              git log --pretty='- %s (%h)' "${PREV}..${TAG}"
+            else
+              git log --pretty='- %s (%h)' -20
+            fi
+            echo
+            echo "## 部署方式"
+            echo
+            echo '```bash'
+            echo "tar -xzf qq-farm-bot-${TAG}.tar.gz"
+            echo "cd qq-farm-bot && ./start.sh"
+            echo '```'
+            echo
+            echo "> 首次部署会执行依赖安装与前端构建，耗时取决于网络和机器性能。"
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: 创建标签（手动触发时）
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG" || echo "标签已存在，跳过"
+          git push origin "$TAG" || echo "推送标签失败（可能已存在）"
+
+      - name: 发布 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          ARGS=()
+          if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then ARGS+=(--prerelease); fi
+          gh release create "$TAG" release/* --title "$TAG" --notes-file release-notes.md "${ARGS[@]}"
+
+      - name: 上传制品
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: release/*
