@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import api from '@/api'
-import PlantBlocklist from '@/components/settings/PlantBlocklist.vue'
 import SellFruitExcludes from '@/components/settings/SellFruitExcludes.vue'
 import StrategySettingsTab from '@/components/settings/StrategySettingsTab.vue'
 import StrategyTimingPanel from '@/components/settings/StrategyTimingPanel.vue'
@@ -429,14 +428,10 @@ watch(() => props.currentAccountId, loadQixiFriends)
                   :account-id="currentAccountId ?? ''"
                 />
 
-                <PlantBlocklist
-                  v-model="automation.automation.no_plant_seeds"
-                  :account-id="currentAccountId ?? ''"
-                />
-
                 <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 dark:border-gray-700">
                   <StrategySettingsTab
                     v-model:settings="strategy"
+                    v-model:no-plant-seeds="automation.automation.no_plant_seeds"
                     :current-account-name="null"
                     :current-account-id="currentAccountId"
                     :loading="false"

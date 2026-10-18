@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BagSeedPriority from '@/components/settings/BagSeedPriority.vue'
+import PlantBlocklist from '@/components/settings/PlantBlocklist.vue'
 import StrategyTimingPanel from '@/components/settings/StrategyTimingPanel.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
@@ -53,6 +54,9 @@ const emit = defineEmits<{
 }>()
 
 const settings = defineModel<StrategySettings>('settings', { required: true })
+
+/** 不种植名单（仅背包种子优先策略下展示与编辑；未绑定时整块不渲染） */
+const noPlantSeeds = defineModel<number[]>('noPlantSeeds')
 
 function selectPlantingStrategy(value: string | number | undefined) {
   if (value === undefined)
@@ -116,6 +120,12 @@ function isBagFallbackStrategySelected(value: string | number) {
       </div>
 
       <BagSeedPriority v-if="settings.plantingStrategy === 'bag_priority'" :key="currentAccountId" v-model="settings.bagSeedPriority" :account-id="currentAccountId" />
+
+      <PlantBlocklist
+        v-if="settings.plantingStrategy === 'bag_priority' && noPlantSeeds"
+        v-model="noPlantSeeds"
+        :account-id="currentAccountId"
+      />
 
       <div v-if="['bag_priority', 'task_priority'].includes(settings.plantingStrategy)" class="flex flex-col gap-2">
         <label class="text-sm text-gray-700 font-medium dark:text-gray-300">
