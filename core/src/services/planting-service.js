@@ -9,6 +9,7 @@ const {
   getBagSeedFallbackStrategy,
   getPrioritize2x2Crops,
   getPrioritizeGrowthTasks,
+  getNoPlantSeeds,
 } = require('../models/store');
 const { getPlantRankings } = require('./analytics');
 const { getBagSeeds } = require('./warehouse');
@@ -348,7 +349,9 @@ async function plantPrioritized2x2Crops(emptyLandIds, lands, accountId) {
     .sort(compareBagSeedGameOrder)
     .map(seed => ({ ...seed, count: Number(seed.count) || 0 }));
   const lockedByLevelSeeds = sortedSize2Seeds.filter(seed => isSeedLockedByLevel(seed, userLevel));
-  const size2Seeds = sortedSize2Seeds.filter(seed => !isSeedLockedByLevel(seed, userLevel));
+  const noPlantSet2x2 = new Set(getNoPlantSeeds(accountId));
+  const size2Seeds = sortedSize2Seeds.filter(seed =>
+    !isSeedLockedByLevel(seed, userLevel) && !noPlantSet2x2.has(Number(seed.seedId)));
 
   if (lockedByLevelSeeds.length > 0) {
     log('种植', `已跳过当前等级未解锁的 2x2 背包种子: ${lockedByLevelSeeds.map(seed => seed.name || seed.seedId).join('，')}`, {
@@ -605,8 +608,18 @@ async function plantFromBagSeeds(emptyLandIds, accountId = getCurrentAccountId()
   const seedPriority = syncedPriority.priority;
 
   // The synchronized list is the same order shown in the settings page.
+  const noPlantSeeds = new Set(getNoPlantSeeds(accountId));
+  const blockedSeeds = noPlantSeeds.size > 0
+    ? syncedPriority.seeds.filter(seed => noPlantSeeds.has(Number(seed.seedId)))
+    : [];
+  if (blockedSeeds.length > 0) {
+    log('种植', `不种植名单拦截 ${blockedSeeds.length} 种背包种子: ${blockedSeeds.map(seed => seed.name || seed.seedId).join('，')}`, {
+      module: 'farm', event: '种植种子', result: 'no_plant_skip', strategy: 'bag_priority',
+      seedIds: blockedSeeds.map(seed => seed.seedId),
+    });
+  }
   const availableSeeds = sortBagSeedsForPlanting(
-    syncedPriority.seeds,
+    syncedPriority.seeds.filter(seed => !noPlantSeeds.has(Number(seed.seedId))),
     seedPriority
   );
 
@@ -701,6 +714,7 @@ async function findBestSeed(overrideStrategy, accountId = getCurrentAccountId())
   }
 
   const userState = getUserState();
+  const noPlantSeedSet = new Set(getNoPlantSeeds(accountId));
   const candidates = [];
 
   // 筛选可购买的种子
@@ -724,6 +738,7 @@ async function findBestSeed(overrideStrategy, accountId = getCurrentAccountId())
 
     const seedId = toNum(goods.item_id);
     if (getPlantSizeBySeedId(seedId) !== 1) continue;
+    if (noPlantSeedSet.has(seedId)) continue;
     candidates.push({
       goods, goodsId: toNum(goods.id), seedId,
       price: toNum(goods.price), requiredLevel
@@ -813,7 +828,10 @@ async function findBestSeedFromLocal(overrideStrategy, accountId = getCurrentAcc
     return list;
   }, []);
 
-  if (availableSeeds.length === 0) {
+  const noPlantSetLocal = new Set(getNoPlantSeeds(accountId));
+  const plantableSeeds = availableSeeds.filter(seed => !noPlantSetLocal.has(Number(seed.seedId)));
+
+  if (plantableSeeds.length === 0) {
     logWarn('商店', '商店不可用且本地种子库与背包库存未匹配到可种植种子，已跳过本轮自动种植');
     return null;
   }
@@ -836,14 +854,14 @@ async function findBestSeedFromLocal(overrideStrategy, accountId = getCurrentAcc
         if (seedId <= 0) continue;
         const level = Number(rank && rank.level);
         if (Number.isFinite(level) && level > userState.level) continue;
-        const match = availableSeeds.find(s => s.seedId === seedId);
+        const match = plantableSeeds.find(s => s.seedId === seedId);
         if (match && match.requiredLevel <= userState.level) return match;
       }
     } catch { /* fall through */ }
   }
 
   // 回退策略：按等级降序，选当前等级以下最高等级种子
-  const candidates = availableSeeds.filter(s => s.requiredLevel <= userState.level);
+  const candidates = plantableSeeds.filter(s => s.requiredLevel <= userState.level);
   candidates.sort((a, b) => b.requiredLevel - a.requiredLevel);
   return candidates[0] || null;
 }

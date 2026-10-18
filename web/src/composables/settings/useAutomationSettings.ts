@@ -13,6 +13,7 @@ const defaultAutomation = {
   task: false,
   sell: false,
   sell_fruit_excludes: [] as number[],
+  no_plant_seeds: [] as number[],
   friend: false,
   friend_auto_accept: true,
   farm_push: false,
@@ -166,6 +167,7 @@ export function useAutomationSettings({
       localAutomationSettings.value.automation.fertilizer_land_types = normalizeFertilizerLandTypes(localAutomationSettings.value.automation.fertilizer_land_types)
       localAutomationSettings.value.automation.qixi_friend_priority = normalizeQixiFriendPriority(localAutomationSettings.value.automation.qixi_friend_priority)
       localAutomationSettings.value.automation.sell_fruit_excludes = normalizeQixiFriendPriority(localAutomationSettings.value.automation.sell_fruit_excludes)
+      localAutomationSettings.value.automation.no_plant_seeds = normalizeQixiFriendPriority(localAutomationSettings.value.automation.no_plant_seeds)
       if (localAutomationSettings.value.automation.fertilizer_smart_seconds === undefined) {
         localAutomationSettings.value.automation.fertilizer_smart_seconds = 300
       }
@@ -206,6 +208,7 @@ export function useAutomationSettings({
       localAutoCodeRefresh.value.intervalMinutes = normalizeAutoCodeRefreshInterval(localAutoCodeRefresh.value.intervalMinutes)
       localAutomationSettings.value.automation.qixi_friend_priority = normalizeQixiFriendPriority(localAutomationSettings.value.automation.qixi_friend_priority)
       localAutomationSettings.value.automation.sell_fruit_excludes = normalizeQixiFriendPriority(localAutomationSettings.value.automation.sell_fruit_excludes)
+      localAutomationSettings.value.automation.no_plant_seeds = normalizeQixiFriendPriority(localAutomationSettings.value.automation.no_plant_seeds)
       const fullSettings = {
         ...settings.value,
         automation: localAutomationSettings.value.automation,

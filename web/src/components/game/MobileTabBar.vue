@@ -60,6 +60,7 @@ const moreItems = menuRoutes
 
 <style scoped>
 .mobile-tabbar {
+  animation: tabbar-fade-in 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   position: fixed;
   bottom: calc(10px + env(safe-area-inset-bottom));
   left: 0;
@@ -71,6 +72,17 @@ const moreItems = menuRoutes
   gap: 10px;
   padding: 0 12px;
   pointer-events: none;
+}
+
+@keyframes tabbar-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .tabbar-glass {

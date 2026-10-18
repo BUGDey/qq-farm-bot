@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import api from '@/api'
+import PlantBlocklist from '@/components/settings/PlantBlocklist.vue'
 import SellFruitExcludes from '@/components/settings/SellFruitExcludes.vue'
 import StrategySettingsTab from '@/components/settings/StrategySettingsTab.vue'
 import StrategyTimingPanel from '@/components/settings/StrategyTimingPanel.vue'
@@ -371,449 +372,462 @@ watch(() => props.currentAccountId, loadQixiFriends)
     </template>
 
     <Teleport to="body">
-      <div v-if="activeModule && activeInfo" class="fixed inset-0 z-[200] grid place-items-center overflow-y-auto bg-gray-950/45 p-3 backdrop-blur-[2px] sm:p-6" @click.self="cancel">
-        <section class="feature-config-modal max-h-[94vh] max-w-4xl w-full flex flex-col overflow-hidden border border-gray-200 rounded-lg bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
-          <header class="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 dark:border-gray-700 sm:px-6">
-            <div class="min-w-0 flex items-start gap-3">
-              <img v-if="activeInfo.image" :src="activeInfo.image" alt="" class="h-11 w-11 shrink-0 rounded-lg bg-gray-100 object-contain p-1.5 dark:bg-gray-700">
-              <span v-else class="inline-grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-gray-100 text-xl dark:bg-gray-700" :class="activeInfo.icon" />
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
-                  <h3 class="text-lg text-gray-900 font-semibold dark:text-gray-100">
-                    {{ activeInfo.title }}
-                  </h3>
-                  <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-300">
-                    {{ moduleStateLabel(activeModule as ModuleKey) }}
-                  </span>
+      <Transition name="feature-modal">
+        <div v-if="activeModule && activeInfo" class="fixed inset-0 z-[200] grid place-items-center overflow-y-auto bg-gray-950/45 p-3 backdrop-blur-[2px] sm:p-6" @click.self="cancel">
+          <section class="feature-config-modal max-h-[94vh] max-w-4xl w-full flex flex-col overflow-hidden border border-gray-200 rounded-2xl bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+            <header class="flex items-start justify-between gap-4 border-b border-gray-200/80 px-5 py-4 dark:border-gray-700 sm:px-6">
+              <div class="min-w-0 flex items-start gap-3">
+                <img v-if="activeInfo.image" :src="activeInfo.image" alt="" class="h-11 w-11 shrink-0 rounded-lg bg-gray-100 object-contain p-1.5 dark:bg-gray-700">
+                <span v-else class="inline-grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-gray-100 text-xl dark:bg-gray-700" :class="activeInfo.icon" />
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="text-lg text-gray-900 font-semibold dark:text-gray-100">
+                      {{ activeInfo.title }}
+                    </h3>
+                    <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                      {{ moduleStateLabel(activeModule as ModuleKey) }}
+                    </span>
+                  </div>
+                  <p class="mt-1 text-sm text-gray-500">
+                    {{ activeInfo.description }}
+                  </p>
                 </div>
-                <p class="mt-1 text-sm text-gray-500">
-                  {{ activeInfo.description }}
-                </p>
+              </div>
+              <button class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" @click="cancel">
+                <span class="i-carbon-close text-xl" />
+              </button>
+            </header>
+
+            <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+              <div class="mb-5 flex flex-wrap gap-2">
+                <span
+                  v-for="tag in summaryTags(activeModule as ModuleKey)"
+                  :key="tag"
+                  class="max-w-full truncate rounded-md bg-gray-50 px-2.5 py-1 text-xs text-gray-600 dark:bg-gray-900/40 dark:text-gray-300"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+
+              <div v-if="activeModule === 'planting'" class="space-y-4">
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
+                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                    基础功能
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="strategy.prioritize2x2Crops" label="优先种植 2×2 作物" />
+                    <BaseSwitch v-model="automation.automation.sell" label="卖果实" />
+                    <BaseSwitch v-model="automation.automation.golden_bug_clear" label="祛除黄金虫" />
+                    <BaseSwitch v-model="automation.automation.farm_push" label="推送触发巡田" />
+                    <BaseSwitch v-model="automation.automation.skip_own_weed_bug" label="保留自己农场的草虫" />
+                  </div>
+                </section>
+
+                <SellFruitExcludes
+                  v-if="automation.automation.sell"
+                  v-model="automation.automation.sell_fruit_excludes"
+                  :account-id="currentAccountId ?? ''"
+                />
+
+                <PlantBlocklist
+                  v-model="automation.automation.no_plant_seeds"
+                  :account-id="currentAccountId ?? ''"
+                />
+
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 dark:border-gray-700">
+                  <StrategySettingsTab
+                    v-model:settings="strategy"
+                    :current-account-name="null"
+                    :current-account-id="currentAccountId"
+                    :loading="false"
+                    :saving="saving"
+                    :show-actions="false"
+                    timing-section="planting"
+                    title="选种策略与巡田频率"
+                    :planting-strategy-options="plantingStrategyOptions"
+                    :bag-fallback-strategy-options="bagFallbackStrategyOptions"
+                    :strategy-preview-label="strategyPreviewLabel"
+                  />
+                </section>
+              </div>
+
+              <div v-else-if="activeModule === 'fertilizer'" class="space-y-5">
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
+                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                    基础功能
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.land_upgrade" label="升级土地" />
+                    <BaseSwitch v-model="automation.automation.fertilizer_gift" label="填充化肥" />
+                    <BaseSwitch v-model="automation.automation.fertilizer_buy_organic" label="购买有机肥" />
+                    <BaseSwitch v-model="automation.automation.fertilizer_buy_normal" label="购买无机肥" />
+                  </div>
+                </section>
+
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                      施肥范围
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      已选 {{ selectedLandTypeCount }}/{{ fertilizerLandTypeOptions.length }}
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 lg:grid-cols-5">
+                    <button
+                      v-for="option in fertilizerLandTypeOptions"
+                      :key="option.value"
+                      type="button"
+                      class="min-h-11 flex items-center justify-between gap-3 border rounded-lg px-3 py-2 text-left text-sm transition"
+                      :class="isFertilizerLandSelected(option.value)
+                        ? 'border-[var(--theme-primary)] bg-[color-mix(in_srgb,var(--theme-primary)_10%,transparent)] text-gray-900 shadow-sm dark:text-gray-100'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-700/60'"
+                      @click="toggleFertilizerLand(option.value)"
+                    >
+                      <span class="truncate font-medium">{{ option.label }}</span>
+                      <span
+                        class="grid h-5 w-5 shrink-0 place-items-center border rounded-full text-xs transition"
+                        :class="isFertilizerLandSelected(option.value)
+                          ? 'border-[var(--theme-primary)] bg-[var(--theme-primary)] text-white'
+                          : 'border-gray-300 text-transparent dark:border-gray-600'"
+                      >
+                        <span class="i-carbon-checkmark text-sm" />
+                      </span>
+                    </button>
+                  </div>
+                </section>
+
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSelect v-model="automation.automation.fertilizer" label="施肥策略" :options="fertilizerOptions" />
+                    <BaseInput v-if="['smart', 'smart_only', 'smart_normal'].includes(automation.automation.fertilizer)" v-model.number="automation.automation.fertilizer_smart_seconds" label="快成熟判定秒数" type="number" min="30" max="3600" />
+                  </div>
+                  <BaseSwitch v-model="automation.automation.fertilizer_multi_season" label="多季补肥" />
+                </section>
+
+                <section v-if="automation.automation.fertilizer_buy_organic || automation.automation.fertilizer_buy_normal" class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div class="text-sm font-medium">
+                    自动补肥参数
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseInput v-if="automation.automation.fertilizer_buy_organic" v-model.number="automation.fertilizerBuyOrganicCount" label="有机肥购买数量" type="number" min="1" />
+                    <BaseInput v-if="automation.automation.fertilizer_buy_organic" v-model.number="automation.fertilizerBuyOrganicThresholdHours" label="有机肥触发阈值（小时）" type="number" min="1" />
+                    <BaseInput v-if="automation.automation.fertilizer_buy_normal" v-model.number="automation.fertilizerBuyNormalCount" label="无机肥购买数量" type="number" min="1" />
+                    <BaseInput v-if="automation.automation.fertilizer_buy_normal" v-model.number="automation.fertilizerBuyNormalThresholdHours" label="无机肥触发阈值（小时）" type="number" min="1" />
+                    <BaseInput v-model.number="automation.fertilizerBuyCheckIntervalMinutes" label="检测间隔（分钟）" type="number" min="1" />
+                  </div>
+                </section>
+              </div>
+
+              <div v-else-if="activeModule === 'friends'" class="space-y-5">
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
+                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                    好友互动
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.friend_help" label="帮助好友" />
+                    <BaseSwitch v-model="automation.automation.friend_bad" label="好友捣乱" />
+                    <BaseSwitch v-model="automation.automation.friend_golden_bug" label="放黄金虫" />
+                    <BaseSwitch v-model="automation.automation.friend_help_exp_limit" label="经验满只帮护主犬" />
+                  </div>
+                </section>
+
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                    好友申请
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.friend_auto_accept" label="自动通过好友申请" />
+                    <BaseInput v-if="automation.automation.friend_auto_accept" v-model.number="automation.autoAcceptFriendMinLevel" label="自动通过好友最低等级" type="number" min="0" max="200" />
+                  </div>
+                </section>
+
+                <section v-if="automation.automation.friend_golden_bug" class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                    黄金虫策略
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseInput v-model.number="automation.goldenBugKeepCount" label="黄金虫保留数量" type="number" min="0" />
+                    <BaseInput v-model.number="automation.goldenBugRoundLimit" label="黄金虫单轮上限" type="number" min="1" />
+                  </div>
+                </section>
+
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 dark:border-gray-700">
+                  <StrategyTimingPanel v-model:settings="strategy" section="friends" />
+                </section>
+              </div>
+              <div v-else-if="activeModule === 'steal'" class="space-y-5">
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-2 dark:border-gray-700 dark:bg-gray-900/25">
+                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                    巡查节奏说明
+                  </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    偷菜巡查不再使用固定的巡查间隔或延迟设置。系统会根据已知好友农场的作物成熟时间动态计算下一次巡查的时机，成熟越近巡查越勤，避免固定间隔造成的空跑或错过窗口。开启右上角的开关即可自动运行。
+                  </p>
+                </section>
+              </div>
+
+              <div v-else-if="activeModule === 'merchant'" class="space-y-4">
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div>
+                    <div class="mb-2 text-sm text-gray-700 font-medium dark:text-gray-300">
+                      允许使用的货币
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                      <BaseSwitch v-model="automation.automation.mystery_shop_allow_gold" label="金币" />
+                      <BaseSwitch v-model="automation.automation.mystery_shop_allow_coupon" label="点券" />
+                      <BaseSwitch v-model="automation.automation.mystery_shop_allow_gold_bean" label="金豆豆" />
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <div v-else class="space-y-4">
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
+                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                    日常任务
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.task" label="自动完成日常任务" />
+                  </div>
+                </section>
+
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <h3 class="text-sm font-medium">
+                    节令小札
+                  </h3>
+                  <BaseSwitch v-model="automation.automation.star_solar_claim" label="自动领取节令奖励" />
+                </section>
+
+                <section v-if="SHOW_STAR_ACTIVITY" class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div>
+                    <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                      心许千灯星垂野
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      千星游记与观星礼录领取
+                    </div>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.star_passport_claim" label="领取千星游记" />
+                    <BaseSwitch v-model="automation.automation.star_record_claim" label="领取观星礼录" />
+                  </div>
+                </section>
+
+                <section v-if="SHOW_QIXI_ACTIVITY" class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div>
+                    <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                      鹊桥寄情
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      灵露、鹊桥与香囊赠送
+                    </div>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.qixi_dew_use" label="使用鹊羽灵露" />
+                    <BaseSwitch v-model="automation.automation.qixi_bridge_build" label="驻建鹊桥" />
+                    <BaseSwitch v-model="automation.automation.qixi_sachet_gift" label="赠送鹊羽香囊" />
+                  </div>
+
+                  <div v-if="automation.automation.qixi_sachet_gift" class="border-t border-gray-100 pt-3 space-y-3 dark:border-gray-700">
+                    <div class="text-sm font-medium">
+                      香囊好友优先级
+                    </div>
+                    <div v-for="(gid, index) in qixiPriority()" :key="gid" class="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-900/40">
+                      <span class="w-6 text-gray-400">{{ Number(index) + 1 }}</span>
+                      <span class="flex-1">{{ friendName(Number(gid)) }}</span>
+                      <button :disabled="Number(index) === 0" @click="moveQixiFriend(Number(index), -1)">
+                        ↑
+                      </button>
+                      <button :disabled="Number(index) === qixiPriority().length - 1" @click="moveQixiFriend(Number(index), 1)">
+                        ↓
+                      </button>
+                      <button class="text-red-500" @click="toggleQixiFriend(Number(gid))">
+                        ×
+                      </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button v-for="friend in qixiFriends.filter(item => !qixiPriority().includes(item.gid))" :key="friend.gid" class="border rounded-full px-3 py-1.5 text-xs" @click="toggleQixiFriend(friend.gid)">
+                        + {{ friend.name }}
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                <section v-if="showRainPoemActivity" class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div>
+                    <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                      雨落成诗
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      天气采集、雷雨召唤与气象研究
+                    </div>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.rain_poem_bottle_buy" label="购买天气采集瓶" />
+                    <BaseSwitch v-model="automation.automation.rain_poem_weather_collect" label="采集好友雷雨" />
+                    <BaseSwitch v-model="automation.automation.rain_poem_summon_use" label="使用雷雨召唤瓶" />
+                    <BaseSwitch v-model="automation.automation.rain_poem_prank_use" label="使用青蛙与乌云使坏瓶" />
+                    <BaseSwitch v-model="automation.automation.rain_poem_research_unlock" label="解锁气象研究" />
+                  </div>
+                </section>
+
+                <section v-if="showCharityFlowerActivity" class="border border-rose-100 rounded-lg p-4 space-y-3 dark:border-rose-900/40">
+                  <div>
+                    <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                      公益小红花
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      分享奖励、爱心捐赠、档位奖励与公益金
+                    </div>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.charity_flower_share_claim" label="领取每日分享奖励" />
+                    <BaseSwitch v-model="automation.automation.charity_flower_donate" label="送出全部爱心" />
+                    <BaseSwitch v-model="automation.automation.charity_flower_reward_claim" label="领取爱心档位奖励" />
+                    <BaseSwitch v-model="automation.automation.charity_flower_public_fund_claim" label="领取并送出 1 元公益金" />
+                  </div>
+                  <p class="text-xs text-amber-600 dark:text-amber-400">
+                    该开关会执行真实的 1 元公益助力，每个角色活动期仅一次；仅在官方状态可领取且账号已同意腾讯公益平台协议时执行。
+                  </p>
+                </section>
+
+                <section v-if="showWishSignActivity" class="border border-amber-100 rounded-lg p-4 space-y-3 dark:border-amber-900/40">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                        秋祈良愿
+                      </div>
+                      <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        每日祈愿和领取好运奖励。烟花可在个人背包使用。
+                      </div>
+                    </div>
+                    <span class="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">2026-09-24 00:00 — 2026-10-07 23:59</span>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.wish_sign_draw" label="自动祈愿" />
+                    <BaseSwitch v-model="automation.automation.wish_sign_claim" label="自动领取祈愿奖励" />
+                  </div>
+                  <BaseSelect
+                    v-model="automation.automation.wish_sign_choice" label="自动祈愿方向" :options="[
+                      { label: '财运', value: 1 }, { label: '感情', value: 2 }, { label: '前程', value: 3 },
+                      { label: '生活', value: 4 }, { label: '农耕', value: 5 }, { label: '人际', value: 6 },
+                    ]"
+                  />
+                </section>
+
+                <section v-if="showShareRewardActivity" class="border border-orange-100 rounded-lg p-4 space-y-3 dark:border-orange-900/40">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                        快乐不独享
+                      </div>
+                      <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        自动分享领取首次分享快乐值，无需好友点击；自动领取每日快乐值和已达成的档位奖励。
+                      </div>
+                    </div>
+                    <span class="rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">2026-09-24 00:00 — 2026-10-12 23:59</span>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.share_reward_share" label="自动分享" />
+                    <BaseSwitch v-model="automation.automation.share_reward_daily" label="自动领取每日快乐值" />
+                    <BaseSwitch v-model="automation.automation.share_reward_milestones" label="自动领取档位奖励" />
+                  </div>
+                </section>
+
+                <section v-if="showMilkTeaActivity" class="border border-amber-200 rounded-xl bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
+                  <h3 class="mb-4 text-sm text-gray-900 font-semibold dark:text-gray-100">
+                    奶茶热销中
+                  </h3>
+                  <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    <div v-for="setting in milkTeaSettings" :key="setting.key" class="min-w-0 flex items-center justify-between gap-4 border border-amber-100 rounded-lg bg-white/80 px-3 py-2.5 dark:border-gray-700 dark:bg-gray-900/40">
+                      <div class="min-w-0">
+                        <div :id="`milk-tea-setting-${setting.key}`" class="text-sm text-gray-800 font-medium leading-5 dark:text-gray-200">
+                          {{ setting.label }}
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500 leading-5 dark:text-gray-400">
+                          {{ setting.detail }}
+                        </p>
+                      </div>
+                      <BaseSwitch v-model="automation.automation[setting.key]" class="shrink-0" :aria-labelledby="`milk-tea-setting-${setting.key}`" />
+                    </div>
+                  </div>
+                  <div v-if="showMilkTeaBusiness" class="grid mt-3 gap-3 sm:grid-cols-3">
+                    <label class="text-sm">雇佣时长
+                      <select v-model.number="automation.automation.milk_tea_hire_duration" class="mt-1 w-full border rounded p-2 dark:bg-gray-900">
+                        <option :value="1">4 小时</option><option :value="2">12 小时</option><option :value="3">24 小时</option>
+                      </select>
+                    </label>
+                    <label class="text-sm">员工类型
+                      <select v-model.number="automation.automation.milk_tea_hire_talent" class="mt-1 w-full border rounded p-2 dark:bg-gray-900">
+                        <option :value="0">任意好友</option><option :value="9001">金牌销售</option><option :value="9002">金牌宣传</option><option :value="9003">金牌服务</option><option :value="9004">实习员工（默默搬砖）</option>
+                      </select>
+                    </label>
+                    <label class="text-sm">备选类型
+                      <select v-model.number="automation.automation.milk_tea_hire_fallback_talent" class="mt-1 w-full border rounded p-2 dark:bg-gray-900">
+                        <option :value="0">任意好友</option><option :value="9001">金牌销售</option><option :value="9002">金牌宣传</option><option :value="9003">金牌服务</option><option :value="9004">实习员工（默默搬砖）</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p v-if="showMilkTeaBusiness" class="mt-2 text-xs text-gray-500">
+                    首选类型没有可雇佣好友时，自动改用备选类型。备选也不可用则等待下次检查。时长或奶茶券不足时跳过。
+                  </p>
+                  <div v-if="showMilkTeaBusiness" class="grid mt-3 gap-3 sm:grid-cols-2">
+                    <label class="text-sm">工作收益
+                      <select v-model.number="automation.automation.milk_tea_work_interact_type" class="mt-1 w-full border rounded p-2 dark:bg-gray-900">
+                        <option :value="1">宣传推广（立即售出奶茶）</option>
+                        <option :value="2">花式摇杯（工资 30% 奖金，无失败风险）</option>
+                        <option :value="3">招牌试饮（随机高级奶茶）</option>
+                        <option :value="4">划水摸鱼（40% 得喇叭 / 60% 工资减半）</option>
+                        <option :value="5">申请涨薪（60% 翻倍 / 40% 减半）</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p v-if="showMilkTeaBusiness" class="mt-2 text-xs text-gray-500">
+                    开启「自动选择工作收益」后，被好友雇佣的班次内会自动完成一次所选互动；班次结束领取工资后，下一次被雇佣时自动继续。
+                  </p>
+                </section>
+                <section v-if="showPetDiaryActivity" class="border border-violet-100 rounded-lg p-4 space-y-3 dark:border-violet-900/40">
+                  <div>
+                    <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                      萌宠成长日记
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      比熊养成、爪印手记、宝藏护送与节令赠礼
+                    </div>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.pet_diary_adopt" label="领养并领取比熊" />
+                    <BaseSwitch v-model="automation.automation.pet_diary_feed" label="自动投喂（每日 16 次）" />
+                    <BaseSwitch v-model="automation.automation.pet_diary_draw" label="自动寻宝（每日 10 次）" />
+                    <BaseSwitch v-model="automation.automation.pet_diary_story_claim" label="领取爪印手记奖励" />
+                    <BaseSwitch v-model="automation.automation.pet_diary_seed_claim" label="领取活动种子礼包" />
+                    <BaseSwitch v-model="automation.automation.pet_diary_solar_claim" label="领取节令赠礼" />
+                    <BaseSwitch v-model="automation.automation.pet_diary_treasure_open" label="护送完成后开启宝藏" />
+                    <BaseSwitch v-model="automation.automation.pet_diary_compensation_claim" label="领取夺宝补偿" />
+                    <BaseSwitch v-model="automation.automation.pet_diary_battle" label="自动好友夺宝" />
+                    <BaseSwitch v-model="automation.automation.pet_diary_charm_equip" label="自动选择锦囊（含免费刷新）" />
+                  </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    投喂与寻宝消耗萌宠元气糕，元气糕来自收获活动作物，元气糕不足时自动跳过。锦囊只使用每日免费刷新额度，不消耗点券或钻石。
+                  </p>
+                  <p class="text-xs text-amber-600 dark:text-amber-400">
+                    自动夺宝轮转检查好友并跳过好友黑名单，按初级、中级、高级顺序使用宝藏允许的已有挑战书，不自动购买。拾物小铺兑换仍需手动选择商品。
+                  </p>
+                </section>
               </div>
             </div>
-            <button class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" @click="cancel">
-              <span class="i-carbon-close text-xl" />
-            </button>
-          </header>
-
-          <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-            <div class="mb-5 flex flex-wrap gap-2">
-              <span
-                v-for="tag in summaryTags(activeModule as ModuleKey)"
-                :key="tag"
-                class="max-w-full truncate rounded-md bg-gray-50 px-2.5 py-1 text-xs text-gray-600 dark:bg-gray-900/40 dark:text-gray-300"
-              >
-                {{ tag }}
-              </span>
-            </div>
-
-            <div v-if="activeModule === 'planting'" class="space-y-4">
-              <section class="border border-gray-100 rounded-lg bg-gray-50/70 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
-                <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                  基础功能
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="strategy.prioritize2x2Crops" label="优先种植 2×2 作物" />
-                  <BaseSwitch v-model="automation.automation.sell" label="卖果实" />
-                  <BaseSwitch v-model="automation.automation.golden_bug_clear" label="祛除黄金虫" />
-                  <BaseSwitch v-model="automation.automation.farm_push" label="推送触发巡田" />
-                  <BaseSwitch v-model="automation.automation.skip_own_weed_bug" label="保留自己农场的草虫" />
-                </div>
-              </section>
-
-              <SellFruitExcludes
-                v-if="automation.automation.sell"
-                v-model="automation.automation.sell_fruit_excludes"
-                :account-id="currentAccountId ?? ''"
-              />
-
-              <section class="border border-gray-100 rounded-lg p-4 dark:border-gray-700">
-                <StrategySettingsTab
-                  v-model:settings="strategy"
-                  :current-account-name="null"
-                  :current-account-id="currentAccountId"
-                  :loading="false"
-                  :saving="saving"
-                  :show-actions="false"
-                  timing-section="planting"
-                  title="选种策略与巡田频率"
-                  :planting-strategy-options="plantingStrategyOptions"
-                  :bag-fallback-strategy-options="bagFallbackStrategyOptions"
-                  :strategy-preview-label="strategyPreviewLabel"
-                />
-              </section>
-            </div>
-
-            <div v-else-if="activeModule === 'fertilizer'" class="space-y-5">
-              <section class="border border-gray-100 rounded-lg bg-gray-50/70 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
-                <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                  基础功能
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.land_upgrade" label="升级土地" />
-                  <BaseSwitch v-model="automation.automation.fertilizer_gift" label="填充化肥" />
-                  <BaseSwitch v-model="automation.automation.fertilizer_buy_organic" label="购买有机肥" />
-                  <BaseSwitch v-model="automation.automation.fertilizer_buy_normal" label="购买无机肥" />
-                </div>
-              </section>
-
-              <section class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <div class="flex items-center justify-between gap-3">
-                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                    施肥范围
-                  </div>
-                  <div class="text-xs text-gray-500 dark:text-gray-400">
-                    已选 {{ selectedLandTypeCount }}/{{ fertilizerLandTypeOptions.length }}
-                  </div>
-                </div>
-                <div class="grid grid-cols-2 gap-2 lg:grid-cols-5">
-                  <button
-                    v-for="option in fertilizerLandTypeOptions"
-                    :key="option.value"
-                    type="button"
-                    class="min-h-11 flex items-center justify-between gap-3 border rounded-lg px-3 py-2 text-left text-sm transition"
-                    :class="isFertilizerLandSelected(option.value)
-                      ? 'border-[var(--theme-primary)] bg-[color-mix(in_srgb,var(--theme-primary)_10%,transparent)] text-gray-900 shadow-sm dark:text-gray-100'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-700/60'"
-                    @click="toggleFertilizerLand(option.value)"
-                  >
-                    <span class="truncate font-medium">{{ option.label }}</span>
-                    <span
-                      class="grid h-5 w-5 shrink-0 place-items-center border rounded-full text-xs transition"
-                      :class="isFertilizerLandSelected(option.value)
-                        ? 'border-[var(--theme-primary)] bg-[var(--theme-primary)] text-white'
-                        : 'border-gray-300 text-transparent dark:border-gray-600'"
-                    >
-                      <span class="i-carbon-checkmark text-sm" />
-                    </span>
-                  </button>
-                </div>
-              </section>
-
-              <section class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSelect v-model="automation.automation.fertilizer" label="施肥策略" :options="fertilizerOptions" />
-                  <BaseInput v-if="['smart', 'smart_only', 'smart_normal'].includes(automation.automation.fertilizer)" v-model.number="automation.automation.fertilizer_smart_seconds" label="快成熟判定秒数" type="number" min="30" max="3600" />
-                </div>
-                <BaseSwitch v-model="automation.automation.fertilizer_multi_season" label="多季补肥" />
-              </section>
-
-              <section v-if="automation.automation.fertilizer_buy_organic || automation.automation.fertilizer_buy_normal" class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <div class="text-sm font-medium">
-                  自动补肥参数
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseInput v-if="automation.automation.fertilizer_buy_organic" v-model.number="automation.fertilizerBuyOrganicCount" label="有机肥购买数量" type="number" min="1" />
-                  <BaseInput v-if="automation.automation.fertilizer_buy_organic" v-model.number="automation.fertilizerBuyOrganicThresholdHours" label="有机肥触发阈值（小时）" type="number" min="1" />
-                  <BaseInput v-if="automation.automation.fertilizer_buy_normal" v-model.number="automation.fertilizerBuyNormalCount" label="无机肥购买数量" type="number" min="1" />
-                  <BaseInput v-if="automation.automation.fertilizer_buy_normal" v-model.number="automation.fertilizerBuyNormalThresholdHours" label="无机肥触发阈值（小时）" type="number" min="1" />
-                  <BaseInput v-model.number="automation.fertilizerBuyCheckIntervalMinutes" label="检测间隔（分钟）" type="number" min="1" />
-                </div>
-              </section>
-            </div>
-
-            <div v-else-if="activeModule === 'friends'" class="space-y-5">
-              <section class="border border-gray-100 rounded-lg bg-gray-50/70 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
-                <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                  好友互动
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.friend_help" label="帮助好友" />
-                  <BaseSwitch v-model="automation.automation.friend_bad" label="好友捣乱" />
-                  <BaseSwitch v-model="automation.automation.friend_golden_bug" label="放黄金虫" />
-                  <BaseSwitch v-model="automation.automation.friend_help_exp_limit" label="经验满只帮护主犬" />
-                </div>
-              </section>
-
-              <section class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                  好友申请
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.friend_auto_accept" label="自动通过好友申请" />
-                  <BaseInput v-if="automation.automation.friend_auto_accept" v-model.number="automation.autoAcceptFriendMinLevel" label="自动通过好友最低等级" type="number" min="0" max="200" />
-                </div>
-              </section>
-
-              <section v-if="automation.automation.friend_golden_bug" class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                  黄金虫策略
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseInput v-model.number="automation.goldenBugKeepCount" label="黄金虫保留数量" type="number" min="0" />
-                  <BaseInput v-model.number="automation.goldenBugRoundLimit" label="黄金虫单轮上限" type="number" min="1" />
-                </div>
-              </section>
-
-              <section class="border border-gray-100 rounded-lg p-4 dark:border-gray-700">
-                <StrategyTimingPanel v-model:settings="strategy" section="friends" />
-              </section>
-            </div>
-            <div v-else-if="activeModule === 'steal'" class="space-y-5">
-              <section class="border border-gray-100 rounded-lg bg-gray-50/70 p-4 space-y-2 dark:border-gray-700 dark:bg-gray-900/25">
-                <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                  巡查节奏说明
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  偷菜巡查不再使用固定的巡查间隔或延迟设置。系统会根据已知好友农场的作物成熟时间动态计算下一次巡查的时机，成熟越近巡查越勤，避免固定间隔造成的空跑或错过窗口。开启右上角的开关即可自动运行。
-                </p>
-              </section>
-            </div>
-
-            <div v-else-if="activeModule === 'merchant'" class="space-y-4">
-              <section class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <div>
-                  <div class="mb-2 text-sm text-gray-700 font-medium dark:text-gray-300">
-                    允许使用的货币
-                  </div>
-                  <div class="grid gap-3 sm:grid-cols-3">
-                    <BaseSwitch v-model="automation.automation.mystery_shop_allow_gold" label="金币" />
-                    <BaseSwitch v-model="automation.automation.mystery_shop_allow_coupon" label="点券" />
-                    <BaseSwitch v-model="automation.automation.mystery_shop_allow_gold_bean" label="金豆豆" />
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div v-else class="space-y-4">
-              <section class="border border-gray-100 rounded-lg bg-gray-50/70 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
-                <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                  日常任务
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.task" label="自动完成日常任务" />
-                </div>
-              </section>
-
-              <section class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <h3 class="text-sm font-medium">节令小札</h3>
-                <BaseSwitch v-model="automation.automation.star_solar_claim" label="自动领取节令奖励" />
-              </section>
-
-              <section v-if="SHOW_STAR_ACTIVITY" class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <div>
-                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                    心许千灯星垂野
-                  </div>
-                  <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    千星游记与观星礼录领取
-                  </div>
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.star_passport_claim" label="领取千星游记" />
-                  <BaseSwitch v-model="automation.automation.star_record_claim" label="领取观星礼录" />
-                </div>
-              </section>
-
-              <section v-if="SHOW_QIXI_ACTIVITY" class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <div>
-                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                    鹊桥寄情
-                  </div>
-                  <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    灵露、鹊桥与香囊赠送
-                  </div>
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.qixi_dew_use" label="使用鹊羽灵露" />
-                  <BaseSwitch v-model="automation.automation.qixi_bridge_build" label="驻建鹊桥" />
-                  <BaseSwitch v-model="automation.automation.qixi_sachet_gift" label="赠送鹊羽香囊" />
-                </div>
-
-                <div v-if="automation.automation.qixi_sachet_gift" class="border-t border-gray-100 pt-3 space-y-3 dark:border-gray-700">
-                  <div class="text-sm font-medium">
-                    香囊好友优先级
-                  </div>
-                  <div v-for="(gid, index) in qixiPriority()" :key="gid" class="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-900/40">
-                    <span class="w-6 text-gray-400">{{ Number(index) + 1 }}</span>
-                    <span class="flex-1">{{ friendName(Number(gid)) }}</span>
-                    <button :disabled="Number(index) === 0" @click="moveQixiFriend(Number(index), -1)">
-                      ↑
-                    </button>
-                    <button :disabled="Number(index) === qixiPriority().length - 1" @click="moveQixiFriend(Number(index), 1)">
-                      ↓
-                    </button>
-                    <button class="text-red-500" @click="toggleQixiFriend(Number(gid))">
-                      ×
-                    </button>
-                  </div>
-                  <div class="flex flex-wrap gap-2">
-                    <button v-for="friend in qixiFriends.filter(item => !qixiPriority().includes(item.gid))" :key="friend.gid" class="border rounded-full px-3 py-1.5 text-xs" @click="toggleQixiFriend(friend.gid)">
-                      + {{ friend.name }}
-                    </button>
-                  </div>
-                </div>
-              </section>
-
-              <section v-if="showRainPoemActivity" class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
-                <div>
-                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                    雨落成诗
-                  </div>
-                  <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    天气采集、雷雨召唤与气象研究
-                  </div>
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.rain_poem_bottle_buy" label="购买天气采集瓶" />
-                  <BaseSwitch v-model="automation.automation.rain_poem_weather_collect" label="采集好友雷雨" />
-                  <BaseSwitch v-model="automation.automation.rain_poem_summon_use" label="使用雷雨召唤瓶" />
-                  <BaseSwitch v-model="automation.automation.rain_poem_prank_use" label="使用青蛙与乌云使坏瓶" />
-                  <BaseSwitch v-model="automation.automation.rain_poem_research_unlock" label="解锁气象研究" />
-                </div>
-              </section>
-
-              <section v-if="showCharityFlowerActivity" class="border border-rose-100 rounded-lg p-4 space-y-3 dark:border-rose-900/40">
-                <div>
-                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                    公益小红花
-                  </div>
-                  <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    分享奖励、爱心捐赠、档位奖励与公益金
-                  </div>
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.charity_flower_share_claim" label="领取每日分享奖励" />
-                  <BaseSwitch v-model="automation.automation.charity_flower_donate" label="送出全部爱心" />
-                  <BaseSwitch v-model="automation.automation.charity_flower_reward_claim" label="领取爱心档位奖励" />
-                  <BaseSwitch v-model="automation.automation.charity_flower_public_fund_claim" label="领取并送出 1 元公益金" />
-                </div>
-                <p class="text-xs text-amber-600 dark:text-amber-400">
-                  该开关会执行真实的 1 元公益助力，每个角色活动期仅一次；仅在官方状态可领取且账号已同意腾讯公益平台协议时执行。
-                </p>
-              </section>
-
-              <section v-if="showWishSignActivity" class="border border-amber-100 rounded-lg p-4 space-y-3 dark:border-amber-900/40">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                      秋祈良愿
-                    </div>
-                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      每日祈愿和领取好运奖励。烟花可在个人背包使用。
-                    </div>
-                  </div>
-                  <span class="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">2026-09-24 00:00 — 2026-10-07 23:59</span>
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.wish_sign_draw" label="自动祈愿" />
-                  <BaseSwitch v-model="automation.automation.wish_sign_claim" label="自动领取祈愿奖励" />
-                </div>
-                <BaseSelect
-                  v-model="automation.automation.wish_sign_choice" label="自动祈愿方向" :options="[
-                    { label: '财运', value: 1 }, { label: '感情', value: 2 }, { label: '前程', value: 3 },
-                    { label: '生活', value: 4 }, { label: '农耕', value: 5 }, { label: '人际', value: 6 },
-                  ]"
-                />
-              </section>
-
-              <section v-if="showShareRewardActivity" class="border border-orange-100 rounded-lg p-4 space-y-3 dark:border-orange-900/40">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                      快乐不独享
-                    </div>
-                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      自动分享领取首次分享快乐值，无需好友点击；自动领取每日快乐值和已达成的档位奖励。
-                    </div>
-                  </div>
-                  <span class="rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">2026-09-24 00:00 — 2026-10-12 23:59</span>
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.share_reward_share" label="自动分享" />
-                  <BaseSwitch v-model="automation.automation.share_reward_daily" label="自动领取每日快乐值" />
-                  <BaseSwitch v-model="automation.automation.share_reward_milestones" label="自动领取档位奖励" />
-                </div>
-              </section>
-
-              <section v-if="showMilkTeaActivity" class="border border-amber-200 rounded-xl bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/10">
-                <h3 class="mb-4 text-sm text-gray-900 font-semibold dark:text-gray-100">
-                  奶茶热销中
-                </h3>
-                <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                  <div v-for="setting in milkTeaSettings" :key="setting.key" class="min-w-0 flex items-center justify-between gap-4 border border-amber-100 rounded-lg bg-white/80 px-3 py-2.5 dark:border-gray-700 dark:bg-gray-900/40">
-                    <div class="min-w-0">
-                      <div :id="`milk-tea-setting-${setting.key}`" class="text-sm text-gray-800 font-medium leading-5 dark:text-gray-200">
-                        {{ setting.label }}
-                      </div>
-                      <p class="mt-1 text-xs text-gray-500 leading-5 dark:text-gray-400">
-                        {{ setting.detail }}
-                      </p>
-                    </div>
-                    <BaseSwitch v-model="automation.automation[setting.key]" class="shrink-0" :aria-labelledby="`milk-tea-setting-${setting.key}`" />
-                  </div>
-                </div>
-                <div v-if="showMilkTeaBusiness" class="mt-3 grid gap-3 sm:grid-cols-3">
-                  <label class="text-sm">雇佣时长
-                    <select v-model.number="automation.automation.milk_tea_hire_duration" class="mt-1 w-full rounded border p-2 dark:bg-gray-900">
-                      <option :value="1">4 小时</option><option :value="2">12 小时</option><option :value="3">24 小时</option>
-                    </select>
-                  </label>
-                  <label class="text-sm">员工类型
-                    <select v-model.number="automation.automation.milk_tea_hire_talent" class="mt-1 w-full rounded border p-2 dark:bg-gray-900">
-                      <option :value="0">任意好友</option><option :value="9001">金牌销售</option><option :value="9002">金牌宣传</option><option :value="9003">金牌服务</option><option :value="9004">实习员工（默默搬砖）</option>
-                    </select>
-                  </label>
-                  <label class="text-sm">备选类型
-                    <select v-model.number="automation.automation.milk_tea_hire_fallback_talent" class="mt-1 w-full rounded border p-2 dark:bg-gray-900">
-                      <option :value="0">任意好友</option><option :value="9001">金牌销售</option><option :value="9002">金牌宣传</option><option :value="9003">金牌服务</option><option :value="9004">实习员工（默默搬砖）</option>
-                    </select>
-                  </label>
-                </div>
-                <p v-if="showMilkTeaBusiness" class="mt-2 text-xs text-gray-500">首选类型没有可雇佣好友时，自动改用备选类型。备选也不可用则等待下次检查。时长或奶茶券不足时跳过。</p>
-                <div v-if="showMilkTeaBusiness" class="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label class="text-sm">工作收益
-                    <select v-model.number="automation.automation.milk_tea_work_interact_type" class="mt-1 w-full rounded border p-2 dark:bg-gray-900">
-                      <option :value="1">宣传推广（立即售出奶茶）</option>
-                      <option :value="2">花式摇杯（工资 30% 奖金，无失败风险）</option>
-                      <option :value="3">招牌试饮（随机高级奶茶）</option>
-                      <option :value="4">划水摸鱼（40% 得喇叭 / 60% 工资减半）</option>
-                      <option :value="5">申请涨薪（60% 翻倍 / 40% 减半）</option>
-                    </select>
-                  </label>
-                </div>
-                <p v-if="showMilkTeaBusiness" class="mt-2 text-xs text-gray-500">开启「自动选择工作收益」后，被好友雇佣的班次内会自动完成一次所选互动；班次结束领取工资后，下一次被雇佣时自动继续。</p>
-              </section>
-              <section v-if="showPetDiaryActivity" class="border border-violet-100 rounded-lg p-4 space-y-3 dark:border-violet-900/40">
-                <div>
-                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                    萌宠成长日记
-                  </div>
-                  <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    比熊养成、爪印手记、宝藏护送与节令赠礼
-                  </div>
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <BaseSwitch v-model="automation.automation.pet_diary_adopt" label="领养并领取比熊" />
-                  <BaseSwitch v-model="automation.automation.pet_diary_feed" label="自动投喂（每日 16 次）" />
-                  <BaseSwitch v-model="automation.automation.pet_diary_draw" label="自动寻宝（每日 10 次）" />
-                  <BaseSwitch v-model="automation.automation.pet_diary_story_claim" label="领取爪印手记奖励" />
-                  <BaseSwitch v-model="automation.automation.pet_diary_seed_claim" label="领取活动种子礼包" />
-                  <BaseSwitch v-model="automation.automation.pet_diary_solar_claim" label="领取节令赠礼" />
-                  <BaseSwitch v-model="automation.automation.pet_diary_treasure_open" label="护送完成后开启宝藏" />
-                  <BaseSwitch v-model="automation.automation.pet_diary_compensation_claim" label="领取夺宝补偿" />
-                  <BaseSwitch v-model="automation.automation.pet_diary_battle" label="自动好友夺宝" />
-                  <BaseSwitch v-model="automation.automation.pet_diary_charm_equip" label="自动选择锦囊（含免费刷新）" />
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  投喂与寻宝消耗萌宠元气糕，元气糕来自收获活动作物，元气糕不足时自动跳过。锦囊只使用每日免费刷新额度，不消耗点券或钻石。
-                </p>
-                <p class="text-xs text-amber-600 dark:text-amber-400">
-                  自动夺宝轮转检查好友并跳过好友黑名单，按初级、中级、高级顺序使用宝藏允许的已有挑战书，不自动购买。拾物小铺兑换仍需手动选择商品。
-                </p>
-              </section>
-            </div>
-          </div>
-          <footer class="flex justify-end gap-2 border-t bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-900/20 sm:px-6">
-            <BaseButton variant="secondary" size="sm" @click="cancel">
-              取消
-            </BaseButton>
-            <BaseButton size="sm" :loading="saving" @click="finish">
-              保存并关闭
-            </BaseButton>
-          </footer>
-        </section>
-      </div>
+            <footer class="flex justify-end gap-2 border-t bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-900/20 sm:px-6">
+              <BaseButton variant="secondary" size="sm" @click="cancel">
+                取消
+              </BaseButton>
+              <BaseButton size="sm" :loading="saving" @click="finish">
+                保存并关闭
+              </BaseButton>
+            </footer>
+          </section>
+        </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -831,9 +845,10 @@ watch(() => props.currentAccountId, loadQixiFriends)
 /* 弹窗内所有配置分组块（基础功能/选种策略/日常任务/节令小札/奶茶热销中等）
    原本灰底、彩底混杂，统一为半透明白色（用 space-y 特征精准命中分组块，
    避免误伤内部选项 chip 的选中高亮背景） */
-.feature-config-modal div[class*="space-y-"] {
+.feature-config-modal div[class*='space-y-'] {
   background: rgba(255, 255, 255, 0.55) !important;
-  border-color: rgba(255, 255, 255, 0.65) !important;
+  /* 白色磨砂底上用淡墨色描边才有可见的分组边界（原先白色边框等于不可见） */
+  border-color: rgba(31, 38, 80, 0.14) !important;
 }
 
 /* 暗色模式：分组块改用深色半透明，保证浅色文字可读 */
@@ -841,8 +856,41 @@ watch(() => props.currentAccountId, loadQixiFriends)
   background: rgba(31, 41, 55, 0.82) !important;
 }
 
-:global(.dark) .feature-config-modal div[class*="space-y-"] {
+:global(.dark) .feature-config-modal div[class*='space-y-'] {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 配置弹窗淡入淡出：遮罩淡入 + 面板轻微上浮缩放 */
+.feature-modal-enter-active,
+.feature-modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.feature-modal-enter-active .feature-config-modal {
+  transition:
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+}
+
+.feature-modal-enter-from,
+.feature-modal-leave-to {
+  opacity: 0;
+}
+
+.feature-modal-enter-from .feature-config-modal {
+  transform: translateY(16px) scale(0.985);
+  opacity: 0;
+}
+
+.feature-modal-leave-active .feature-config-modal {
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.feature-modal-leave-to .feature-config-modal {
+  transform: translateY(10px) scale(0.99);
+  opacity: 0;
 }
 </style>

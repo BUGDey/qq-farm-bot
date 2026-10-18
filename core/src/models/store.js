@@ -266,6 +266,7 @@ const DEFAULT_AUTOMATION = {
     qixi_friend_priority: [],
     // 卖果实白名单：名单内的果实 ID 在自动出售时跳过（不影响背包手动出售）
     sell_fruit_excludes: [],
+    no_plant_seeds: [],
     rain_poem_bottle_buy: false,
     rain_poem_weather_collect: false,
     rain_poem_summon_use: false,
@@ -804,6 +805,10 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
                 cfg.automation[key] = normalizeKnownFriendGids(value, []);
             } else if (key === 'sell_fruit_excludes') {
                 cfg.automation[key] = normalizeKnownFriendGids(value, []);
+            } else if (key === 'no_plant_seeds') {
+                cfg.automation[key] = Array.isArray(value)
+                    ? [...new Set(value.map(Number).filter(n => Number.isSafeInteger(n) && n > 0))]
+                    : [];
             } else if (['milk_tea_hire_duration', 'milk_tea_hire_talent', 'milk_tea_hire_fallback_talent'].includes(key)) {
                 const field = { milk_tea_hire_duration: 'durationId', milk_tea_hire_talent: 'talentId', milk_tea_hire_fallback_talent: 'fallbackTalentId' }[key];
                 cfg.automation[key] = require('../services/activity-milk-tea').normalizeHireOptions({ [field]: value })[field];
@@ -1299,6 +1304,12 @@ function getSellFruitExcludes(accountId) {
     return normalizeKnownFriendGids(getAccountConfigSnapshot(accountId).automation.sell_fruit_excludes, []);
 }
 
+/** 不种植名单：名单内的种子在自己农场种植时跳过（与背包优先级、好友代种黑名单相互独立） */
+function getNoPlantSeeds(accountId) {
+    const value = getAccountConfigSnapshot(accountId).automation.no_plant_seeds;
+    return Array.isArray(value) ? value.map(Number).filter(n => Number.isSafeInteger(n) && n > 0) : [];
+}
+
 function getConfigSnapshot(accountId) {
     const cfg = getAccountConfigSnapshot(accountId);
     const auto = { ...cfg.automation };
@@ -1348,6 +1359,10 @@ function applyConfigSnapshot(patch = {}, opts = {}) {
                 cfg.automation[key] = normalizeKnownFriendGids(value, []);
             } else if (key === 'sell_fruit_excludes') {
                 cfg.automation[key] = normalizeKnownFriendGids(value, []);
+            } else if (key === 'no_plant_seeds') {
+                cfg.automation[key] = Array.isArray(value)
+                    ? [...new Set(value.map(Number).filter(n => Number.isSafeInteger(n) && n > 0))]
+                    : [];
             } else if (['milk_tea_hire_duration', 'milk_tea_hire_talent', 'milk_tea_hire_fallback_talent'].includes(key)) {
                 const field = { milk_tea_hire_duration: 'durationId', milk_tea_hire_talent: 'talentId', milk_tea_hire_fallback_talent: 'fallbackTalentId' }[key];
                 cfg.automation[key] = require('../services/activity-milk-tea').normalizeHireOptions({ [field]: value })[field];
@@ -2139,6 +2154,7 @@ module.exports = {
     applyConfigSnapshot,
     getAutomation,
     getSellFruitExcludes,
+    getNoPlantSeeds,
     setAutomation,
     getAutoCodeRefresh,
     setAutoCodeRefresh,

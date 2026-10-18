@@ -136,7 +136,7 @@ watch(expanded, (value) => {
 </script>
 
 <template>
-  <section class="border border-gray-200 rounded-lg p-2.5 dark:border-gray-700">
+  <section class="border border-gray-200/90 rounded-xl bg-white/55 p-2.5 dark:border-gray-700">
     <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
       <button type="button" class="min-h-8 flex items-center gap-2 text-sm font-medium" :aria-expanded="expanded" @click="expanded = !expanded">
         <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="h-3 w-3 transition-transform" :class="{ 'rotate-90': expanded }"><path d="m6 3 5 5-5 5" /></svg>

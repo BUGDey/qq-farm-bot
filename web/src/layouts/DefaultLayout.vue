@@ -323,19 +323,26 @@ function onSearchBlur() {
 }
 
 /* Slide Fade Transition */
-.slide-fade-enter-active,
+.slide-fade-enter-active {
+  transition:
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .slide-fade-leave-active {
-  transition: all 0.2s ease-out;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .slide-fade-enter-from {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(14px);
 }
 
 .slide-fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-6px);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
