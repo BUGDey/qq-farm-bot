@@ -394,7 +394,7 @@ defineExpose({ load })
     <!-- 弹窗 -->
     <div
       v-if="modal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
+      class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
       @click.self="closeModal"
     >
       <div class="modal-glass max-h-[85vh] max-w-lg w-full overflow-y-auto rounded-xl p-5">
@@ -585,18 +585,26 @@ defineExpose({ load })
   background-color: rgba(156, 163, 175, 0.35);
   border-radius: 3px;
 }
-/* 竖排徽章：窄表格列（手机端）下「正常/超管/已过期」统一为不折行的竖排色块 */
+/* 徽章：默认横向胶囊（PC 端表格列宽充足）；窄屏（手机端）下为不折行的竖排色块 */
 .chip-vertical {
   display: inline-block;
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  letter-spacing: 3px;
-  padding: 5px 3px;
-  border-radius: 7px;
+  padding: 3px 10px;
+  border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.4;
   white-space: nowrap;
   vertical-align: middle;
+}
+
+@media (max-width: 767px) {
+  .chip-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: 3px;
+    padding: 5px 3px;
+    border-radius: 7px;
+    line-height: 1;
+  }
 }
 </style>

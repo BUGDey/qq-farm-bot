@@ -138,7 +138,7 @@ function accountAvatar(acc: any) {
       <div
         v-for="acc in accounts"
         :key="acc.id"
-        class="cursor-pointer border rounded-lg bg-white p-3 shadow transition-all duration-200 dark:bg-gray-800 sm:p-4"
+        class="cursor-pointer border rounded-lg bg-white p-4 shadow transition-all duration-200 dark:bg-gray-800"
         :class="String(currentAccountId) === String(acc.id)
           ? 'ring-2'
           : 'border-transparent'"
@@ -149,24 +149,24 @@ function accountAvatar(acc: any) {
       >
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div class="min-w-0 flex flex-1 items-center gap-3">
-            <div class="h-10 w-10 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 sm:h-12 sm:w-12 dark:bg-gray-700">
+            <div class="h-12 w-12 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
               <img v-if="accountAvatar(acc)" :src="accountAvatar(acc)" class="h-full w-full object-cover">
-              <div v-else class="i-carbon-user text-xl text-gray-400 sm:text-2xl" />
+              <div v-else class="i-carbon-user text-2xl text-gray-400" />
             </div>
             <div class="min-w-0 flex-1">
-              <h4 class="truncate text-base font-bold sm:text-lg">
+              <h4 class="truncate text-lg font-bold">
                 {{ acc.name || acc.nick || acc.id }}
               </h4>
-              <div class="mt-0.5 flex flex-wrap items-center gap-1.5">
+              <div class="mt-1 flex flex-wrap items-center gap-1.5">
                 <span
                   v-if="acc.platform"
-                  class="rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight"
+                  class="rounded px-1.5 py-0.5 text-[11px] font-medium leading-tight sm:text-[10px]"
                   :class="getPlatformClass(acc.platform)"
                 >
                   {{ getPlatformLabel(acc.platform) }}
                 </span>
                 <span
-                  class="max-w-full truncate rounded bg-gray-100 px-1.5 py-0.5 text-[10px] leading-tight text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                  class="max-w-full truncate rounded bg-gray-100 px-1.5 py-0.5 text-[11px] leading-tight text-gray-500 sm:text-[10px] dark:bg-gray-700 dark:text-gray-400"
                   :title="`创建者：${ownerLabel(acc)}`"
                 >
                   创建者：{{ ownerLabel(acc) }}
@@ -175,14 +175,14 @@ function accountAvatar(acc: any) {
             </div>
           </div>
           <div class="flex items-center justify-end gap-2 sm:flex-col sm:items-end">
-            <span class="flex items-center gap-1 text-xs text-gray-500 sm:hidden">
+            <span class="flex items-center gap-1 text-sm text-gray-500 sm:hidden">
               <div class="h-2 w-2 rounded-full" :class="acc.running ? 'bg-green-500' : 'bg-gray-300'" />
               {{ acc.running ? '运行中' : '已停止' }}
             </span>
             <BaseButton
               variant="secondary"
               size="sm"
-              class="border rounded-full shadow-sm transition-all duration-500 ease-in-out sm:w-20 active:scale-95"
+              class="border rounded-full px-4 shadow-sm transition-all duration-500 ease-in-out sm:w-20 sm:px-2 active:scale-95"
               :class="acc.running ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 focus:ring-red-500 active:border-red-300 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 dark:focus:ring-red-500 dark:active:border-red-700' : 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100 focus:ring-green-500 active:border-green-300 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30 dark:focus:ring-green-500 dark:active:border-green-700'"
               :disabled="!isOwnedAccount(acc) || (!acc.running && isAccountOpsDisabled)"
               :title="!isOwnedAccount(acc) ? '仅账号归属用户或超级管理员可以操作' : (!acc.running && isAccountOpsDisabled ? '账号已到期，无法启动账号' : '')"
@@ -194,7 +194,7 @@ function accountAvatar(acc: any) {
           </div>
         </div>
 
-        <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 sm:mt-4 dark:border-gray-700 sm:pt-4">
+        <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-700">
           <div class="hidden shrink-0 items-center gap-2 text-sm whitespace-nowrap text-gray-500 sm:flex">
             <span class="flex items-center gap-1">
               <div class="h-2 w-2 rounded-full" :class="acc.running ? 'bg-green-500' : 'bg-gray-300'" />
@@ -202,11 +202,11 @@ function accountAvatar(acc: any) {
             </span>
           </div>
 
-          <div class="flex flex-1 flex-wrap justify-end gap-1 sm:flex-initial sm:gap-2">
+          <div class="flex flex-1 flex-wrap items-center justify-between gap-1.5 sm:flex-initial sm:justify-end sm:gap-2">
             <BaseButton
               :data-testid="`set-default-plan-${acc.id}`"
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] !p-2"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial"
               :loading="defaultPlanSettingId === String(acc.id)"
               :disabled="!isOwnedAccount(acc) || !!defaultPlanSettingId || !!defaultPlanApplyingId"
               aria-label="设置默认方案"
@@ -221,7 +221,7 @@ function accountAvatar(acc: any) {
             <BaseButton
               :data-testid="`apply-default-plan-${acc.id}`"
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] !p-2"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial"
               :loading="defaultPlanApplyingId === String(acc.id)"
               :disabled="!isOwnedAccount(acc) || !!defaultPlanSettingId || !!defaultPlanApplyingId"
               aria-label="应用默认方案"
@@ -235,7 +235,7 @@ function accountAvatar(acc: any) {
             </BaseButton>
             <BaseButton
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] !p-2"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial"
               :disabled="!isOwnedAccount(acc)"
               aria-label="设置"
               :title="isOwnedAccount(acc) ? '设置' : '仅账号归属用户或超级管理员可以配置'"
@@ -248,7 +248,7 @@ function accountAvatar(acc: any) {
             </BaseButton>
             <BaseButton
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] !p-2"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial"
               :disabled="!isOwnedAccount(acc)"
               aria-label="编辑"
               :title="isOwnedAccount(acc) ? '编辑' : '仅账号归属用户或超级管理员可以编辑'"
@@ -261,7 +261,7 @@ function accountAvatar(acc: any) {
             </BaseButton>
             <BaseButton
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] text-red-500 !p-2 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 disabled:text-red-300 disabled:opacity-60 dark:disabled:text-red-400/60"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 text-red-500 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 disabled:text-red-300 disabled:opacity-60 dark:disabled:text-red-400/60"
               :disabled="!isOwnedAccount(acc)"
               aria-label="删除"
               :title="isOwnedAccount(acc) ? '删除' : '仅账号归属用户或超级管理员可以删除'"
