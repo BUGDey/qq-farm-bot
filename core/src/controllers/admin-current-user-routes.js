@@ -6,11 +6,11 @@ const path = require('path');
 const { USER_SYSTEM_CONFIG, isElevatedRole } = require('../config/user-system');
 const { getAccountOwner } = require('./admin-account-access');
 
-/** 本站排行：聚合全部账号的日/周/月偷菜与赚取收益（登录用户可看，前端负责脱敏展示） */
+/** 本站排行：聚合全部账号的日/周/月/总历史偷菜与赚取收益（登录用户可看，前端负责脱敏展示） */
 function registerRankingRoute({ app, requireAdminToken, store }) {
   app.get('/api/ranking', requireAdminToken, (req, res) => {
     try {
-      const period = ['daily', 'weekly', 'monthly'].includes(String(req.query.period || '')) ? String(req.query.period) : 'daily';
+      const period = ['daily', 'weekly', 'monthly', 'total'].includes(String(req.query.period || '')) ? String(req.query.period) : 'daily';
       const type = ['earn', 'steal'].includes(String(req.query.type || '')) ? String(req.query.type) : 'earn';
 
       const dataDir = process.env.FARM_DATA_DIR || path.join(__dirname, '../../data');

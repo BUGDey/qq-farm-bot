@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import api from '@/api'
 
-type Period = 'daily' | 'weekly' | 'monthly'
+type Period = 'daily' | 'weekly' | 'monthly' | 'total'
 type RankType = 'earn' | 'steal'
 
 interface RankRow {
@@ -20,6 +20,7 @@ const periods: { key: Period, label: string }[] = [
   { key: 'daily', label: '日榜' },
   { key: 'weekly', label: '周榜' },
   { key: 'monthly', label: '月榜' },
+  { key: 'total', label: '总历史' },
 ]
 
 const period = ref<Period>('daily')
@@ -92,6 +93,16 @@ function formatValue(row: RankRow) {
   return String(Math.round(n))
 }
 
+/** 行内次要指标：与当前排序维度互补，让每行信息更完整 */
+function secondaryValue(row: RankRow) {
+  if (type.value === 'steal') {
+    const n = Number(row.earn) || 0
+    const text = n >= 1e8 ? `${(n / 1e8).toFixed(1)}亿` : n >= 1e4 ? `${(n / 1e4).toFixed(1)}万` : String(Math.round(n))
+    return `收益 +${text}`
+  }
+  return `偷菜 ${Math.round(Number(row.steal) || 0)} 次`
+}
+
 onMounted(fetchRanking)
 </script>
 
@@ -105,7 +116,7 @@ onMounted(fetchRanking)
         </h1>
       </div>
 
-      <div class="mb-3 inline-flex border border-white/55 rounded-lg bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="排行周期">
+      <div class="mb-3 inline-flex period-group border border-white/55 rounded-lg bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="排行周期">
         <button
           v-for="p in periods"
           :key="p.key"
@@ -118,7 +129,7 @@ onMounted(fetchRanking)
         </button>
       </div>
 
-      <div class="mb-4 flex items-center gap-2">
+      <div class="mb-4 type-group flex items-center gap-2">
         <button
           class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition"
           :class="type === 'earn' ? 'bg-amber-100 text-amber-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'"
@@ -156,12 +167,15 @@ onMounted(fetchRanking)
           <img :src="row.avatar || '/default-avatar.png'" alt="" class="rank-avatar">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
-              <span class="truncate text-sm text-gray-900 font-bold">{{ maskName(row.name) }}</span>
+              <span class="rank-name truncate text-sm text-gray-900 font-bold">{{ maskName(row.name) }}</span>
               <span class="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700 font-medium">{{ platformLabel(row.platform) }}</span>
             </div>
-            <div class="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
-              <span class="i-carbon-user text-xs" />
-              <span>{{ maskOwner(row.owner) }}</span>
+            <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-400">
+              <span class="flex items-center gap-1">
+                <span class="i-carbon-user text-xs" />
+                <span>{{ maskOwner(row.owner) }}</span>
+              </span>
+              <span class="rank-sub">{{ secondaryValue(row) }}</span>
             </div>
           </div>
           <div class="rank-value" :class="type === 'steal' ? 'rank-value-steal' : 'rank-value-earn'">
@@ -241,5 +255,76 @@ onMounted(fetchRanking)
 
 .rank-value-steal {
   color: #ea580c;
+}
+
+.rank-sub {
+  color: #9ca3af;
+}
+
+/* 窄屏（含平板竖屏 / 手机横屏，与全站移动端断点一致）：卡片铺满、信息放大、间距放宽 */
+@media (max-width: 1023px) {
+  .ranking-page {
+    max-width: 100%;
+    padding: 0 2px;
+  }
+
+  .ranking-card {
+    padding: 16px 14px;
+    border-radius: 18px;
+  }
+
+  .period-group,
+  .type-group {
+    width: 100%;
+  }
+
+  .period-group {
+    display: flex;
+  }
+
+  .period-group button {
+    flex: 1;
+    padding: 9px 6px;
+    font-size: 15px;
+  }
+
+  .type-group button {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: 15px;
+  }
+
+  .rank-row {
+    gap: 14px;
+    padding: 13px 14px;
+    border-radius: 16px;
+  }
+
+  .rank-medal {
+    width: 40px;
+    font-size: 24px;
+  }
+
+  .rank-avatar {
+    height: 50px;
+    width: 50px;
+  }
+
+  .rank-name {
+    font-size: 15px;
+  }
+
+  .rank-row .text-xs {
+    font-size: 12px;
+  }
+
+  .rank-sub {
+    font-size: 12px;
+  }
+
+  .rank-value {
+    font-size: 20px;
+  }
 }
 </style>

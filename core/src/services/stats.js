@@ -62,11 +62,12 @@ let currentDateKey = null;
 /** 全期累计操作计数（跨天不重置，供「账号统计」展示） */
 const totalOperations = {};
 
-/** 排行累计（日/周/月的偷菜次数与赚取金币），键变化时自动重置 */
+/** 排行累计（日/周/月的偷菜次数与赚取金币），键变化时自动重置；total 为全期累计，不重置 */
 const rank = {
     daily: { key: '', steal: 0, earn: 0 },
     weekly: { key: '', steal: 0, earn: 0 },
     monthly: { key: '', steal: 0, earn: 0 },
+    total: { key: 'all', steal: 0, earn: 0 },
 };
 
 /** 本周键：以本周一日期表示，避免周界歧义 */
@@ -99,6 +100,9 @@ function bumpRank(stealDelta, earnDelta) {
     rank.weekly.earn += earnDelta;
     rank.monthly.steal += stealDelta;
     rank.monthly.earn += earnDelta;
+    // 全期累计：跨天/跨周/跨月都不重置
+    rank.total.steal += stealDelta;
+    rank.total.earn += earnDelta;
 }
 
 /** 上次记录的金币/经验/点券值（用于计算增量） */
@@ -197,7 +201,8 @@ function doSave() {
     rank: {
       daily: { ...rank.daily },
       weekly: { ...rank.weekly },
-      monthly: { ...rank.monthly }
+      monthly: { ...rank.monthly },
+      total: { ...rank.total }
     },
     tongQiGiftCount,
     initialState: init,
@@ -267,7 +272,7 @@ function initStatsWithPersistence(accountId, gold, exp, coupon = 0) {
     });
     const savedRank = persisted.rank && typeof persisted.rank === 'object' ? persisted.rank : null;
     if (savedRank) {
-      for (const seg of ['daily', 'weekly', 'monthly']) {
+      for (const seg of ['daily', 'weekly', 'monthly', 'total']) {
         const seg0 = savedRank[seg];
         if (seg0 && typeof seg0 === 'object') {
           rank[seg] = {
@@ -405,7 +410,8 @@ function getStats(farmUser, userState, connected, limits) {
     rank: {
       daily: { ...rank.daily },
       weekly: { ...rank.weekly },
-      monthly: { ...rank.monthly }
+      monthly: { ...rank.monthly },
+      total: { ...rank.total }
     },
     tongQiGiftCount,
     tongQiGiftLimit: null,

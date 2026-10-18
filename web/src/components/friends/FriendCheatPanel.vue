@@ -98,6 +98,24 @@ function metricsTitle(v: any) {
   return parts.join(' · ')
 }
 
+/** 指标胶囊：把摘要拆成一颗颗带底色的胶囊，避免浅灰细字看不清 */
+function metricsParts(v: any) {
+  const m = v.metrics || {}
+  const parts: { label: string, value: string }[] = [
+    { label: '样本', value: `${m.count ?? 0} 条` },
+    { label: '日均', value: (m.perDay ?? 0).toFixed(1) },
+    { label: '凌晨占比', value: `${Math.round((m.dawnRatio ?? 0) * 100)}%` },
+  ]
+  if (m.regularityCv != null)
+    parts.push({ label: '间隔变异', value: String(m.regularityCv) })
+  if (m.singleAction)
+    parts.push({ label: '', value: '行为单一' })
+  parts.push({ label: '活跃跨度', value: `${(m.spanHours ?? 0).toFixed(1)}h` })
+  parts.push({ label: '帮忙', value: String(m.helpCount ?? 0) })
+  parts.push({ label: '偷菜', value: `${m.stealCount ?? 0}（价值 ${m.stealValue ?? 0}）` })
+  return parts
+}
+
 // ---- 状态胶囊（高嫌疑/可疑/高活跃/帮助值高/偷价值高） ----
 
 function statusTags(v: any) {
@@ -258,7 +276,14 @@ async function startDetection() {
                 </span>
               </div>
               <div class="flex flex-wrap items-center gap-1.5">
-                <span class="text-[11px] text-gray-400 sm:truncate">{{ metricsTitle(v) }}</span>
+                <span
+                  v-for="(part, idx) in metricsParts(v)"
+                  :key="idx"
+                  class="metric-chip"
+                >
+                  <template v-if="part.label">{{ part.label }} <b>{{ part.value }}</b></template>
+                  <template v-else><b>{{ part.value }}</b></template>
+                </span>
                 <span
                   v-for="tag in statusTags(v)"
                   :key="tag.label"
@@ -314,6 +339,35 @@ async function startDetection() {
 </template>
 
 <style scoped>
+/* 指标胶囊：浅底深字，避免细灰字在磨砂背景上看不清 */
+.metric-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  color: #374151;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.metric-chip b {
+  color: #111827;
+  font-weight: 700;
+}
+
+:global(.dark) .metric-chip {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #d1d5db;
+}
+
+:global(.dark) .metric-chip b {
+  color: #f9fafb;
+}
+
 /* 状态胶囊：高嫌疑/可疑/高活跃 = 红/琥珀，帮助值高/偷价值高 = 绿 */
 .status-tag {
   display: inline-flex;
@@ -416,6 +470,11 @@ async function startDetection() {
 @media (max-width: 640px) {
   .row-action-btn {
     padding: 5px 7px;
+  }
+
+  .metric-chip {
+    padding: 3px 9px;
+    font-size: 12px;
   }
 }
 </style>
