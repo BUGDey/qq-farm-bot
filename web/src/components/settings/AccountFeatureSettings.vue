@@ -765,7 +765,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
                     </label>
                   </div>
                   <p v-if="showMilkTeaBusiness" class="mt-2 text-xs text-gray-500">
-                    首选类型没有可雇佣好友时，自动改用备选类型。备选也不可用则等待下次检查。时长或奶茶券不足时跳过。
+                    首选类型没有可雇佣好友时，自动改用备选类型。备选也没有可雇佣的则随机雇佣一名可雇佣好友。时长或奶茶券不足时跳过。
                   </p>
                   <div v-if="showMilkTeaBusiness" class="grid mt-3 gap-3 sm:grid-cols-2">
                     <label class="text-sm">工作收益

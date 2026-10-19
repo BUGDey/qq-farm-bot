@@ -39,12 +39,14 @@ function selectHireCandidate(candidates, input, now) {
   // 首选类型没有可雇佣好友时自动改用备选类型；备选落空后：
   // - 未配置备选 → 保持旧兜底（天赋/任意好友：任意好友 → 实习员工；实习员工：严格不兜底）
   // - 备选为任意好友 → 兜底实习员工
-  // - 备选为具体类型 → 用户明确限定了范围，不再兜底，返回空让上层跳过
+  // - 备选为具体类型 → 随机雇佣一名可雇佣的（好友/机器人），不再等待下次检查
   let target = pick(talentId);
   if (!target && fallbackTalentId != null) target = pick(fallbackTalentId);
+  // 首选与备选都落空（含未配置备选）：随机雇佣一名可雇佣的（好友/机器人），
+  // 不再留空等待下次检查
   if (!target) {
-    if (fallbackTalentId == null) target = talentId === 9004 ? undefined : friends[0] || robots[0];
-    else if (fallbackTalentId === 0) target = robots[0];
+    const pool = [...friends, ...robots];
+    target = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : undefined;
   }
   return target;
 }

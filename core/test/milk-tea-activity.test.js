@@ -225,7 +225,9 @@ test('hire chooses first matching idle friend, then other idle friends, then int
   const other = employee(1, 9002), matching = employee(2, 9001), robot = employee(3, 9004, { is_robot: true });
   const candidates = { friends: [employee(4, 9001, { state: 1 }), other, matching, employee(5, 9001)], robots: [robot] };
   assert.equal(selectHireCandidate(candidates, { talentId: 9001 }, 100), matching);
-  assert.equal(selectHireCandidate(candidates, { talentId: 9003 }, 100), other);
+  // 首选落空且未配置备选 → 随机雇佣一名可雇佣的（好友/机器人）
+  const randomPick = selectHireCandidate(candidates, { talentId: 9003 }, 100);
+  assert.ok(randomPick != null && randomPick !== undefined, '落空后应随机返回一名可雇佣者');
   assert.equal(selectHireCandidate(candidates, { talentId: 0 }, 100), other);
   assert.equal(selectHireCandidate(candidates, { talentId: 9004 }, 100), robot);
   candidates.friends = [employee(6, 9001, { rehire_available_at: 101 }), employee(7, 9001, { state_until_at: 101 }), employee(8, 9001, { state: 2 })];
@@ -295,17 +297,19 @@ test('hire falls back to the configured backup talent before any-friend or inter
   const candidates = { friends: [seller, promoter], robots: [robot] };
   // 首选金牌服务落空 → 备选金牌宣传命中
   assert.equal(selectHireCandidate(candidates, { talentId: 9003, fallbackTalentId: 9002 }, 100), promoter);
-  // 备选也是具体类型且落空（机器人忙碌、无金牌服务好友）→ 不兜底任意好友，返回空让上层跳过
+  // 备选也是具体类型且落空（机器人忙碌、无金牌服务好友）→ 随机雇佣一名可雇佣的
   const busyRobots = { friends: [seller, promoter], robots: [employee(13, 9004, { is_robot: true, state: 1 })] };
-  assert.equal(selectHireCandidate(busyRobots, { talentId: 9004, fallbackTalentId: 9003 }, 100), undefined);
+  const randomPick = selectHireCandidate(busyRobots, { talentId: 9004, fallbackTalentId: 9003 }, 100);
+  assert.ok(randomPick === seller || randomPick === promoter, '首选备选都落空时应随机雇佣一名可雇佣好友');
   // 备选任意好友 → 首选落空后取任意空闲好友
   assert.equal(selectHireCandidate(candidates, { talentId: 9003, fallbackTalentId: 0 }, 100), seller);
   // 备选实习员工 → 首选落空后取机器人
   assert.equal(selectHireCandidate(candidates, { talentId: 9003, fallbackTalentId: 9004 }, 100), robot);
-  // 未配置备选 → 保持旧兜底：任意好友 → 实习员工
-  assert.equal(selectHireCandidate(candidates, { talentId: 9003 }, 100), seller);
+  // 未配置备选 → 同样随机雇佣一名可雇佣的（好友优先、不足再机器人）
+  const anyPick = selectHireCandidate(candidates, { talentId: 9003 }, 100);
+  assert.ok(anyPick === seller || anyPick === promoter || anyPick === robot, '落空后应随机返回一名可雇佣者');
   assert.equal(selectHireCandidate({ friends: [], robots: [robot] }, { talentId: 9004 }, 100), robot);
-  assert.equal(selectHireCandidate({ friends: [seller], robots: [] }, { talentId: 9004 }, 100), undefined);
+  assert.equal(selectHireCandidate({ friends: [seller], robots: [] }, { talentId: 9004 }, 100), seller);
   // 非法备选值回落为未配置
   assert.deepEqual(normalizeHireOptions({ fallbackTalentId: 'oops' }), { durationId: 1, talentId: 0, fallbackTalentId: null });
   assert.equal(normalizeHireOptions({ fallbackTalentId: '9001' }).fallbackTalentId, 9001);
