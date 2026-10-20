@@ -11,6 +11,8 @@
  *   5. 24 小时在线时长（普通玩家约 2-3 小时/天；4-6 小时起怀疑，
  *      10 小时以上基本是挂机——以最近 24h 有真实操作覆盖的小时数计）
  *   6. 秒偷（我方作物成熟后 60 秒内即被该访客偷走；真人很难连续踩点）
+ * - 样本置信阈值：单个访客样本不足 20 条时嫌疑分按样本量线性压缩并封顶在
+ *   关注线（30）以下，不标记可疑/高活跃，改标「样本不足」，避免小样本误伤
  * - 护主犬好友（dogId=90021）自动加分保护：嫌疑分强制压低并打上护主犬标记
  */
 const fs = require('fs');
@@ -26,6 +28,10 @@ const SAMPLE_MAX_ENTRIES = 8000;
 const FAST_STEAL_WINDOW_SEC = 60;
 /** 成熟时刻历史最大条数（按时刻去重） */
 const MATURE_HISTORY_MAX = 4000;
+/** 样本置信阈值：单个访客样本低于该条数时不标记可疑/高活跃，嫌疑分按比例压缩 */
+const SAMPLE_MIN_TRUST = 20;
+/** 样本不足时嫌疑分封顶值：压在关注线（warn >= 30）之下，保证分数与等级一致 */
+const INSUFFICIENT_SAMPLE_SCORE_CAP = 29;
 
 const GUARD_DOG_ID = 90021;
 
@@ -320,19 +326,37 @@ function analyzeFriendCheat(accountId, now = Date.now()) {
 
     // 护主犬保护：压缩嫌疑分，避免误伤
     if (isGuardDog) score = Math.min(score, 15);
+
+    // 样本不足（< SAMPLE_MIN_TRUST 条）：嫌疑分按样本量线性压缩（小样本
+    // 置信度低，如 10 条只保留一半分数），并封顶在关注线之下；同时不参与
+    // 可疑（warn/danger）与高活跃标记，改由 insufficientSamples 标注
+    const insufficientSamples = total < SAMPLE_MIN_TRUST;
+    if (insufficientSamples) {
+      score = Math.min(
+        Math.round(score * (total / SAMPLE_MIN_TRUST)),
+        INSUFFICIENT_SAMPLE_SCORE_CAP,
+      );
+    }
     score = Math.max(0, Math.min(100, Math.round(score)));
+
+    const level = !insufficientSamples && score >= 60
+      ? 'danger'
+      : !insufficientSamples && score >= 30
+        ? 'warn'
+        : 'safe';
 
     visitors.push({
       gid,
       nick: entry.nick || `GID:${gid}`,
       score,
-      // >=60 嫌疑（建议清洗）/ >=30 关注 / 其余正常
-      level: score >= 60 ? 'danger' : score >= 30 ? 'warn' : 'safe',
+      // >=60 嫌疑（建议清洗）/ >=30 关注 / 其余正常；样本不足时一律 safe
+      level,
       protected: isGuardDog,
+      insufficientSamples,
       // 近 24 小时活跃度（覆盖的小时数 / 24）：普通玩家约 2-3 小时，
       // >= 4 小时开始怀疑、>= 10 小时基本挂机
       activeHours24: entry.recentOpHours.size,
-      highActive: entry.recentOpHours.size >= 6,
+      highActive: !insufficientSamples && entry.recentOpHours.size >= 6,
       metrics: {
         count: total,
         perDay,
@@ -354,6 +378,7 @@ function analyzeFriendCheat(accountId, now = Date.now()) {
 
   return {
     windowHours: SAMPLE_WINDOW_MS / (60 * 60 * 1000),
+    sampleMinTrust: SAMPLE_MIN_TRUST,
     sampleCount: rawSamples.length,
     visitorCount: visitors.length,
     suspiciousCount: visitors.filter((v) => v.level === 'danger' && !v.protected).length,
@@ -366,5 +391,6 @@ module.exports = {
   analyzeFriendCheat,
   collectSamplesThrottled,
   SAMPLE_WINDOW_MS,
+  SAMPLE_MIN_TRUST,
   GUARD_DOG_ID,
 };

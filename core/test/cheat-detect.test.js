@@ -39,18 +39,24 @@ test('普通玩家：白天游玩 2 小时、间隔零散、无秒偷 → 绿色
   assert.equal(visitor.level, 'safe');
   assert.ok(visitor.score < 30, `普通玩家嫌疑分应低于 30，实际 ${visitor.score}`);
   assert.equal(visitor.activeHours24, 2, '12:00-14:00 覆盖 2 个小时桶');
+  assert.equal(visitor.insufficientSamples, true, '8 条样本应标注样本不足');
 });
 
-test('可疑玩家：在线 5 小时 + 两次踩点秒偷 + 只偷菜 → 黄色（warn）', () => {
-  // 成熟时刻：14:00:00；该访客在 14:00:10、14:30:10 两次成熟后 10 秒内偷走
+test('可疑玩家：在线偏长 + 两次踩点秒偷 + 只偷菜 → 黄色（warn）', () => {
+  // 成熟时刻：14:00:00、14:30:00；该访客在成熟后 10 秒内偷走
   const matureAt1 = Math.floor((NOW + 2 * HOUR) / 1000);
   const matureAt2 = Math.floor((NOW + 2.5 * HOUR) / 1000);
-  // 09:00-14:00 覆盖 5 个小时桶（>=4h 开始怀疑），间隔刻意不均匀（避开规律分）
-  const samples = [];
-  const offsetsMin = [0, 5, 40, 95, 260];
-  for (const min of offsetsMin) {
-    samples.push([Math.floor((NOW - 4 * HOUR + min * 60 * 1000) / 1000), 200, 1, 4, '踩点哥']);
-  }
+  // 08:00-12:30 之间 22 条间隔刻意不均匀的偷菜记录（避开规律分），
+  // 覆盖小时桶 8/9/10/11/12，凑足 20 条置信阈值以上
+  const base = NOW - 4 * HOUR;
+  const offsetsMin = [
+    0, 3, 42, 95, 130, 200, 262,
+    8, 55, 150, 210, 25, 80, 175, 240,
+    12, 61, 118, 33, 90, 145, 225,
+  ];
+  const samples = offsetsMin.map(min => [
+    Math.floor((base + min * 60 * 1000) / 1000), 200, 1, 4, '踩点哥',
+  ]);
   // 两次秒偷（成熟后 10 秒）
   samples.push([matureAt1 + 10, 200, 1, 4, '踩点哥']);
   samples.push([matureAt2 + 10, 200, 1, 4, '踩点哥']);
@@ -59,7 +65,9 @@ test('可疑玩家：在线 5 小时 + 两次踩点秒偷 + 只偷菜 → 黄色
   const result = analyzeFriendCheat(ACCOUNT, NOW);
   const visitor = result.visitors.find(v => v.nick === '踩点哥');
   assert.ok(visitor, '访客应被统计到');
+  assert.equal(visitor.metrics.count, 24, '22 条常规 + 2 条秒偷');
   assert.equal(visitor.metrics.fastStealCount, 2, '两次成熟后 10 秒内偷取都应计为秒偷');
+  assert.equal(visitor.insufficientSamples, false, '样本 >= 20 不再标注样本不足');
   assert.equal(visitor.level, 'warn', `在线偏长 + 秒偷两次应为黄色，实际 ${visitor.score}`);
   assert.ok(visitor.score >= 30 && visitor.score < 60, `黄色区间应为 30-59，实际 ${visitor.score}`);
 });
@@ -87,6 +95,7 @@ test('挂机账号：在线 16 小时、凌晨活跃、间隔均匀、只偷菜�
   assert.ok(visitor, '访客应被统计到');
   assert.ok(visitor.score >= 60, `挂机账号嫌疑分应 >= 60，实际 ${visitor.score}`);
   assert.equal(visitor.level, 'danger');
+  assert.equal(visitor.insufficientSamples, false, '样本充足不标注样本不足');
   assert.ok(visitor.metrics.fastStealCount >= 3, '秒偷次数应 >= 3');
 });
 
@@ -102,6 +111,27 @@ test('秒偷窗口边界：成熟 61 秒后偷取不计为秒偷', () => {
   assert.ok(visitor, '访客应被统计到');
   assert.equal(visitor.metrics.fastStealCount, 0, '超过 60 秒窗口不应计秒偷');
   assert.equal(visitor.level, 'safe');
+  assert.equal(visitor.insufficientSamples, true, '1 条样本应标注样本不足');
+});
+
+test('样本不足（<20 条）：嫌疑分压缩封顶且不标记可疑/高活跃', () => {
+  // 构造一个"本该红色"的访客但只有 10 条样本：小时级均匀间隔（规律分满分）、
+  // 覆盖 10 个小时桶（活跃分满分）、含凌晨时段（凌晨分）、只偷菜（单一行为分）
+  const samples = [];
+  for (let h = 10; h >= 1; h -= 1) {
+    samples.push([Math.floor((NOW - h * HOUR) / 1000), 600, 1, 4, '小样本哥']);
+  }
+  writeFixture(samples, []);
+
+  const result = analyzeFriendCheat(ACCOUNT, NOW);
+  const visitor = result.visitors.find(v => v.nick === '小样本哥');
+  assert.ok(visitor, '访客应被统计到');
+  assert.equal(visitor.metrics.count, 10, '10 条样本');
+  assert.equal(visitor.insufficientSamples, true, '低于 20 条应标注样本不足');
+  assert.equal(visitor.level, 'safe', '样本不足时不得标记可疑（即使原始分很高）');
+  assert.equal(visitor.highActive, false, '样本不足时不得标记高活跃');
+  assert.ok(visitor.score <= 29, `样本不足嫌疑分应封顶在关注线之下，实际 ${visitor.score}`);
+  assert.ok(result.sampleMinTrust === 20, '分析结果应携带样本置信阈值');
 });
 
 test('样本去重：同一秒同一访客同一动作只计一次', () => {

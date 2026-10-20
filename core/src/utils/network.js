@@ -59,7 +59,12 @@ let clientSeq = 1;
 let serverSeq = 0;
 const pendingCallbacks = new Map();
 const pendingStartedAt = new Map();
-const requestGate = createRequestGate({ maxActive: 8, maxQueued: 100 });
+// 拟真节流：同时在途请求并发上限 2（拟真真机小程序的网络通信模型），
+// 出队 250ms 基线间隔 + 0~150ms 随机抖动（见 request-priority.js）。
+// 收菜/做奶茶/好友/任务等多任务并发触发时，底层平滑排队按人类手速发包，
+// 避免瞬间打出上百个包被腾讯网关风控静默拉黑——黑名单不回包的典型表现
+// 就是「请求超时 → 心跳无响应 → 心跳超时掉线」循环（2026-10-19 实测）。
+const requestGate = createRequestGate({ maxActive: 2, maxQueued: 100 });
 let wsErrorState = { code: 0, at: 0, message: '' };
 const networkScheduler = createScheduler('network');
 let tsdkRuntime = null;

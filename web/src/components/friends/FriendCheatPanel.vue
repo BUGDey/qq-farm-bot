@@ -26,7 +26,7 @@ const actionBusy = ref<Record<number, boolean>>({})
 const actionMsg = ref('')
 
 const description = computed(() =>
-  `基于访客互动记录的行为分析：操作间隔规律性 / 在线时长 / 凌晨活跃占比 / 日均频率 / 行为单一性，综合评出 0-100 嫌疑分。样本在挂机过程中持续积累（${cheatAnalysis.value?.windowHours ?? 72} 小时窗口），护主犬好友自动加分保护。`)
+  `基于访客互动记录的行为分析：操作间隔规律性 / 在线时长 / 凌晨活跃占比 / 日均频率 / 行为单一性，综合评出 0-100 嫌疑分。单个访客样本不足 ${cheatAnalysis.value?.sampleMinTrust ?? 20} 条时嫌疑分按比例压缩、不标记可疑（标注「样本不足」）。样本在挂机过程中持续积累（${cheatAnalysis.value?.windowHours ?? 72} 小时窗口），护主犬好友自动加分保护。`)
 
 const visitors = computed<any[]>(() => cheatAnalysis.value?.visitors || [])
 
@@ -123,18 +123,24 @@ function metricsParts(v: any) {
 
 function statusTags(v: any) {
   const tags: { label: string, cls: string }[] = []
-  if (!v.protected) {
+  // 样本不足：嫌疑分已被压缩、不参与可疑/高活跃判定，只显示灰色提示标签
+  // 与绿色价值标签，抑制所有红色/琥珀色的嫌疑类标签
+  if (v.insufficientSamples)
+    tags.push({ label: '样本不足', cls: 'status-tag-gray' })
+  if (!v.protected && !v.insufficientSamples) {
     if (v.level === 'danger')
       tags.push({ label: '高嫌疑', cls: 'status-tag-red' })
     else if (v.level === 'warn')
       tags.push({ label: '可疑', cls: 'status-tag-amber' })
   }
-  if (v.highActive)
+  if (!v.insufficientSamples && v.highActive)
     tags.push({ label: '长时间在线', cls: 'status-tag-red' })
-  if ((v.metrics?.fastStealCount ?? 0) >= 2)
-    tags.push({ label: '踩点秒偷', cls: 'status-tag-red' })
-  else if ((v.activeHours24 ?? 0) >= 4 && (v.activeHours24 ?? 0) < 6)
-    tags.push({ label: '在线偏长', cls: 'status-tag-amber' })
+  if (!v.insufficientSamples) {
+    if ((v.metrics?.fastStealCount ?? 0) >= 2)
+      tags.push({ label: '踩点秒偷', cls: 'status-tag-red' })
+    else if ((v.activeHours24 ?? 0) >= 4 && (v.activeHours24 ?? 0) < 6)
+      tags.push({ label: '在线偏长', cls: 'status-tag-amber' })
+  }
   if ((v.metrics?.helpCount ?? 0) >= 5)
     tags.push({ label: '帮助值高', cls: 'status-tag-green' })
   if ((v.metrics?.stealValue ?? 0) >= 30)
@@ -415,6 +421,17 @@ async function startDetection() {
 :global(.dark) .status-tag-green {
   background: rgba(46, 204, 113, 0.22);
   color: #6ee7b7;
+}
+
+/* 样本不足：灰色中性提示 */
+.status-tag-gray {
+  background: rgba(107, 114, 128, 0.14);
+  color: #4b5563;
+}
+
+:global(.dark) .status-tag-gray {
+  background: rgba(107, 114, 128, 0.22);
+  color: #d1d5db;
 }
 
 /* 行内操作按钮（拉黑/删除）：小号描边按钮，移动端重置全局 44px 强制尺寸 */
