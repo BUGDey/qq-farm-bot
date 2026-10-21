@@ -53,6 +53,11 @@ function createWorkerManager(deps) {
         getPetDiaryFriend: 30000,
     };
     const WATCHDOG_MAX_RESTARTS = 3;
+    // 微信账号下线提醒的延迟确认窗口：自动刷新 Code（含重启 Worker）实测约需 10 秒上下，
+    // 窗口内恢复在线则撤销提醒，避免"刚推送下线提醒就自动刷新成功"的误报
+    const WECHAT_REMINDER_CONFIRM_DELAY_MS = 15000;
+    // 宽限复检：确认时刻可能恰好落在重启换 Worker 的空档，多给一次机会再定论
+    const WECHAT_REMINDER_RECHECK_DELAY_MS = 5000;
 
     /** 是否支持 Thread 模式（非 pkg 打包 + Worker 可用） */
     const threadMode = runtimeMode === 'thread' && !processRef.pkg && typeof WorkerThread === 'function';
@@ -85,21 +90,96 @@ function createWorkerManager(deps) {
         return String(value || '').trim();
     }
 
+    function resolveAccountPlatform(accountId, wrk) {
+        if (wrk && wrk.platform) return String(wrk.platform).toLowerCase();
+        try {
+            const data = getAccounts();
+            const accounts = Array.isArray(data && data.accounts) ? data.accounts : [];
+            const acc = accounts.find(item => String(item.id) === String(accountId));
+            return String((acc && acc.platform) || '').toLowerCase();
+        } catch {
+            return '';
+        }
+    }
+
+    function isWorkerConnected(accountId) {
+        const current = workers[accountId];
+        if (!current || current.stopping) return false;
+        return !current.disconnectedSince;
+    }
+
     function notifyAbnormalOffline(accountId, wrk, reason, action, message) {
         if (!wrk || wrk.offlineReminderTriggered) return false;
         wrk.offlineReminderTriggered = true;
         const normalizedReason = cleanText(reason) || 'unknown';
+        const offlineMs = wrk.disconnectedSince ? Date.now() - wrk.disconnectedSince : 0;
 
-        triggerOfflineReminder({
-            accountId,
-            accountName: wrk.name,
-            username: wrk.username,
-            reason: normalizedReason,
-            offlineMs: wrk.disconnectedSince ? Date.now() - wrk.disconnectedSince : 0
-        });
-        if (action && message) {
-            addAccountLog(action, message, accountId, wrk.name, { reason: normalizedReason });
+        const sendReminder = () => {
+            triggerOfflineReminder({
+                accountId,
+                accountName: wrk.name,
+                username: wrk.username,
+                reason: normalizedReason,
+                offlineMs
+            });
+            if (action && message) {
+                addAccountLog(action, message, accountId, wrk.name, { reason: normalizedReason });
+            }
+        };
+
+        // 微信账号开启了自动刷新 Code：掉线后几秒内可能自动恢复在线。
+        // 先等一个确认窗口，恢复就撤销提醒；确认仍离线才真正推送。
+        // QQ 等其他登录方式保持原逻辑（立即提醒）。
+        if (resolveAccountPlatform(accountId, wrk) === 'wx') {
+            log('系统', `微信账号 ${wrk.name} 触发下线事件，${Math.round(WECHAT_REMINDER_CONFIRM_DELAY_MS / 1000)} 秒后确认是否仍离线`, {
+                accountId: String(accountId),
+                accountName: wrk.name,
+                reason: normalizedReason
+            });
+            const cancelReminder = (note) => {
+                const current = workers[accountId];
+                if (current) current.offlineReminderTriggered = false;
+                log('系统', `微信账号 ${wrk.name} 已自动恢复在线，撤销下线提醒`, {
+                    accountId: String(accountId),
+                    accountName: wrk.name,
+                    reason: normalizedReason
+                });
+                addAccountLog('offline_reminder_cancelled',
+                    `账号 ${wrk.name} 自动刷新成功恢复在线，撤销下线提醒${note ? `（${note}）` : ''}`,
+                    accountId, wrk.name, { reason: normalizedReason });
+            };
+            setTimeout(() => {
+                try {
+                    if (isWorkerConnected(accountId)) {
+                        cancelReminder();
+                        return;
+                    }
+                    // 可能恰好处于重启换 Worker 的空档，宽限复检一次再定论
+                    setTimeout(() => {
+                        try {
+                            if (isWorkerConnected(accountId)) {
+                                cancelReminder('宽限复检');
+                                return;
+                            }
+                            log('系统', `微信账号 ${wrk.name} 确认仍离线，发送下线提醒`, {
+                                accountId: String(accountId),
+                                accountName: wrk.name,
+                                reason: normalizedReason
+                            });
+                        } catch (err) {
+                            log('错误', `下线提醒延迟确认异常，按仍离线发送: ${err.message}`);
+                        }
+                        sendReminder();
+                    }, WECHAT_REMINDER_RECHECK_DELAY_MS);
+                } catch (err) {
+                    log('错误', `下线提醒延迟确认异常，按仍离线发送: ${err.message}`);
+                    sendReminder();
+                }
+            }, WECHAT_REMINDER_CONFIRM_DELAY_MS);
+            return true;
         }
+
+        sendReminder();
         return true;
     }
 
