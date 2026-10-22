@@ -167,7 +167,7 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <!-- 免费卡密功能 -->
+    <!-- 普通用户可见全部账号 -->
     <div class="ui-card overflow-hidden rounded-xl p-4">
       <div class="mb-1 flex items-center gap-2">
         <div class="i-carbon-user-multiple text-lg" style="color: var(--theme-primary);" />
@@ -179,13 +179,15 @@ onMounted(() => {
         开启后普通用户在账号列表可以看到其他用户添加的农场账号（仍然只能操作自己的）。
         默认关闭：普通用户只能看到自己添加的账号。
       </p>
-      <div class="flex items-center justify-between gap-3">
-        <span class="text-xs text-gray-400">{{ visibilityLoaded ? (usersSeeAllAccounts ? '当前：可见全部账号' : '当前：仅可见自己的账号') : '读取中…' }}</span>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
         <BaseSwitch
           :model-value="usersSeeAllAccounts"
+          label="开启普通用户可见全部账号"
           :disabled="visibilitySaving"
           @update:model-value="toggleVisibility"
         />
+        <span v-if="visibilitySaving" class="text-xs text-gray-400">保存中…</span>
+        <span v-if="visibilityLoaded" class="text-xs text-gray-500 dark:text-gray-400">{{ usersSeeAllAccounts ? '当前：可见全部账号' : '当前：仅可见自己的账号' }}</span>
       </div>
     </div>
 
