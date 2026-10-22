@@ -101,25 +101,15 @@ function registerAdminAccountRoutes({
           // 账号可见性开关（全局设置）：关闭时普通用户只能看到自己添加的账号；
           // 管理员及以上不受限。默认关闭。
           const canSeeAll = isElevatedRole(currentUser.role) || store.getUsersSeeAllAccounts();
-          const isSuper = isSuperAdminUser(currentUser);
-          const selfName = String(currentUser.username || "").trim();
-          // 开启"普通用户可见全部账号"后，他人账号的创建者展示脱敏（仅超管与本人保持全显）。
-          // username 字段保留原值供功能引用；展示层（ownerLabel）优先取 owner，因此展示为掩码。
-          const maskOwnerName = owner => (owner ? `${owner.slice(0, 1)}***` : owner);
-          const baseAccounts = canSeeAll
+          const visibleAccounts = canSeeAll
             ? allAccounts
-            : allAccounts.filter(account => getAccountOwner(account) === selfName);
-          const visibleAccounts = baseAccounts.map((account) => {
-            const owner = getAccountOwner(account);
-            const next = { ...account, owner };
-            if (canSeeAll && !isSuper && owner !== selfName) {
-              next.owner = maskOwnerName(owner);
-            }
-            return next;
-          });
+            : allAccounts.filter(account => getAccountOwner(account) === String(currentUser.username || '').trim());
           data = {
             ...accounts,
-            accounts: visibleAccounts,
+            accounts: visibleAccounts.map((account) => ({
+              ...account,
+              owner: getAccountOwner(account),
+            })),
           };
         } else {
           data = accounts;

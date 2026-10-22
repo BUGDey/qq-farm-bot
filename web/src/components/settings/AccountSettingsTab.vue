@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AccountModal from '@/components/AccountModal.vue'
-import AccountVisibilityCard from '@/components/settings/AccountVisibilityCard.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { getPlatformClass, getPlatformLabel } from '@/stores/account'
@@ -113,9 +112,6 @@ function accountAvatar(acc: any) {
         </BaseButton>
       </div>
     </div>
-
-    <!-- 账号可见性开关（原在 管理后台 → 全局设置，移到本页：开关直接作用于上方账号列表） -->
-    <AccountVisibilityCard v-if="userIsSuperAdmin" />
 
     <div v-if="accountsLoading && accounts.length === 0" class="py-8 text-center text-gray-500">
       <div i-svg-spinners-90-ring-with-bg class="mb-2 inline-block text-2xl" />
