@@ -187,6 +187,8 @@ let isRunning = false;
 let loginReady = false;
 let appliedConfigRevision = 0;
 let unifiedSchedulerRunning = false;
+/** 当前账号本次运行的起始时间（毫秒），面板「已运行」按此计算 */
+let accountRunStartedAt = 0;
 
 // ==================== 工具函数 ====================
 
@@ -1511,6 +1513,7 @@ async function startBot(config) {
     // 登录成功回调
     const onReady = async () => {
         loginReady = true;
+        if (!accountRunStartedAt) accountRunStartedAt = Date.now();
 
         // 出售收益监听
         if (onSellGain) networkEvents.off('sell', onSellGain);
@@ -1653,6 +1656,7 @@ async function stopBot() {
     saveStats();
     isRunning = false;
     loginReady = false;
+    accountRunStartedAt = 0;
     friendSyncPaused = false;
 
     stopUnifiedScheduler();
@@ -2286,7 +2290,10 @@ function syncStatus() {
     }
 
     const limits = require('../services/friend').getOperationLimits();
-    const stats = require('../services/stats').getStats(statusData, userState, connected, limits);
+    const accountUptimeSec = accountRunStartedAt
+        ? Math.max(0, Math.floor((Date.now() - accountRunStartedAt) / 1000))
+        : 0;
+    const stats = require('../services/stats').getStats(statusData, userState, connected, limits, accountUptimeSec);
 
     const now = Date.now();
     const farmRemainSec = Math.max(0, Math.ceil((Number(nextFarmRunAt || 0) - now) / 1000));

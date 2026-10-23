@@ -363,8 +363,9 @@ function recomputeSessionTotals(gold, exp, coupon) {
  * @param {object} userState - 用户状态（含 gold/exp/coupon）
  * @param {boolean} connected - 是否连接中
  * @param {object} limits - 操作次数限制
+ * @param {number} uptimeSec - 当前账号本次运行时长（秒）；缺省时回退为进程运行时长
  */
-function getStats(farmUser, userState, connected, limits) {
+function getStats(farmUser, userState, connected, limits, uptimeSec) {
   checkAndResetDailyStats();
   const fu = farmUser && typeof farmUser === 'object' ? farmUser : {};
   const us = userState && typeof userState === 'object' ? userState : {};
@@ -388,6 +389,7 @@ function getStats(farmUser, userState, connected, limits) {
   }
 
   const ops = { ...operations, tongQiGift: tongQiGiftCount };
+  const accountUptime = Number(uptimeSec);
 
   return {
     connection: { connected },
@@ -404,7 +406,7 @@ function getStats(farmUser, userState, connected, limits) {
       openId: us.openId || fu.openId || fu.open_id || '',
       avatar: us.avatar || fu.avatar || fu.avatarUrl || fu.avatar_url || ''
     },
-    uptime: process.uptime(),
+    uptime: Number.isFinite(accountUptime) ? Math.max(0, accountUptime) : process.uptime(),
     operations: ops,
     operationsTotal: { ...totalOperations },
     rank: {
