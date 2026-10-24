@@ -43,19 +43,12 @@ function formatNumber(value: number) {
 
 function formatCompactNumber(value: number) {
   const numericValue = Number(value || 0)
-  const units = [
-    { threshold: 100000000, divisor: 100000000, suffix: '亿' },
-    { threshold: 10000000, divisor: 10000000, suffix: '千万' },
-    { threshold: 1000000, divisor: 1000000, suffix: '百万' },
-    { threshold: 10000, divisor: 10000, suffix: '万' },
-    { threshold: 1000, divisor: 1000, suffix: '千' },
-  ]
-  const unit = units.find(item => Math.abs(numericValue) >= item.threshold)
-  if (!unit)
-    return formatNumber(numericValue)
-  const compactValue = numericValue / unit.divisor
-  const digits = compactValue >= 100 ? 0 : 1
-  return `${compactValue.toFixed(digits).replace(/\.0+$|(?<=\.\d)0+$/g, '')}${unit.suffix}`
+  // 只用「亿/万」两档：「百万/千万」组合后缀读起来生硬（如 3.2百万 → 320万）
+  if (Math.abs(numericValue) >= 100000000)
+    return `${(numericValue / 100000000).toFixed(1).replace(/\.0+$|(?<=\.\d)0+$/g, '')}亿`
+  if (Math.abs(numericValue) >= 10000)
+    return `${(numericValue / 10000).toFixed(1).replace(/\.0+$|(?<=\.\d)0+$/g, '')}万`
+  return formatNumber(numericValue)
 }
 
 const modalSurface = ref<HTMLElement | null>(null)
