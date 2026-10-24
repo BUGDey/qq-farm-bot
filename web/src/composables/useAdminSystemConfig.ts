@@ -7,6 +7,8 @@ export interface SystemConfig {
   clientVersion: string
   platform: string
   os: string
+  /** 访问凭证有效时长（小时）：wx refreshtoken 约 2h 过期，供账号管理页凭证倒计时使用 */
+  credentialValidityHours: number
 }
 
 export interface CaptureConfig {
@@ -37,6 +39,7 @@ const defaultSystemConfigValues: SystemConfig = {
   clientVersion: '1.15.0.2_20261001',
   platform: 'qq',
   os: 'iOS',
+  credentialValidityHours: 2,
 }
 
 const defaultCaptureConfig: CaptureConfig = {
@@ -243,9 +246,9 @@ export function useAdminSystemConfig(options: UseAdminSystemConfigOptions) {
       const { data } = await api.get(readonly ? '/api/system-config' : '/api/admin/system-config')
       if (data?.ok) {
         if (data.data.saved)
-          localSystemConfig.value = { ...data.data.saved }
+          localSystemConfig.value = { ...defaultSystemConfigValues, ...data.data.saved }
         if (data.data.default)
-          defaultSystemConfig.value = { ...data.data.default }
+          defaultSystemConfig.value = { ...defaultSystemConfigValues, ...data.data.default }
       }
     }
     catch (e: any) {

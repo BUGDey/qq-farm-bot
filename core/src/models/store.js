@@ -1713,12 +1713,17 @@ function addOrUpdateAccount(account) {
         // 更新已有账号
         const idx = data.accounts.findIndex(a => a.id === account.id);
         if (idx >= 0) {
+            // 访问凭证（loginBuffer）变化时打点更新时间，作为账号管理页凭证有效期倒计时的起点。
+            // 保活/换 code 的凭证轮转最终都会经由这里持久化新 loginBuffer。
+            const credentialChanged = account.loginBuffer !== undefined
+                && String(account.loginBuffer) !== String(data.accounts[idx].loginBuffer || '');
             data.accounts[idx] = {
                 ...data.accounts[idx],
                 ...account,
                 name: account.name !== undefined ? account.name : data.accounts[idx].name,
                 ...(nextAvatar !== undefined ? { avatar: nextAvatar } : {}),
                 ...(nextOpenId !== undefined ? { openId: nextOpenId } : {}),
+                ...(credentialChanged ? { credentialUpdatedAt: Date.now() } : {}),
                 updatedAt: Date.now()
             };
             accountId = String(data.accounts[idx].id || '');
@@ -1745,6 +1750,8 @@ function addOrUpdateAccount(account) {
             openId: nextOpenId ? String(nextOpenId) : '',
             avatar: nextAvatar || '',
             username: account.username || '',
+            // 访问凭证更新时间打点：新建账号自带凭证时立即生效，供凭证有效期倒计时使用
+            credentialUpdatedAt: account.loginBuffer ? Date.now() : 0,
             createdAt: Date.now(),
             updatedAt: Date.now()
         });
@@ -1965,11 +1972,25 @@ function getSystemConfig() {
 
 function setSystemConfig(config) {
     if (!config || typeof config !== 'object') return null;
+    // 访问凭证有效时长（小时）：用于账号管理页的凭证有效期倒计时。
+    // wx 凭证 refreshtoken 约 2 小时过期、每 30 分钟保活，故默认 2。
+    // 未携带该字段时保留现值，避免旧客户端保存时重置。
+    let credentialValidityHours;
+    if (config.credentialValidityHours === undefined) {
+        credentialValidityHours = Number(globalConfig.systemConfig?.credentialValidityHours) || 2;
+    }
+    else {
+        const rawValidity = Number(config.credentialValidityHours);
+        credentialValidityHours = Number.isFinite(rawValidity)
+            ? Math.min(8760, Math.max(1, Math.round(rawValidity)))
+            : 2;
+    }
     globalConfig.systemConfig = {
         serverUrl: String(config.serverUrl || '').trim(),
         clientVersion: String(config.clientVersion || '').trim(),
         platform: String(config.platform || 'qq').trim(),
-        os: String(config.os || 'iOS').trim()
+        os: String(config.os || 'iOS').trim(),
+        credentialValidityHours
     };
     saveGlobalConfig();
     return { ...globalConfig.systemConfig };

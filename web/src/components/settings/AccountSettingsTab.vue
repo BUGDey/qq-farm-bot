@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
 import AccountModal from '@/components/AccountModal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -52,6 +53,58 @@ function isOwnedAccount(acc: any) {
     return true
   const owner = String(acc?.owner || acc?.username || '').trim()
   return !!owner && owner === String(props.currentUserUsername || '').trim()
+}
+
+// ==================== 访问凭证有效期倒计时 ====================
+// credentialExpireAt 是后端绝对时间戳（credentialUpdatedAt + 有效期时长），本地只需
+// 每秒刷新一次时钟做递减，不轮询接口也不会累积漂移。保活成功（每 30 分钟）会刷新
+// loginBuffer 并重新打点，倒计时自动回到满额。
+const nowTick = ref(Date.now())
+let nowTimer: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  nowTimer = setInterval(() => {
+    nowTick.value = Date.now()
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (nowTimer) {
+    clearInterval(nowTimer)
+    nowTimer = null
+  }
+})
+
+function credentialRemainingMs(acc: any) {
+  return Number(acc?.credentialExpireAt || 0) - nowTick.value
+}
+
+/** 中文格式：剩余 1 小时 49 分 59 秒（跳过为 0 的高位单位） */
+function formatCredentialRemaining(acc: any) {
+  const ms = credentialRemainingMs(acc)
+  if (ms <= 0)
+    return '已过期，请重新扫码或刷新凭证'
+  const totalSec = Math.floor(ms / 1000)
+  const days = Math.floor(totalSec / 86400)
+  const hours = Math.floor((totalSec % 86400) / 3600)
+  const minutes = Math.floor((totalSec % 3600) / 60)
+  const seconds = totalSec % 60
+  const parts: string[] = []
+  if (days)
+    parts.push(`${days} 天`)
+  if (days || hours)
+    parts.push(`${hours} 小时`)
+  if (days || hours || minutes)
+    parts.push(`${minutes} 分`)
+  parts.push(`${seconds} 秒`)
+  return `剩余 ${parts.join(' ')}`
+}
+
+function credentialCountdownClass(acc: any) {
+  const ms = credentialRemainingMs(acc)
+  if (ms <= 30 * 60 * 1000)
+    return 'text-red-500'
+  return 'text-gray-700 dark:text-gray-200'
 }
 
 /** 创建者展示文案 */
@@ -275,6 +328,19 @@ function accountAvatar(acc: any) {
               </span>
             </BaseButton>
           </div>
+        </div>
+
+        <!-- 访问凭证有效期倒计时：账号登录后显示；到期时刻为后端绝对时间戳，按系统配置的时长估算 -->
+        <div
+          v-if="acc.running && acc.credentialExpireAt"
+          class="mt-3 flex items-center gap-1.5 border-t border-gray-100 pt-3 text-xs dark:border-gray-700"
+          :title="`以凭证更新时间 + ${acc.credentialValidityHours ?? 2} 小时估算（可在管理后台全局设置调整）；每 30 分钟保活成功后自动重置`"
+        >
+          <div class="i-carbon-timer text-sm" :class="credentialCountdownClass(acc)" />
+          <span class="text-gray-500 dark:text-gray-400">访问凭证:</span>
+          <span class="tabular-nums" :class="credentialCountdownClass(acc)">
+            {{ formatCredentialRemaining(acc) }}
+          </span>
         </div>
       </div>
     </div>

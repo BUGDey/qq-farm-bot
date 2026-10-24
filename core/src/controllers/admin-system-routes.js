@@ -112,12 +112,13 @@ function registerAdminSystemRoutes({
   function handleUpdateSystemConfig(req, res) {
     try {
       if (!requireDangerConfirmation(req, res, "UPDATE_SYSTEM_CONFIG")) return;
-      const { serverUrl, clientVersion, platform, os } = req.body || {};
+      const { serverUrl, clientVersion, platform, os, credentialValidityHours } = req.body || {};
       const saved = store.setSystemConfig({
         serverUrl,
         clientVersion,
         platform,
         os,
+        credentialValidityHours,
       });
       updateRuntimeConfig(saved);
       logger.warn("更新系统配置", {

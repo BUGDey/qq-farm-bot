@@ -369,6 +369,12 @@ function createDataProvider(deps) {
         // ========== 账号管理 ==========
         getAccounts: () => {
             const data = getAccounts();
+            // 访问凭证有效期倒计时数据：到期时刻 = credentialUpdatedAt + 有效期时长。
+            // wx 凭证 refreshtoken 约 2h 过期、每 30 分钟保活（保活成功会更新 loginBuffer
+            // 并重新打点），时长取系统配置的估算值；绝对时间戳交给前端逐秒递减，
+            // 不轮询接口也不会累积漂移。仅带凭证的账号（微信扫码）有倒计时。
+            const sysConfig = store.getSystemConfig() || {};
+            const validityMs = (Number(sysConfig.credentialValidityHours) || 2) * 3600 * 1000;
             data.accounts.forEach(acc => {
                 const worker = workers[acc.id];
                 acc.running = !!worker;
@@ -376,6 +382,10 @@ function createDataProvider(deps) {
                 delete acc.loginBuffer;
                 delete acc.refreshtoken;
                 delete acc.accesstoken;
+                acc.credentialValidityHours = Number(sysConfig.credentialValidityHours) || 2;
+                acc.credentialExpireAt = acc.credentialUpdatedAt
+                    ? Number(acc.credentialUpdatedAt) + validityMs
+                    : 0;
                 if (worker && worker.status && worker.status.status && worker.status.status.name) {
                     acc.nick = worker.status.status.name;
                 }

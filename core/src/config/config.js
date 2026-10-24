@@ -30,7 +30,9 @@ const DEFAULT_SYSTEM_CONFIG = {
     serverUrl: 'wss://gate-obt.nqf.qq.com/prod/ws',
     clientVersion: DEFAULT_CLIENT_VERSION,
     platform: 'qq',
-    os: 'iOS'
+    os: 'iOS',
+    // 访问凭证有效时长（小时）：wx refreshtoken 约 2h 过期，供面板凭证倒计时使用
+    credentialValidityHours: 2
 };
 
 // 运行时配置（可被系统配置覆盖）

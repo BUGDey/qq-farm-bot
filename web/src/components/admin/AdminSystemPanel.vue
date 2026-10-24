@@ -107,6 +107,14 @@ const localCaptureConfig = defineModel<CaptureConfig>('localCaptureConfig', { re
             class="col-span-2"
             :disabled="readonly"
           />
+          <BaseInput
+            v-model="localSystemConfig.credentialValidityHours"
+            label="访问凭证有效时长(小时)"
+            type="number"
+            placeholder="2"
+            class="col-span-2"
+            :disabled="readonly"
+          />
           <div class="flex flex-col gap-1.5">
             <label class="text-sm text-gray-700 font-medium dark:text-gray-300">平台</label>
             <div class="flex gap-2">
