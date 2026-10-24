@@ -19,7 +19,11 @@ test('official crystal resources match recorded hashes and default clip', () => 
 });
 
 test('offline curve extraction reproduces checked-in animation and preserves key values', () => {
-  const result = spawnSync('python3', ['-c', `
+  // Windows 的 python3 是 Microsoft Store 占位 stub（退出码 9009），真实解释器是 python/py
+  const candidates = process.platform === 'win32' ? ['python', 'py'] : ['python3'];
+  const python = candidates.find((cmd) => spawnSync(cmd, ['-c', 'print(1)'], { encoding: 'utf8' }).status === 0);
+  assert.ok(python, `no usable python interpreter among: ${candidates.join(', ')}`);
+  const result = spawnSync(python, ['-c', `
 import importlib.util, json
 from pathlib import Path
 spec = importlib.util.spec_from_file_location('crystal', 'scripts/generate-crystal-animation.py')

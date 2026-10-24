@@ -43,7 +43,12 @@ async function fertilizeOrganicLoop(landIds) {
 
   let successCount = 0;
   let index = 0;
-  while (true) {
+  // 保险上限：正常情况服务端在化肥耗尽/地块封顶时报错跳出循环；
+  // 若服务端持续接受请求，没有上限会变成无限循环打爆网关队列
+  const maxAttempts = 2000;
+  let attempts = 0;
+  while (attempts < maxAttempts) {
+    attempts += 1;
     const landId = ids[index];
     try {
       const payload = types.FertilizeRequest.encode(types.FertilizeRequest.create({

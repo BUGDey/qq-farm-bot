@@ -351,17 +351,19 @@ function createWorkerManager(deps) {
             lastPongAt: Date.now()
         };
 
-        // 发送启动配置
-        proc.send({
-            type: 'start',
-            config: { code: account.code, platform: account.platform, loginType: account.loginType || 'manual' }
-        });
-
-        // 发送配置快照
-        proc.send({
-            type: 'config_sync',
-            config: buildConfigSnapshotForAccount(account.id)
-        });
+        // 发送启动配置与配置快照。
+        // fork 模式下通道已关闭时 send 会同步抛错；此时先注册好监听器，
+        // 让 exit 事件把 worker 记录清掉，避免留下无监听的僵尸记录。
+        try {
+            proc.send({
+                type: 'start',
+                config: { code: account.code, platform: account.platform, loginType: account.loginType || 'manual' }
+            });
+            proc.send({
+                type: 'config_sync',
+                config: buildConfigSnapshotForAccount(account.id)
+            });
+        } catch { }
 
         // 监听 Worker 消息
         proc.on('message', (msg) => {
@@ -426,8 +428,10 @@ function createWorkerManager(deps) {
         const targetProc = wrk.process;
         wrk.stopping = true;
 
-        // 发送停止指令
-        wrk.process.send({ type: 'stop' });
+        // 发送停止指令（fork 模式下通道已关闭时 send 会同步抛错，走强制杀死兜底）
+        try {
+            wrk.process.send({ type: 'stop' });
+        } catch { }
 
         // 1 秒后强制杀死
         scheduler.setTimeoutTask(`force_kill_${  accountId}`, 1000, () => {

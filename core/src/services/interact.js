@@ -145,22 +145,21 @@ async function fetchInteractReply() {
     throw new Error('访客记录 proto 未加载');
   }
 
-  // 并发锁
+  // 并发锁：先拿锁再做最小间隔等待，否则多个并发调用会在等待窗口内同时通过锁检查
   while (fetchInteractLock) {
     await sleep(100);
   }
-
-  // 最小间隔检查
-  const now = Date.now();
-  const elapsed = now - lastFetchInteractTime;
-  if (elapsed < FETCH_INTERACT_MIN_INTERVAL_MS) {
-    await sleep(FETCH_INTERACT_MIN_INTERVAL_MS - elapsed);
-  }
-
   fetchInteractLock = true;
-  lastFetchInteractTime = Date.now();
 
   try {
+    // 最小间隔检查
+    const now = Date.now();
+    const elapsed = now - lastFetchInteractTime;
+    if (elapsed < FETCH_INTERACT_MIN_INTERVAL_MS) {
+      await sleep(FETCH_INTERACT_MIN_INTERVAL_MS - elapsed);
+    }
+    lastFetchInteractTime = Date.now();
+
     const request = types.InteractRecordsRequest.encode(
       types.InteractRecordsRequest.create({})
     ).finish();

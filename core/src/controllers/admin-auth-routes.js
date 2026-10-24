@@ -350,32 +350,6 @@ function registerAdminAuthRoutes({
     });
   });
 
-  // 修改密码接口
-  app.post("/api/change-password", (req, res) => {
-    const { oldPassword, newPassword } = req.body || {};
-
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({ ok: false, error: "旧密码和新密码不能为空" });
-    }
-
-    if (oldPassword !== adminConfig.password) {
-      return res.status(401).json({ ok: false, error: "旧密码错误" });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ ok: false, error: "新密码长度至少为 6 位" });
-    }
-
-    // 保存新密码到配置文件
-    adminConfig.password = newPassword;
-    const saved = saveAdminConfig(adminConfig);
-
-    if (!saved) {
-      return res.status(500).json({ ok: false, error: "密码保存失败，请重试" });
-    }
-
-    return res.json({ ok: true, message: "密码修改成功" });
-  });
 }
 
 module.exports = { registerAdminAuthRoutes, getClientIp };
