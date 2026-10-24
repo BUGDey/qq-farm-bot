@@ -17,7 +17,6 @@ const confirmPassword = ref('')
 const loading = ref(false)
 
 const adminToken = useStorage('admin_token', '')
-const userInfo = useStorage('user_info', '')
 
 async function handleChangePassword() {
   if (!oldPassword.value || !newPassword.value || !confirmPassword.value) {
@@ -60,7 +59,8 @@ async function handleChangePassword() {
 
 function handleLogout() {
   adminToken.value = ''
-  userInfo.value = ''
+  // user_info 由 user store 以 object 序列化器写入，这里直接移除，避免字符串序列化器写坏该键
+  localStorage.removeItem('user_info')
   toastStore.success('已退出登录')
   router.push('/login')
 }

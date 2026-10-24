@@ -2,21 +2,17 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
-import AdminSystemPanel from '@/components/admin/AdminSystemPanel.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import AccountFeatureSettings from '@/components/settings/AccountFeatureSettings.vue'
 import AccountSettingsTab from '@/components/settings/AccountSettingsTab.vue'
 import AutoCodeRefreshCard from '@/components/settings/AutoCodeRefreshCard.vue'
 import ChangePasswordCard from '@/components/settings/ChangePasswordCard.vue'
-import DeviceProtocolCard from '@/components/settings/DeviceProtocolCard.vue'
 import OfflineReminderCard from '@/components/settings/OfflineReminderCard.vue'
-import YYBConfigCard from '@/components/settings/YYBConfigCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAccountSettings } from '@/composables/settings/useAccountSettings'
 import { useAutomationSettings } from '@/composables/settings/useAutomationSettings'
 import { useStrategySettings } from '@/composables/settings/useStrategySettings'
 import { useUserSettings } from '@/composables/settings/useUserSettings'
-import { useAdminSystemConfig } from '@/composables/useAdminSystemConfig'
 import { useSettingStore } from '@/stores/setting'
 import { useUserStore } from '@/stores/user'
 import AdminPanel from '@/views/AdminPanel.vue'
@@ -41,15 +37,17 @@ const isCurrentAccountEditable = computed(() => {
   return !!owner && owner === me
 })
 
-type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'system' | 'my-account' | 'admin-panel'
+type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'my-account' | 'admin-panel'
 
-const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'system', 'my-account', 'admin-panel']
+const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'my-account', 'admin-panel']
 const LEGACY_SETTINGS_TABS: Record<string, SettingsTabKey> = {
   'strategy': 'account-config',
   'automation': 'account-config',
   'default-plan': 'account-config',
   'user': 'notification',
-  'capture': 'system',
+  // 系统配置页签已移除：定时刷新重登并入我的账号，连接参数等并入管理后台全局设置
+  'system': 'my-account',
+  'capture': 'my-account',
 }
 
 function getInitialSettingsTab(): SettingsTabKey {
@@ -87,12 +85,11 @@ const tabs = [
   { key: 'account', label: '账号管理', icon: 'i-carbon-user-settings' },
   { key: 'account-config', label: '账号设置', icon: 'i-carbon-settings-adjust' },
   { key: 'notification', label: '通知设置', icon: 'i-carbon-notification' },
-  { key: 'system', label: '系统配置', icon: 'i-carbon-settings-services' },
   { key: 'my-account', label: '我的账号', icon: 'i-carbon-user-avatar' },
   { key: 'admin-panel', label: '管理后台', icon: 'i-carbon-user-admin' },
 ] as const
 
-/** 系统配置 tab 所有登录用户可见且可修改；管理后台 tab 仅超级管理员可见（接口均为对应角色专属） */
+/** 管理后台 tab 仅超级管理员可见（接口均为对应角色专属）；其余页签所有登录用户可见 */
 const ADMIN_ONLY_TABS: SettingsTabKey[] = []
 const SUPER_ONLY_TABS: SettingsTabKey[] = ['admin-panel']
 const visibleTabs = computed(() =>
@@ -143,40 +140,12 @@ function showAlert(message: string, type: 'primary' | 'danger' = 'primary') {
 }
 
 const {
-  systemConfigSaving,
-  captureConfigSaving,
-  captureConfigTesting,
-  localSystemConfig,
-  defaultSystemConfig,
-  localCaptureConfig,
-  platformOptions,
-  osOptions,
-  loadCaptureConfig,
-  handleTestCaptureConfig,
-  loadSystemConfig,
-  handleResetSystemConfig,
-} = useAdminSystemConfig({ showAlert })
-
-const {
   offlineSaving,
   offlineTesting,
-  deviceProtocolLoading,
-  deviceProtocolSaving,
-  yybConfigLoading,
-  deviceProtocolPresetOptions,
-  selectedDevicePreset,
-  deviceProtocolForm,
-  yybConfig,
   localOffline,
   channelOptions,
   currentChannelDocUrl,
   openChannelDocs,
-  fillRandomDeviceMac,
-  fillRandomDeviceId,
-  fillRandomImei,
-  applyDevicePreset,
-  fetchDeviceProtocol,
-  fetchYYBConfig,
   syncLocalOfflineSettings,
   handleSaveOffline,
   handleTestOffline,
@@ -245,8 +214,6 @@ const {
 
 const accountSettingsSaving = ref(false)
 const autoCodeRefreshSaving = ref(false)
-const systemSettingsSaving = ref(false)
-const anySystemSaving = computed(() => systemSettingsSaving.value || systemConfigSaving.value || captureConfigSaving.value || deviceProtocolSaving.value)
 
 function buildCurrentAccountConfig() {
   return {
@@ -297,47 +264,6 @@ async function saveAutoCodeRefreshSettings() {
 function openAccountSettings(account: any) {
   selectAccount(account)
   activeTab.value = 'account-config'
-}
-
-async function saveSystemSettings() {
-  if (anySystemSaving.value)
-    return
-  systemSettingsSaving.value = true
-  try {
-    // 普通用户只保存全局连接参数（设备协议与抓包服务为管理员功能，不在其页面内）
-    if (!isAdminUser.value) {
-      const systemResult = await api.post('/api/system-config', { ...localSystemConfig.value, confirmed: true })
-      if (!systemResult.data?.ok)
-        throw new Error(systemResult.data?.error || '系统配置保存失败')
-      await loadSystemConfig(true)
-      showAlert('系统配置已保存并立即生效，无需重启项目')
-      return
-    }
-    const devicePayload = {
-      enabled: !!deviceProtocolForm.value.enabled,
-      userAgent: String(deviceProtocolForm.value.userAgent || '').trim(),
-      deviceBrand: String(deviceProtocolForm.value.deviceBrand || '').trim(),
-      deviceModel: String(deviceProtocolForm.value.deviceModel || '').trim(),
-      deviceMac: String(deviceProtocolForm.value.deviceMac || '').trim(),
-      deviceId: String(deviceProtocolForm.value.deviceId || '').trim(),
-      imei: String(deviceProtocolForm.value.imei || '').trim(),
-    }
-    const [systemResult, captureResult, deviceResult] = await Promise.all([
-      api.post('/api/admin/system-config', { ...localSystemConfig.value, confirmed: true }),
-      api.post('/api/admin/capture-config', { ...localCaptureConfig.value, confirmed: true }),
-      api.post('/api/user/device-protocol', devicePayload),
-    ])
-    if (!systemResult.data?.ok || !captureResult.data?.ok || !deviceResult.data?.ok)
-      throw new Error('部分系统配置保存失败')
-    await Promise.all([loadSystemConfig(), loadCaptureConfig(), fetchDeviceProtocol()])
-    showAlert('系统配置已统一保存并生效')
-  }
-  catch (error: any) {
-    showAlert(error.response?.data?.error || error.message || '系统配置保存失败', 'danger')
-  }
-  finally {
-    systemSettingsSaving.value = false
-  }
 }
 
 async function applyDefaultPlan(account: any) {
@@ -420,13 +346,7 @@ watch(currentAccountId, async () => {
 })
 
 onMounted(async () => {
-  // 系统配置所有登录用户可读写（普通用户走公开端点）；抓包配置仅管理员可用
-  if (isAdminUser.value)
-    await Promise.all([loadSystemConfig(), loadCaptureConfig()])
-  else
-    await loadSystemConfig(true)
   await fetchAccounts()
-  await Promise.all([fetchDeviceProtocol(), fetchYYBConfig()])
   selectFirstAccountIfNeeded()
   if (currentAccountId.value) {
     await loadStrategyData()
@@ -553,89 +473,21 @@ onMounted(async () => {
           />
         </div>
 
-        <div v-else-if="activeTab === 'system'" class="space-y-5">
-          <div class="sticky top-0 z-10 flex items-center justify-between border border-white/60 rounded-xl bg-white/62 p-4 shadow-sm backdrop-blur-xl backdrop-saturate-150">
-            <div>
-              <h3 class="text-lg text-gray-900 font-bold dark:text-gray-100">
-                系统配置
-              </h3>
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {{ isAdminUser ? '统一管理连接参数、设备协议和抓包服务。' : '全局连接参数对所有登录用户开放，修改后立即对所有账号生效。' }}
-              </p>
-            </div>
-            <BaseButton size="sm" :loading="anySystemSaving" @click="saveSystemSettings">
-              保存系统配置
-            </BaseButton>
-          </div>
-
+        <!-- 我的账号：有效期 / 卡密续费 / 农场账号 / 核销记录（复用 Renewal 页面）+ 定时刷新重登 + 修改密码 -->
+        <div v-else-if="activeTab === 'my-account'" class="space-y-4">
+          <RenewalPanel />
+          <AutoCodeRefreshCard
+            v-model:config="localAutoCodeRefresh"
+            :current-account-name="currentAccountName"
+            :current-account-id="currentAccountId"
+            :loading="settingsLoading"
+            :saving="autoCodeRefreshSaving"
+            :refreshing="autoCodeRefreshing"
+            @save="saveAutoCodeRefreshSettings"
+            @refresh="runAutoCodeRefreshNow"
+          />
           <ChangePasswordCard />
-
-          <YYBConfigCard
-            v-if="isAdminUser"
-            v-model:config="yybConfig"
-            :loading="yybConfigLoading"
-          />
-
-          <AdminSystemPanel
-            v-model:local-system-config="localSystemConfig"
-            v-model:local-capture-config="localCaptureConfig"
-            section="system"
-            :show-heading="false"
-            :show-save="false"
-            :default-system-config="defaultSystemConfig"
-            :platform-options="platformOptions"
-            :os-options="osOptions"
-            :system-config-saving="systemConfigSaving"
-            :capture-config-saving="captureConfigSaving"
-            :capture-config-testing="captureConfigTesting"
-            @reset-system="handleResetSystemConfig"
-            @test-capture="handleTestCaptureConfig"
-          />
-
-          <template v-if="isAdminUser">
-            <DeviceProtocolCard
-              v-model:form="deviceProtocolForm"
-              v-model:selected-preset="selectedDevicePreset"
-              :loading="deviceProtocolLoading"
-              :saving="deviceProtocolSaving"
-              :preset-options="deviceProtocolPresetOptions"
-              :show-save="false"
-              @apply-preset="applyDevicePreset"
-              @random-mac="fillRandomDeviceMac"
-              @random-device-id="fillRandomDeviceId"
-              @random-imei="fillRandomImei"
-            />
-
-            <AutoCodeRefreshCard
-              v-model:config="localAutoCodeRefresh"
-              :current-account-name="currentAccountName"
-              :current-account-id="currentAccountId"
-              :loading="settingsLoading"
-              :saving="autoCodeRefreshSaving"
-              :refreshing="autoCodeRefreshing"
-              @save="saveAutoCodeRefreshSettings"
-              @refresh="runAutoCodeRefreshNow"
-            />
-
-            <AdminSystemPanel
-              v-model:local-system-config="localSystemConfig"
-              v-model:local-capture-config="localCaptureConfig"
-              section="capture"
-              :show-heading="false"
-              :show-save="false"
-              :default-system-config="defaultSystemConfig"
-              :platform-options="platformOptions"
-              :os-options="osOptions"
-              :system-config-saving="systemConfigSaving"
-              :capture-config-saving="captureConfigSaving"
-              :capture-config-testing="captureConfigTesting"
-              @test-capture="handleTestCaptureConfig"
-            />
-          </template>
         </div>
-
-        <!-- 我的账号：有效期 / 卡密续费 / 农场账号 / 核销记录（复用 Renewal 页面） -->
-        <RenewalPanel v-else-if="activeTab === 'my-account'" />
 
         <!-- 管理后台：用户 / 卡密 / 流水 / 日志（复用 AdminPanel 页面，仅超级管理员可见该 tab） -->
         <AdminPanel v-else-if="activeTab === 'admin-panel' && isSuperAdminUser" />

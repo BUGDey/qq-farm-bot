@@ -1,4 +1,4 @@
-import { useStorage } from '@vueuse/core'
+import { StorageSerializers, useStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import api from '@/api'
@@ -183,7 +183,9 @@ export function cardStatusText(status: CardStatus | string): string {
 
 export const useUserStore = defineStore('user', () => {
   const token = useStorage('admin_token', '')
-  const userInfo = useStorage<User | null>('user_info', null)
+  // 必须显式指定 object 序列化器：默认 null 会命中 any 序列化器（write: String(v)），
+  // 登录后 user_info 被写成字面量 "[object Object]"，路由守卫的角色解析随之失效
+  const userInfo = useStorage<User | null>('user_info', null, undefined, { serializer: StorageSerializers.object })
 
   const isLoggedIn = computed(() => !!token.value)
   // admin 角色已移除：isAdmin 等同于超级管理员（保留名称以免改动大量引用）

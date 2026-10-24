@@ -18,3 +18,4 @@ web/node_modules
 coverage
 .nyc_output
 *.tsbuildinfo
+**/node_modules
