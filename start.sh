@@ -12,6 +12,7 @@
 #   ./start.sh restart      # 重启服务
 #   ./start.sh logs         # 查看日志
 #   ./start.sh status       # 查看状态
+#   ./start.sh reset-admin ['新密码' [用户名]]   # 强制重置管理员密码（忘记密码时用）
 #
 # 说明：默认版即原先 deploy.sh 直接执行的效果（有 Docker 走 Compose，否则 Node 直跑）。
 #      QQ 登录版依赖 NapCat 容器，必须使用 Docker。
@@ -556,6 +557,101 @@ cmd_status() {
   fi
 }
 
+# ==================== 管理员密码找回 ====================
+
+# 读取密码（隐藏回显）。非交互环境（管道/定时任务）返回空，由调用方处理
+read_secret() {
+  local out=""
+  if [ -t 0 ]; then
+    read -rs out || out=""
+    printf '\n'
+  fi
+  printf '%s' "$out"
+}
+
+# 强制重置管理员密码。用法：
+#   ./start.sh reset-admin                          # 交互式（用户名/密码逐步询问，密码直接回车 = 随机生成）
+#   ./start.sh reset-admin '新密码'                  # 指定密码，用户名取 .env
+#   ./start.sh reset-admin '新密码' '用户名'         # 指定密码与用户名（用户不存在会创建为超管）
+cmd_reset_admin() {
+  local arg_pwd="${1:-}" arg_user="${2:-}"
+
+  # 运行中重置，服务的整存整取可能把改动覆盖回旧密码，必须先停
+  log "正在停止服务（重置期间服务必须离线）..."
+  cmd_stop
+
+  # 用户名：参数 > .env 的 FARM_ADMIN_USERNAME > admin
+  local username="$arg_user"
+  if [ -z "$username" ]; then
+    username="$(grep -E '^FARM_ADMIN_USERNAME=' .env 2>/dev/null | head -1 | cut -d= -f2-)"
+    username="${username:-admin}"
+    if [ -t 0 ]; then
+      prompt "要重置的用户名（回车 = ${username}）: "
+      local ans
+      ans="$(ask "$username")"
+      [ -n "$ans" ] && username="$ans"
+    fi
+  fi
+
+  # 新密码：参数 > 交互输入（回车 = 自动生成 16 位随机密码）
+  local password="$arg_pwd"
+  if [ -z "$password" ]; then
+    if [ ! -t 0 ]; then
+      err "非交互环境必须用参数传入新密码: $0 reset-admin '新密码' [用户名]"
+      exit 1
+    fi
+    prompt "新密码（直接回车 = 自动生成随机密码；要求至少 6 位、含两种字符类型）: "
+    password="$(read_secret)"
+    if [ -z "$password" ]; then
+      password="$(random_password)"
+      ok "已生成随机密码"
+    else
+      prompt "再输入一遍确认: "
+      local again
+      again="$(read_secret)"
+      if [ "$again" != "$password" ]; then
+        err "两次输入不一致，退出（未做任何修改）"
+        exit 1
+      fi
+    fi
+  fi
+  if [ "${#password}" -lt 6 ]; then
+    err "密码至少 6 位（后端还要求包含两种字符类型且不能是常见弱密码），退出"
+    exit 1
+  fi
+
+  # 数据目录判定：Docker 模式挂载 ./data，Node 直跑在 core/data
+  local rc=0
+  if [ -f "${APP_DIR}/data/users.json" ] && detect_docker 2>/dev/null; then
+    log "Docker 模式：在临时容器内执行重置..."
+    "${DOCKER_COMPOSE[@]}" run --rm --entrypoint node qq-farm-bot scripts/reset-admin-password.js "$password" "$username" || rc=$?
+  else
+    check_node
+    log "Node 模式：执行重置..."
+    ( cd "${APP_DIR}/core" && FARM_DATA_DIR="${APP_DIR}/core/data" node scripts/reset-admin-password.js "$password" "$username" ) || rc=$?
+  fi
+  if [ "$rc" -ne 0 ]; then
+    err "重置失败（常见原因：少于 6 位 / 全同字符或纯数字等弱密码 / 用户名不合法）"
+    exit "$rc"
+  fi
+
+  printf '\n'
+  ok "管理员 ${username} 的密码已重置，请妥善保存"
+  prompt "是否立即启动服务？(y/N) "
+  local start_ans
+  start_ans="$(ask "N")"
+  if [[ "$start_ans" =~ ^[Yy]$ ]]; then
+    if [ -f "${APP_DIR}/data/users.json" ] && detect_docker 2>/dev/null; then
+      "${DOCKER_COMPOSE[@]}" up -d
+      ok "Docker 服务已启动"
+    else
+      log "请执行 ./start.sh 1（或 QQ 登录版 ./start.sh 2）启动服务"
+    fi
+  else
+    log "稍后启动: ./start.sh 1（Docker 数据目录则执行 docker compose up -d，或 ./start.sh 1）"
+  fi
+}
+
 # ==================== 菜单 ====================
 
 show_menu() {
@@ -567,6 +663,7 @@ show_menu() {
     printf '\n'
     printf "  ${C_GREEN}1)${C_OFF} 默认版      仅农场服务（占用少，推荐低配机器）\n"
     printf "  ${C_GREEN}2)${C_OFF} QQ 登录版    额外启动 NapCat，支持面板内 ${C_BOLD}QQ 扫码登录${C_OFF}\n"
+    printf "  ${C_GREEN}3)${C_OFF} 找回密码    强制重置管理员密码（忘记密码时用）\n"
     printf "  ${C_GREEN}0)${C_OFF} 退出\n"
     printf "  ${C_YELLOW}提示：直接回车 = 默认版${C_OFF}\n"
     printf '\n'
@@ -577,8 +674,9 @@ show_menu() {
     case "$choice" in
       1|default|d) run_default; return ;;
       2|qq|napcat|n) run_with_qq; return ;;
+      3|reset-admin|resetpass) cmd_reset_admin; return ;;
       0|q|quit) log "已取消"; exit 0 ;;
-      *) warn "无效选择: $choice（请输入 1、2 或 0）" ;;
+      *) warn "无效选择: $choice（请输入 1、2、3 或 0）" ;;
     esac
   done
   err "连续 3 次输入无效，退出。你也可以直接执行 ./start.sh 1 或 ./start.sh 2"
@@ -623,6 +721,7 @@ case "$ACTION" in
   menu|"")      show_menu ;;
   1|default)    run_default ;;
   2|qq|napcat)  run_with_qq ;;
+  3|reset-admin|resetpass) cmd_reset_admin "${2:-}" "${3:-}" ;;
   dev)          run_dev ;;
   stop)         cmd_stop ;;
   restart)      cmd_restart ;;
@@ -633,9 +732,10 @@ case "$ACTION" in
 用法: ./start.sh [命令]
 
   菜单/启动
-    (无参数)        交互菜单：1 默认版 / 2 QQ 登录版
+    (无参数)        交互菜单：1 默认版 / 2 QQ 登录版 / 3 找回密码
     1 | default     默认版：仅农场服务（有 Docker 用 Compose，否则 Node 直跑）
     2 | qq          QQ 登录版：额外启动 NapCat，支持面板内 QQ 扫码登录（需要 Docker）
+    3 | reset-admin 强制重置管理员密码（忘记密码时用）
     dev             本地开发模式（pnpm dev，前台运行）
 
   运维
@@ -649,7 +749,7 @@ EOF
     ;;
   *)
     err "未知参数: $ACTION"
-    echo "用法: $0 [菜单|1|2|dev|stop|restart|logs|status]"
+    echo "用法: $0 [菜单|1|2|3|dev|stop|restart|logs|status|reset-admin]"
     exit 1
     ;;
 esac
