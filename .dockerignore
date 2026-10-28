@@ -1,5 +1,7 @@
 node_modules
-dist
+# 只排除仓库根目录的 dist；完整部署包里的 web/dist 必须带进构建上下文，
+# 这样 core/Dockerfile 才能复用预构建的前端产物，不用重新构建前端
+/dist
 .git
 .gitignore
 *.md
@@ -13,7 +15,6 @@ core/data/logs/*
 !core/data/logs/.gitkeep
 core/data/*.json
 !core/data/.gitkeep
-web/dist
 web/node_modules
 coverage
 .nyc_output

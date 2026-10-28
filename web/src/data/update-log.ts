@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.9.2'
+export const APP_VERSION = '2.9.3'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.9.3',
+    date: '2026-10-29',
+    items: [
+      '修复完整部署包启动时仍会重新构建前端的问题，改为复用包内已构建的前端产物',
+      'Docker 方式启动时同样复用包内前端产物，只有源码包才在首次启动时构建',
+      '启动脚本在 Docker 模式下明确提示「复用前端产物」或「现场构建前端」',
+    ],
+  },
   {
     version: '2.9.2',
     date: '2026-10-29',

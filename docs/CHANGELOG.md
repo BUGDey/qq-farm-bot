@@ -31,11 +31,21 @@ flowchart TB
 
     R --> S[2026-10-29 · v2.9.2<br/>README 发行版安装说明]
 
+    S --> T[2026-10-29 · v2.9.3<br/>完整部署包不再重复构建前端]
+
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T seed;
 ```
 
 ## 详细记录
+
+### 2026-10-29 · v2.9.3 · 完整部署包不再重复构建前端
+
+- 现象：下载 `*-full.zip` 解压后执行 `./start.sh` 选 1 或 2，仍然看到前端在重新构建。
+- 根因：`core/Dockerfile` 无条件执行 `pnpm install --frozen-lockfile` + `pnpm build:web`；同时 `.dockerignore` 里排除了 `web/dist`，所以即使完整包自带构建产物，Docker 构建时也拿不到、只能重来一遍。
+- 修复：`core/Dockerfile` 改为「存在 `web/dist/index.html` 就跳过前端依赖安装与构建」，只有源码包才现场构建；`.dockerignore` 不再排除 `web/dist`（只排除仓库根目录的 `/dist`）。
+- `start.sh` 的 Docker 模式启动前会明确打印「复用包内已构建的前端产物」或「未找到前端产物，会现场构建前端」。
+- 发行说明模板 `.github/release-notes.md`、包内 `使用说明.txt`、README 都补充了完整包与源码包的区别说明。
 
 ### 2026-10-29 · v2.9.2 · README 发行版安装说明
 

@@ -11,12 +11,18 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY core/package.json ./core/
 COPY web/package.json ./web/
 
-RUN pnpm install --frozen-lockfile
-
 COPY core ./core
 COPY web ./web
 
-RUN pnpm build:web
+# 完整部署包（*-full.zip）已经带了构建好的 web/dist，
+# 这里直接复用，不再装前端依赖、也不再重新构建；
+# 只有源码包（没有 dist）才现场安装依赖并构建前端。
+RUN if [ -f web/dist/index.html ]; then \
+      echo "[build] 检测到预构建的 web/dist，跳过前端依赖安装与构建"; \
+    else \
+      echo "[build] 未找到 web/dist，安装依赖并构建前端"; \
+      pnpm install --frozen-lockfile && pnpm build:web; \
+    fi
 
 # ==========================================
 FROM docker.1ms.run/library/node:20-alpine AS prod-deps

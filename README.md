@@ -28,14 +28,14 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.9.2
+## 🎉 最新更新 · v2.9.3
 
-- README 新增「发行版安装」章节：不用装 Git / pnpm，直接下载打包好的 zip。
-- Linux 一条命令下载最新发行版、解压并启动；Windows 解压双击 `start.bat` 即可。
-- 补充 full / source 两种包的对照表，以及管理员密码在 `.env` 的 `FARM_ADMIN_PASSWORD`。
+- 修复完整部署包启动时仍会重新构建前端：`core/Dockerfile` 现在优先复用包内已构建的 `web/dist`，`.dockerignore` 也不再把它排除在构建上下文之外。
+- `start.sh` 的 Docker 模式会明确提示「复用包内前端产物 / 现场构建前端」，不再让人以为一直卡在构建。
+- 顺手修掉 README「微信扫码登录」标题里的残留标签。
 - 完整历史见 [更新记录](docs/CHANGELOG.md)，登录页「更新日志」同步保留全部版本。
 
-## <th><img src="https://cdn.simpleicons.org/wechat/07C160" height="20" alt="微信" /></th> 微信扫码登录
+## 💬 微信扫码登录
 
 微信玩家可直接在“添加账号 → 微信扫码”中完成登录。扫码链路已内置到 Bot 进程，通过应用宝 OAuth 获取微信会话，并使用内置 MMTLS 协议换取农场短时效 Code，无需额外部署 YYB-GO、第三方登录 API 或代理容器。
 
@@ -84,6 +84,7 @@ chmod +x start.sh && ./start.sh
 ```
 
 - 想装源码包：把文件名里的 `full` 换成 `source`；
+- 完整包已内置前端产物：启动时**不会重新构建前端**（`./start.sh 1` 检测到 Docker 时，镜像构建也会直接复用包内 `web/dist`）；只有 `source` 包才会在首次启动时构建；
 - 想钉住某个版本：把 `${V}` 直接换成版本号，例如 `2.9.2`；
 - 跳过菜单直接启动：默认版 `./start.sh 1`，QQ 登录版 `./start.sh 2`；
 - 日常运维：`./start.sh status|logs|restart|stop`；

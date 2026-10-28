@@ -39,3 +39,7 @@ temp/
 
 # 内置插件的构建产物需要随仓库分发（frontend/dist 是插件面板入口，勿被上面的 dist/ 规则排除）
 !core/plugins/*/frontend/dist/
+
+# Python caches
+__pycache__/
+*.pyc

@@ -48,4 +48,5 @@
 
 - 运行数据（用户、卡密、账号配置）在 `core/data/`；Docker 模式在 `./data/`。升级时保留该目录即可。
 - 压缩包里不含 `.env`、`node_modules`、`core/data`，可以覆盖解压升级而不丢数据。
+- 完整部署包（`*-full.zip`）已内置构建好的 `web/dist`，启动时**不会重新构建前端**；Docker 方式（`./start.sh 1` 检测到 Docker 时）也会直接复用包内前端产物，只有源码包才会在首次启动时构建前端。
 - 更新内容见 [docs/CHANGELOG.md](https://github.com/BUGDey/qq-farm-bot/blob/main/docs/CHANGELOG.md)，面板登录页的「更新日志」也有完整历史记录。

@@ -296,7 +296,11 @@ deploy_docker() {
     mkdir -p "${APP_DIR}/data/logs"
   fi
 
-  log "构建并启动容器（首次构建约需 3-10 分钟）..."
+  if [ -f "${APP_DIR}/web/dist/index.html" ]; then
+    log "构建并启动容器：复用包内已构建的前端产物，不会重新构建前端（首次仍需装依赖，约 1-3 分钟）..."
+  else
+    log "构建并启动容器：未找到前端产物，会现场构建前端（首次约需 3-10 分钟）..."
+  fi
   "${DOCKER_COMPOSE[@]}" up -d --build
 
   if [ "$with_napcat" = "true" ]; then
