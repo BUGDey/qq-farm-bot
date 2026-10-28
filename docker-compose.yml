@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: core/Dockerfile
+      args:
+        # 构建镜像时安装 pnpm / 依赖用的 npm 镜像源，源不可用时改 .env 里的这两项即可
+        NPM_REGISTRY: "${NPM_REGISTRY:-https://registry.npmmirror.com}"
+        NPM_REGISTRY_FALLBACK: "${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org}"
     image: qq-farm-bot:latest
     container_name: qq-farm-bot
     restart: unless-stopped

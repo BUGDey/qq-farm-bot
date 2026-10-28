@@ -33,11 +33,22 @@ flowchart TB
 
     S --> T[2026-10-29 · v2.9.3<br/>完整部署包不再重复构建前端]
 
+    T --> U[2026-10-29 · v2.9.4<br/>修复构建时依赖源不可用]
+
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U seed;
 ```
 
 ## 详细记录
+
+### 2026-10-29 · v2.9.4 · 修复构建时依赖源不可用
+
+- 现象：`./start.sh` 选 1 或 2，镜像构建走到 `RUN pnpm -C core install --prod --frozen-lockfile` 直接失败，报 `Error when performing the request to https://registry.npmmirror.com/pnpm/10.30.2` 与 `ETIMEDOUT 116.117.158.52:443`。
+- 原因：`core/Dockerfile` 用 `corepack enable` 安装 pnpm，而 corepack 每次都要联网去镜像源拉 pnpm 本体。镜像源一旦不可达，整次构建就失败；之前能构建成功只是因为那一层还在本地缓存里。
+- 修复：不再使用 corepack，改用 npm 安装 pnpm（版本取自 `package.json` 的 `packageManager`）；镜像源支持「主源 + 备用源」依次重试，每个源最多 3 次，任一可用即可完成构建。
+- 可配置：`docker-compose.yml` 通过构建参数传入镜像源，可在 `.env` 里设置 `NPM_REGISTRY` / `NPM_REGISTRY_FALLBACK`，或执行 `docker compose build --build-arg NPM_REGISTRY=<源>`。
+- `.dockerignore` 排除 `core/data`、`/data`、`*.zip`、`*.bak` 等运行期数据与打包产物，构建上下文从几百 MB 降回源码体积。
+- `.env` 模板补充镜像源说明；老版本生成的 `.env` 会在下次启动时自动补上这几行注释提示。
 
 ### 2026-10-29 · v2.9.3 · 完整部署包不再重复构建前端
 

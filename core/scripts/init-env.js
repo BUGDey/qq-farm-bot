@@ -93,6 +93,11 @@ FARM_BOOTSTRAP_ADMIN_AS_SUPER=true
 # FARM_SUPER_ADMIN_USERNAME=superadmin
 # FARM_SUPER_ADMIN_PASSWORD=ChangeMe@2026
 
+# ---- Docker 构建依赖用的 npm 镜像源（仅 Docker 方式启动时用到）----
+# 构建时如果提示所有镜像源都装不上 pnpm，取消注释并改成你那边能访问的源即可
+# NPM_REGISTRY=https://registry.npmmirror.com
+# NPM_REGISTRY_FALLBACK=https://registry.npmjs.org
+
 # ---- NapCat（QQ 扫码登录，Windows 默认版不使用）----
 NAPCAT_LOGIN_ENABLED=false
 NAPCAT_DEVICE_NAME=qq-farm-bot

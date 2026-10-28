@@ -1,7 +1,7 @@
 {
   "name": "qq-farm-bot-web",
   "type": "module",
-  "version": "2.9.3",
+  "version": "2.9.4",
   "private": true,
   "scripts": {
     "dev": "vite",

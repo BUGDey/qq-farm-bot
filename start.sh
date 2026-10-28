@@ -111,10 +111,24 @@ set_env_var() {
   fi
 }
 
+# 老版本生成的 .env 里没有「npm 镜像源」这段可选项提示，补一段注释方便按需打开
+ensure_env_hints() {
+  [ -f .env ] || return 0
+  grep -q '^# NPM_REGISTRY=' .env 2>/dev/null && return 0
+  cat >> .env <<'EOF'
+
+# ---- Docker 构建依赖用的 npm 镜像源（仅 Docker 方式启动时用到）----
+# 构建时如果提示所有镜像源都装不上 pnpm，取消注释并改成你那边能访问的源即可
+# NPM_REGISTRY=https://registry.npmmirror.com
+# NPM_REGISTRY_FALLBACK=https://registry.npmjs.org
+EOF
+}
+
 prepare_env() {
   FRESH_ENV=0
   if [ -f .env ]; then
     log "已存在 .env，保留现有配置"
+    ensure_env_hints
     return
   fi
   FRESH_ENV=1
@@ -137,12 +151,22 @@ FARM_BOOTSTRAP_ADMIN_AS_SUPER=true
 # FARM_SUPER_ADMIN_USERNAME=superadmin
 # FARM_SUPER_ADMIN_PASSWORD=ChangeMe@2026
 
+# ---- Docker 构建依赖用的 npm 镜像源（仅 Docker 方式启动时用到）----
+# 构建时如果提示所有镜像源都装不上 pnpm，取消注释并改成你那边能访问的源即可
+# NPM_REGISTRY=https://registry.npmmirror.com
+# NPM_REGISTRY_FALLBACK=https://registry.npmjs.org
+
 # ---- NapCat（QQ 扫码登录）----
 # 默认关闭。执行 ./start.sh 2 会自动改为 true 并启用 napcat 容器
 NAPCAT_LOGIN_ENABLED=false
 NAPCAT_IMAGE=mlikiowa/napcat-docker:v4.18.19
 # QQ 登录记录里显示的设备名（只用字母/数字/连字符；修改后需重建 NapCat 容器才生效）
 NAPCAT_DEVICE_NAME=${DEFAULT_NAPCAT_DEVICE_NAME}
+
+# ---- Docker 构建依赖用的 npm 镜像源（仅 Docker 方式启动时用到）----
+# 构建时如果提示所有镜像源都装不上 pnpm，取消注释并改成你那边能访问的源即可
+# NPM_REGISTRY=https://registry.npmmirror.com
+# NPM_REGISTRY_FALLBACK=https://registry.npmjs.org
 EOF
   ok "已生成 .env"
 }

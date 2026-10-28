@@ -49,4 +49,5 @@
 - 运行数据（用户、卡密、账号配置）在 `core/data/`；Docker 模式在 `./data/`。升级时保留该目录即可。
 - 压缩包里不含 `.env`、`node_modules`、`core/data`，可以覆盖解压升级而不丢数据。
 - 完整部署包（`*-full.zip`）已内置构建好的 `web/dist`，启动时**不会重新构建前端**；Docker 方式（`./start.sh 1` 检测到 Docker 时）也会直接复用包内前端产物，只有源码包才会在首次启动时构建前端。
+- Docker 构建需要联网安装 pnpm 与依赖。构建报 `Error when performing the request to https://registry.npmmirror.com/pnpm/...` 时，说明当前镜像源不可达：在项目根目录 `.env` 里设置 `NPM_REGISTRY=https://registry.npmjs.org`（或你那边可用的源）后重新 `./start.sh` 即可，默认会自动在主源失败后尝试备用源。
 - 更新内容见 [docs/CHANGELOG.md](https://github.com/BUGDey/qq-farm-bot/blob/main/docs/CHANGELOG.md)，面板登录页的「更新日志」也有完整历史记录。

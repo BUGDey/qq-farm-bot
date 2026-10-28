@@ -28,11 +28,11 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.9.3
+## 🎉 最新更新 · v2.9.4
 
-- 修复完整部署包启动时仍会重新构建前端：`core/Dockerfile` 现在优先复用包内已构建的 `web/dist`，`.dockerignore` 也不再把它排除在构建上下文之外。
-- `start.sh` 的 Docker 模式会明确提示「复用包内前端产物 / 现场构建前端」，不再让人以为一直卡在构建。
-- 顺手修掉 README「微信扫码登录」标题里的残留标签。
+- 修复 Docker 构建中途失败：原来用 corepack 安装 pnpm，镜像源一不可达就报 `Error when performing the request to https://registry.npmmirror.com/pnpm/...`；现在改用 npm 安装，主源失败自动换备用源重试。
+- `.env` 新增 `NPM_REGISTRY` / `NPM_REGISTRY_FALLBACK`，两个源都不通时可以自己指定可用的 npm 镜像源。
+- `.dockerignore` 排除运行期数据目录（`core/data`、`data`）与打包产物，构建上下文更小、构建更快。
 - 完整历史见 [更新记录](docs/CHANGELOG.md)，登录页「更新日志」同步保留全部版本。
 
 ## 💬 微信扫码登录

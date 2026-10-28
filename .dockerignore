@@ -11,10 +11,14 @@ node_modules
 *.tgz
 .DS_Store
 Thumbs.db
-core/data/logs/*
-!core/data/logs/.gitkeep
-core/data/*.json
-!core/data/.gitkeep
+# 运行期数据/备份/打包产物一律不进构建上下文（否则上下文会有几百 MB，构建明显变慢）
+core/data
+/data
+*.zip
+*.bak
+stage
+out
+web/dist.bak*
 web/node_modules
 coverage
 .nyc_output

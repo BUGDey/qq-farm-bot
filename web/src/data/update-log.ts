@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.9.3'
+export const APP_VERSION = '2.9.4'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.9.4',
+    date: '2026-10-29',
+    items: [
+      '修复 Docker 构建中途失败：镜像源不可达时 corepack 拉不到 pnpm，改为用 npm 安装并支持主源/备用源自动重试',
+      '.env 新增 NPM_REGISTRY / NPM_REGISTRY_FALLBACK，可以自己指定构建用的 npm 镜像源',
+      '.dockerignore 排除运行期数据目录，构建上下文明显变小，构建更快',
+    ],
+  },
   {
     version: '2.9.3',
     date: '2026-10-29',

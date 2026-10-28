@@ -1,13 +1,58 @@
-FROM docker.1ms.run/library/node:20-alpine AS builder
+# ==========================================
+# 公共底座：安装 pnpm
+#
+# 不再使用 corepack —— 它每次构建都要去镜像源拉 pnpm 本体，源一挂构建直接失败
+# （典型报错：Error when performing the request to https://registry.npmmirror.com/pnpm/...）。
+# 这里改用 npm 安装 pnpm，并支持「多个镜像源依次重试」，任一个可用即可。
+#
+# 需要改源时：
+#   docker compose build --build-arg NPM_REGISTRY=https://registry.npmjs.org
+# 或在 .env 里写 NPM_REGISTRY=... 后重新 ./start.sh
+# ==========================================
+FROM docker.1ms.run/library/node:20-alpine AS pnpm-base
 
 WORKDIR /app
 
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
-ENV npm_config_registry=https://registry.npmmirror.com
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+ARG NPM_REGISTRY_FALLBACK=https://registry.npmjs.org
 
-RUN corepack enable
+ENV npm_config_registry=${NPM_REGISTRY}
 
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY package.json ./
+
+RUN set -eu; \
+    ver="$(node -p "(require('./package.json').packageManager || 'pnpm@10.30.2').replace(/^pnpm@/, '')")"; \
+    echo "[build] 需要 pnpm ${ver}"; \
+    installed=""; \
+    for reg in ${NPM_REGISTRY} ${NPM_REGISTRY_FALLBACK}; do \
+      [ -n "${reg}" ] || continue; \
+      attempt=1; \
+      while [ "${attempt}" -le 3 ]; do \
+        echo "[build] 从 ${reg} 安装 pnpm@${ver}（第 ${attempt}/3 次）"; \
+        if npm install -g "pnpm@${ver}" --registry="${reg}" --no-audit --no-fund --loglevel=error; then \
+          installed="${reg}"; \
+          break; \
+        fi; \
+        attempt=$((attempt + 1)); \
+        sleep 3; \
+      done; \
+      if [ -n "${installed}" ]; then break; fi; \
+      echo "[build] ${reg} 不可用，换下一个镜像源"; \
+    done; \
+    if [ -z "${installed}" ]; then \
+      echo "[build][错误] 所有镜像源都装不上 pnpm，请用 --build-arg NPM_REGISTRY=<可用源> 指定镜像源"; \
+      exit 1; \
+    fi; \
+    echo "[build] pnpm 就绪，依赖将使用镜像源 ${installed}"; \
+    printf '%s' "${installed}" > /tmp/npm_registry; \
+    pnpm --version
+
+# ==========================================
+# 构建产物：源码包在这里安装依赖并构建前端
+# ==========================================
+FROM pnpm-base AS builder
+
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY core/package.json ./core/
 COPY web/package.json ./web/
 
@@ -17,28 +62,27 @@ COPY web ./web
 # 完整部署包（*-full.zip）已经带了构建好的 web/dist，
 # 这里直接复用，不再装前端依赖、也不再重新构建；
 # 只有源码包（没有 dist）才现场安装依赖并构建前端。
-RUN if [ -f web/dist/index.html ]; then \
+RUN set -eu; \
+    reg="$(cat /tmp/npm_registry)"; \
+    if [ -f web/dist/index.html ]; then \
       echo "[build] 检测到预构建的 web/dist，跳过前端依赖安装与构建"; \
     else \
       echo "[build] 未找到 web/dist，安装依赖并构建前端"; \
-      pnpm install --frozen-lockfile && pnpm build:web; \
+      pnpm install --frozen-lockfile --registry="${reg}" --fetch-retries=5 && pnpm build:web; \
     fi
 
 # ==========================================
-FROM docker.1ms.run/library/node:20-alpine AS prod-deps
+# 生产依赖：只装 core 的 dependencies
+# ==========================================
+FROM pnpm-base AS prod-deps
 
-WORKDIR /app
-
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
-ENV npm_config_registry=https://registry.npmmirror.com
-
-RUN corepack enable
-
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY core/package.json ./core/
 COPY web/package.json ./web/
 
-RUN pnpm -C core install --prod --frozen-lockfile
+RUN set -eu; \
+    reg="$(cat /tmp/npm_registry)"; \
+    pnpm -C core install --prod --frozen-lockfile --registry="${reg}" --fetch-retries=5
 
 # ==========================================
 
