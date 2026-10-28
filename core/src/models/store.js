@@ -401,7 +401,7 @@ function isActivityWindowActive(group, nowSeconds = Math.floor(Date.now() / 1000
 
 function getInactiveActivityAutomationKeys(nowSeconds = Math.floor(Date.now() / 1000)) {
     const keys = new Set(HIDDEN_ACTIVITY_AUTOMATION_KEYS);
-    for (const group of TIMED_ACTIVITY_AUTOMATION_GROUPS) {
+    for (const group of [...TIMED_ACTIVITY_AUTOMATION_GROUPS, ...PLUGIN_TIMED_GROUPS]) {
         if (isActivityWindowActive(group, nowSeconds)) continue;
         for (const key of group.keys || []) keys.add(key);
     }
@@ -493,6 +493,96 @@ const DEFAULT_ACCOUNT_CONFIG = {
 };
 
 const ALLOWED_AUTOMATION_KEYS = new Set(Object.keys(DEFAULT_ACCOUNT_CONFIG.automation));
+
+// ==================== 活动插件自动化注册表 ====================
+// 限时活动插件的自动化开关、默认值与时间窗由插件 manifest 声明，安装时写入
+// data/plugins/registry.json；主进程与 worker 进程在启动及收到变更通知时从
+// 注册表合并到这里，避免在 DEFAULT_AUTOMATION 与 TIMED_ACTIVITY_AUTOMATION_GROUPS
+// 里为每个插件双写字面量。
+const PLUGIN_AUTOMATION_DEFAULTS = {};
+const PLUGIN_AUTOMATION_SPECS = new Map();
+const PLUGIN_TIMED_GROUPS = [];
+
+function applyPluginAutomationRegistry(plugins) {
+    for (const key of Object.keys(PLUGIN_AUTOMATION_DEFAULTS)) {
+        delete DEFAULT_ACCOUNT_CONFIG.automation[key];
+        ALLOWED_AUTOMATION_KEYS.delete(key);
+        PLUGIN_AUTOMATION_SPECS.delete(key);
+        delete PLUGIN_AUTOMATION_DEFAULTS[key];
+    }
+    PLUGIN_TIMED_GROUPS.length = 0;
+    for (const plugin of plugins || []) {
+        const manifest = plugin.manifest || {};
+        const windows = manifest.windows || {};
+        const groupsByWindow = new Map();
+        for (const spec of manifest.automation || []) {
+            if (!spec || !spec.key) continue;
+            PLUGIN_AUTOMATION_SPECS.set(spec.key, { ...spec, pluginId: plugin.id });
+            PLUGIN_AUTOMATION_DEFAULTS[spec.key] = spec.default;
+            DEFAULT_ACCOUNT_CONFIG.automation[spec.key] = spec.default;
+            ALLOWED_AUTOMATION_KEYS.add(spec.key);
+            const window = spec.window && windows[spec.window];
+            if (window) {
+                const group = groupsByWindow.get(spec.window) || {
+                    startTime: Number(window.startTime) || 0,
+                    endTime: Number(window.endTime) || 0,
+                    keys: [],
+                    pluginId: plugin.id
+                };
+                group.keys.push(spec.key);
+                groupsByWindow.set(spec.window, group);
+            }
+        }
+        for (const group of groupsByWindow.values()) PLUGIN_TIMED_GROUPS.push(group);
+    }
+}
+
+function loadPluginAutomationRegistry() {
+    try {
+        // getDataFile 只接受单参数，插件子路径用 path.join 拼接
+        const raw = JSON.parse(fs.readFileSync(path.join(getDataFile('plugins'), 'registry.json'), 'utf8'));
+        applyPluginAutomationRegistry((raw.plugins || []).filter(entry => entry.enabled === true));
+    } catch {
+        // 注册表不存在或损坏时按无插件处理
+        applyPluginAutomationRegistry([]);
+    }
+}
+
+function normalizePluginAutomationValue(spec, value) {
+    if (!spec) return !!value;
+    if (spec.type === 'boolean') return value === true;
+    if (spec.type === 'select') {
+        const num = Number(value);
+        return (spec.options || []).some(option => option.value === num) ? num : spec.default;
+    }
+    let num = Number(value);
+    if (!Number.isFinite(num)) num = Number(spec.default) || 0;
+    if (Number.isFinite(Number(spec.min))) num = Math.max(Number(spec.min), num);
+    if (Number.isFinite(Number(spec.max))) num = Math.min(Number(spec.max), num);
+    return num;
+}
+
+/**
+ * 插件卸载/停用后其自动化开关立即失效：在所有账号上强制关闭并落盘，
+ * 返回发生变更的账号 id 供上层同步 worker 配置。
+ */
+function forceDisableAutomationKeys(keys) {
+    const changedAccounts = [];
+    const targetKeys = (Array.isArray(keys) ? keys : []).map(String);
+    if (!targetKeys.length) return changedAccounts;
+    for (const [id, cfg] of Object.entries(globalConfig.accountConfigs || {})) {
+        let modified = false;
+        for (const key of targetKeys) {
+            if (cfg.automation?.[key] === true) {
+                cfg.automation[key] = false;
+                modified = true;
+            }
+        }
+        if (modified) changedAccounts.push(id);
+    }
+    if (changedAccounts.length) saveGlobalConfig({ throwOnError: true });
+    return changedAccounts;
+}
 
 // ==================== 标准化函数 ====================
 
@@ -818,6 +908,9 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
             } else if (key === 'wish_sign_choice') {
                 const choice = Number(value);
                 cfg.automation[key] = Number.isInteger(choice) && choice >= 1 && choice <= 6 ? choice : 1;
+            } else if (PLUGIN_AUTOMATION_SPECS.has(key)) {
+                // 插件自动化开关按 manifest 声明的类型与选项归一化（放在显式分支之后，避免抢先拦截）
+                cfg.automation[key] = normalizePluginAutomationValue(PLUGIN_AUTOMATION_SPECS.get(key), value);
             } else {
                 cfg.automation[key] = !!value;
             }
@@ -1285,6 +1378,9 @@ function setAdminPasswordHash(hash) {
 }
 
 loadGlobalConfig();
+// 插件自动化注册表：主进程与 worker 进程都在模块加载时合并一次；
+// 插件安装/卸载/启停后由宿主调用 reloadPluginAutomationRegistry() 刷新。
+loadPluginAutomationRegistry();
 // 将默认开启迁移结果持久化，避免下次重建容器覆盖用户之后保存的选择。
 if (captureDefaultsMigrated) saveGlobalConfig();
 
@@ -1372,6 +1468,9 @@ function applyConfigSnapshot(patch = {}, opts = {}) {
             } else if (key === 'wish_sign_choice') {
                 const choice = Number(value);
                 cfg.automation[key] = Number.isInteger(choice) && choice >= 1 && choice <= 6 ? choice : 1;
+            } else if (PLUGIN_AUTOMATION_SPECS.has(key)) {
+                // 插件自动化开关按 manifest 声明的类型与选项归一化（放在显式分支之后，避免抢先拦截）
+                cfg.automation[key] = normalizePluginAutomationValue(PLUGIN_AUTOMATION_SPECS.get(key), value);
             } else {
                 cfg.automation[key] = !!value;
             }
@@ -1713,8 +1812,7 @@ function addOrUpdateAccount(account) {
         // 更新已有账号
         const idx = data.accounts.findIndex(a => a.id === account.id);
         if (idx >= 0) {
-            // 访问凭证（loginBuffer）变化时打点更新时间，作为账号管理页凭证有效期倒计时的起点。
-            // 保活/换 code 的凭证轮转最终都会经由这里持久化新 loginBuffer。
+            // 访问凭证（loginBuffer）变化时记录更新时间，用于追踪凭证轮转；卡片倒计时按账号创建时间计算。
             const credentialChanged = account.loginBuffer !== undefined
                 && String(account.loginBuffer) !== String(data.accounts[idx].loginBuffer || '');
             data.accounts[idx] = {
@@ -1723,6 +1821,7 @@ function addOrUpdateAccount(account) {
                 name: account.name !== undefined ? account.name : data.accounts[idx].name,
                 ...(nextAvatar !== undefined ? { avatar: nextAvatar } : {}),
                 ...(nextOpenId !== undefined ? { openId: nextOpenId } : {}),
+                createdAt: data.accounts[idx].createdAt,
                 ...(credentialChanged ? { credentialUpdatedAt: Date.now() } : {}),
                 updatedAt: Date.now()
             };
@@ -1750,7 +1849,7 @@ function addOrUpdateAccount(account) {
             openId: nextOpenId ? String(nextOpenId) : '',
             avatar: nextAvatar || '',
             username: account.username || '',
-            // 访问凭证更新时间打点：新建账号自带凭证时立即生效，供凭证有效期倒计时使用
+            // 记录首次凭证写入时间，账号管理页倒计时以 createdAt 为准
             credentialUpdatedAt: account.loginBuffer ? Date.now() : 0,
             createdAt: Date.now(),
             updatedAt: Date.now()
@@ -1972,7 +2071,7 @@ function getSystemConfig() {
 
 function setSystemConfig(config) {
     if (!config || typeof config !== 'object') return null;
-    // 访问凭证有效时长（小时）：用于账号管理页的凭证有效期倒计时。
+    // 访问凭证有效时长（小时）：用于账号管理页按账号创建时间估算的倒计时。
     // wx 凭证 refreshtoken 约 2 小时过期、每 30 分钟保活，故默认 2。
     // 未携带该字段时保留现值，避免旧客户端保存时重置。
     let credentialValidityHours;
@@ -2260,11 +2359,16 @@ module.exports = {
     DEFAULT_ANTI_RESALE_CONFIG,
     getYYBConfig,
     setYYBConfig,
-    persistInactiveActivityAutomation
+    persistInactiveActivityAutomation,
+    forceDisableAutomationKeys,
+    reloadPluginAutomationRegistry: loadPluginAutomationRegistry,
+    getPluginAutomationSpecs: () => [...PLUGIN_AUTOMATION_SPECS.values()]
 };
 
 module.exports._test = {
     ...(module.exports._test || {}),
+    applyPluginAutomationRegistry,
+    normalizePluginAutomationValue,
     normalizeCapitalMode,
     disableHiddenActivityAutomation,
     HIDDEN_ACTIVITY_AUTOMATION_KEYS,

@@ -398,131 +398,131 @@ defineExpose({ load })
         class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
         @click.self="closeModal"
       >
-      <div class="modal-glass max-h-[85vh] max-w-lg w-full overflow-y-auto rounded-xl p-5">
-        <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-base text-gray-900 font-semibold dark:text-gray-100">
-            {{ modal === 'create' ? '新建用户' : modal === 'edit' ? `编辑用户 · ${activeUser?.username}` : modal === 'renew' ? `核销卡密 · ${activeUser?.username}` : `名下农场账号 · ${activeUser?.username}` }}
-          </h3>
-          <button class="icon-btn" @click="closeModal">
-            <div class="i-carbon-close" />
-          </button>
-        </div>
+        <div class="modal-glass max-h-[85vh] max-w-lg w-full overflow-y-auto rounded-xl p-5">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-base text-gray-900 font-semibold dark:text-gray-100">
+              {{ modal === 'create' ? '新建用户' : modal === 'edit' ? `编辑用户 · ${activeUser?.username}` : modal === 'renew' ? `核销卡密 · ${activeUser?.username}` : `名下农场账号 · ${activeUser?.username}` }}
+            </h3>
+            <button class="icon-btn" @click="closeModal">
+              <div class="i-carbon-close" />
+            </button>
+          </div>
 
-        <!-- 新建 / 编辑 -->
-        <div v-if="modal === 'create' || modal === 'edit'" class="space-y-3">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="mb-1 block text-xs text-gray-500">用户名</label>
-              <input v-model="form.username" class="form-input" placeholder="3-32 位">
-            </div>
-            <div>
-              <label class="mb-1 block text-xs text-gray-500">角色</label>
-              <select v-model="form.role" class="form-input" :disabled="isEditingSelf">
-                <option value="user">
-                  普通用户
-                </option>
-                <option v-if="userStore.isSuperAdmin" value="super_admin">
-                  超级管理员
-                </option>
-              </select>
-              <p v-if="isEditingSelf" class="mt-1 text-xs text-gray-400">
-                不能修改自己的角色
-              </p>
-            </div>
-          </div>
-          <div>
-            <label class="mb-1 block text-xs text-gray-500">
-              密码{{ modal === 'edit' ? '（留空表示不修改）' : '' }}
-            </label>
-            <input v-model="form.password" type="password" class="form-input" placeholder="至少 6 位，含两类字符">
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="mb-1 block text-xs text-gray-500">账号额度（-1 不限）</label>
-              <input v-model.number="form.accountLimit" type="number" min="-1" class="form-input">
-            </div>
-            <div>
-              <label class="mb-1 block text-xs text-gray-500">昵称</label>
-              <input v-model="form.nick" class="form-input">
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <input id="user-permanent" v-model="form.isPermanent" type="checkbox" class="accent-primary">
-            <label for="user-permanent" class="text-xs text-gray-600 dark:text-gray-300">永久有效</label>
-          </div>
-          <div v-if="!form.isPermanent">
-            <label class="mb-1 block text-xs text-gray-500">到期时间</label>
-            <input v-model="form.expiresAt" type="datetime-local" class="form-input">
-          </div>
-          <div>
-            <label class="mb-1 block text-xs text-gray-500">备注</label>
-            <input v-model="form.remark" class="form-input">
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <button class="btn-ghost" @click="closeModal">
-              取消
-            </button>
-            <button class="btn-primary-sm" :disabled="submitting" @click="submitCreateOrEdit">
-              {{ submitting ? '提交中…' : '保存' }}
-            </button>
-          </div>
-        </div>
-
-        <!-- 核销卡密 -->
-        <div v-else-if="modal === 'renew'" class="space-y-3">
-          <p class="text-xs text-gray-500 dark:text-gray-400">
-            输入一张卡密为「{{ activeUser?.username }}」核销。加时卡延长有效期，额度卡提升账号配额。
-          </p>
-          <input v-model="renewCode" class="form-input font-mono" placeholder="XXXX-XXXX-XXXX-XXXX">
-          <div class="flex justify-end gap-2 pt-2">
-            <button class="btn-ghost" @click="closeModal">
-              取消
-            </button>
-            <button class="btn-primary-sm" :disabled="submitting" @click="submitRenew">
-              {{ submitting ? '核销中…' : '立即核销' }}
-            </button>
-          </div>
-        </div>
-
-        <!-- 名下账号 -->
-        <div v-else-if="modal === 'accounts'" class="space-y-3">
-          <div v-if="!accountDetail" class="py-6 text-center text-sm text-gray-400">
-            加载中…
-          </div>
-          <template v-else>
-            <div class="text-xs text-gray-500">
-              共 {{ accountDetail.total }} 个农场账号
-            </div>
-            <div
-              v-for="account in accountDetail.accounts"
-              :key="account.id"
-              class="border rounded-xl p-3"
-              style="border-color: var(--surface-border);"
-            >
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-900 font-medium dark:text-gray-100">
-                  {{ account.name || account.nick || `账号 ${account.id}` }}
-                </span>
-                <span class="text-[11px] text-gray-400">ID {{ account.id }} · {{ account.platform || '-' }}</span>
+          <!-- 新建 / 编辑 -->
+          <div v-if="modal === 'create' || modal === 'edit'" class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="mb-1 block text-xs text-gray-500">用户名</label>
+                <input v-model="form.username" class="form-input" placeholder="3-32 位">
               </div>
-              <div v-if="account.config" class="grid grid-cols-2 mt-2 gap-1 text-[11px] text-gray-500">
-                <span>开启任务：{{ Object.values(account.config.automation || {}).filter(Boolean).length }} 项</span>
-                <span>种植策略：{{ account.config.plantingStrategy || '-' }}</span>
-                <span>农场间隔：{{ account.config.intervals?.farm ?? '-' }}s</span>
-                <span>好友间隔：{{ account.config.intervals?.friend ?? '-' }}s</span>
+              <div>
+                <label class="mb-1 block text-xs text-gray-500">角色</label>
+                <select v-model="form.role" class="form-input" :disabled="isEditingSelf">
+                  <option value="user">
+                    普通用户
+                  </option>
+                  <option v-if="userStore.isSuperAdmin" value="super_admin">
+                    超级管理员
+                  </option>
+                </select>
+                <p v-if="isEditingSelf" class="mt-1 text-xs text-gray-400">
+                  不能修改自己的角色
+                </p>
               </div>
             </div>
-            <div v-if="accountDetail.accounts.length === 0" class="py-4 text-center text-sm text-gray-400">
-              该用户暂无农场账号
+            <div>
+              <label class="mb-1 block text-xs text-gray-500">
+                密码{{ modal === 'edit' ? '（留空表示不修改）' : '' }}
+              </label>
+              <input v-model="form.password" type="password" class="form-input" placeholder="至少 6 位，含两类字符">
             </div>
-            <div class="flex justify-end pt-2">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="mb-1 block text-xs text-gray-500">账号额度（-1 不限）</label>
+                <input v-model.number="form.accountLimit" type="number" min="-1" class="form-input">
+              </div>
+              <div>
+                <label class="mb-1 block text-xs text-gray-500">昵称</label>
+                <input v-model="form.nick" class="form-input">
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input id="user-permanent" v-model="form.isPermanent" type="checkbox" class="accent-primary">
+              <label for="user-permanent" class="text-xs text-gray-600 dark:text-gray-300">永久有效</label>
+            </div>
+            <div v-if="!form.isPermanent">
+              <label class="mb-1 block text-xs text-gray-500">到期时间</label>
+              <input v-model="form.expiresAt" type="datetime-local" class="form-input">
+            </div>
+            <div>
+              <label class="mb-1 block text-xs text-gray-500">备注</label>
+              <input v-model="form.remark" class="form-input">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
               <button class="btn-ghost" @click="closeModal">
-                关闭
+                取消
+              </button>
+              <button class="btn-primary-sm" :disabled="submitting" @click="submitCreateOrEdit">
+                {{ submitting ? '提交中…' : '保存' }}
               </button>
             </div>
-          </template>
+          </div>
+
+          <!-- 核销卡密 -->
+          <div v-else-if="modal === 'renew'" class="space-y-3">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              输入一张卡密为「{{ activeUser?.username }}」核销。加时卡延长有效期，额度卡提升账号配额。
+            </p>
+            <input v-model="renewCode" class="form-input font-mono" placeholder="XXXX-XXXX-XXXX-XXXX">
+            <div class="flex justify-end gap-2 pt-2">
+              <button class="btn-ghost" @click="closeModal">
+                取消
+              </button>
+              <button class="btn-primary-sm" :disabled="submitting" @click="submitRenew">
+                {{ submitting ? '核销中…' : '立即核销' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 名下账号 -->
+          <div v-else-if="modal === 'accounts'" class="space-y-3">
+            <div v-if="!accountDetail" class="py-6 text-center text-sm text-gray-400">
+              加载中…
+            </div>
+            <template v-else>
+              <div class="text-xs text-gray-500">
+                共 {{ accountDetail.total }} 个农场账号
+              </div>
+              <div
+                v-for="account in accountDetail.accounts"
+                :key="account.id"
+                class="border rounded-xl p-3"
+                style="border-color: var(--surface-border);"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-900 font-medium dark:text-gray-100">
+                    {{ account.name || account.nick || `账号 ${account.id}` }}
+                  </span>
+                  <span class="text-[11px] text-gray-400">ID {{ account.id }} · {{ account.platform || '-' }}</span>
+                </div>
+                <div v-if="account.config" class="grid grid-cols-2 mt-2 gap-1 text-[11px] text-gray-500">
+                  <span>开启任务：{{ Object.values(account.config.automation || {}).filter(Boolean).length }} 项</span>
+                  <span>种植策略：{{ account.config.plantingStrategy || '-' }}</span>
+                  <span>农场间隔：{{ account.config.intervals?.farm ?? '-' }}s</span>
+                  <span>好友间隔：{{ account.config.intervals?.friend ?? '-' }}s</span>
+                </div>
+              </div>
+              <div v-if="accountDetail.accounts.length === 0" class="py-4 text-center text-sm text-gray-400">
+                该用户暂无农场账号
+              </div>
+              <div class="flex justify-end pt-2">
+                <button class="btn-ghost" @click="closeModal">
+                  关闭
+                </button>
+              </div>
+            </template>
+          </div>
         </div>
-      </div>
       </div>
     </Teleport>
   </div>

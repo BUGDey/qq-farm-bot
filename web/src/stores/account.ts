@@ -19,6 +19,10 @@ export interface Account {
   owner?: string
   platform?: string
   running?: boolean
+  online?: boolean
+  hasWxCredential?: boolean
+  credentialExpireAt?: number
+  credentialValidityHours?: number
   // Add other fields as discovered
 }
 

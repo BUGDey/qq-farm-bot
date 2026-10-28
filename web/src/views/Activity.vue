@@ -6,14 +6,14 @@ import api from '@/api'
 import CharityFlowerActivityPanel from '@/components/activity/CharityFlowerActivityPanel.vue'
 import HeluExchangePanel from '@/components/activity/HeluExchangePanel.vue'
 import HeluPassportPanel from '@/components/activity/HeluPassportPanel.vue'
-import SolarTermsActivityPanel from '@/components/activity/SolarTermsActivityPanel.vue'
 import HeluSolarTermsPanel from '@/components/activity/HeluSolarTermsPanel.vue'
 import QingMeiActivityPanel from '@/components/activity/QingMeiActivityPanel.vue'
 import QixiActivityPanel from '@/components/activity/QixiActivityPanel.vue'
 import RainPoemActivityPanel from '@/components/activity/RainPoemActivityPanel.vue'
+import SolarTermsActivityPanel from '@/components/activity/SolarTermsActivityPanel.vue'
 import StarRecordPanel from '@/components/activity/StarRecordPanel.vue'
-import BaseButton from '@/components/ui/BaseButton.vue'
 import WishShareActivityPanel from '@/components/activity/WishShareActivityPanel.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import { CHARITY_FLOWER_ACTIVITY_WINDOW, isWithinActivityWindowMs, PET_DIARY_ACTIVITY_WINDOW, RAIN_POEM_ACTIVITY_WINDOW, SHARE_REWARD_ACTIVITY_WINDOW, WISH_SIGN_ACTIVITY_WINDOW } from '@/constants/activity-windows'
 import { useAccountStore } from '@/stores/account'
 import { useActivityStore } from '@/stores/activity'
@@ -209,7 +209,8 @@ const activityCards = computed(() => {
         endTime: RAIN_POEM_ACTIVITY_WINDOW.endMs / 1000,
         activityIds: [2026070300],
       }]
-  if (!source.some(group => group.activityIds.includes(2026110100))) source.push({ id: 2026110100, title: '奶茶热销中', startTime: 1792029600, endTime: 1794844799, activityIds: [2026110100] })
+  if (!source.some(group => group.activityIds.includes(2026110100)))
+    source.push({ id: 2026110100, title: '奶茶热销中', startTime: 1792029600, endTime: 1794844799, activityIds: [2026110100] })
   const cards = source.map((group) => {
     const adaptedKey = group.id === 2026090100
       ? 'pet-diary' as const
@@ -240,7 +241,9 @@ const activityCards = computed(() => {
         'pet-diary': 'i-fa-solid-paw',
         'charity-flower': 'i-carbon-favorite',
         'qing-mei': 'i-carbon-bee',
-        'rain-poem': 'i-carbon-rain-heavy', 'wish-sign': 'i-carbon-sun', 'share-reward': 'i-carbon-share',
+        'rain-poem': 'i-carbon-rain-heavy',
+        'wish-sign': 'i-carbon-sun',
+        'share-reward': 'i-carbon-share',
       }[adapted || ''] || 'i-carbon-calendar',
       image: adapted === 'milk-tea' ? '/activity/milk-tea/img_s4Main_bg.png' : adapted === 'pet-diary' ? '/activity/pet-diary/scene-home-adult.webp?v=20260912' : adapted === 'wish-sign' ? '/activity/wish-sign/card-bg.svg' : adapted === 'share-reward' ? '/activity/share-reward/card-bg.svg' : group.imageUrl || (adapted === 'rain-poem' ? '/activity/rain-poem/day-rain-bg.jpg' : ''),
       imagePosition: adapted === 'pet-diary' ? 'center 64%' : 'center',
@@ -253,12 +256,7 @@ const activityCards = computed(() => {
       },
     }
   })
-  cards.push({ permanent: true, key: 'solar-terms', activityIds: [], adaptedKey: null,
-    title: '节令小札', description: '查看各节令赠礼与领取状态', icon: 'i-carbon-notebook',
-    image: '', imagePosition: 'center', window: { startMs: 0, endMs: 0 },
-    updatedMs: Date.parse('2026-10-15T00:00:00+08:00'), status: 'active', pending: false,
-    backgroundStyle: { background: '#385c46' },
-  })
+  cards.push({ permanent: true, key: 'solar-terms', activityIds: [], adaptedKey: null, title: '节令小札', description: '查看各节令赠礼与领取状态', icon: 'i-carbon-notebook', image: '', imagePosition: 'center', window: { startMs: 0, endMs: 0 }, updatedMs: Date.parse('2026-10-15T00:00:00+08:00'), status: 'active', pending: false, backgroundStyle: { background: '#385c46' } })
   return cards.sort((left, right) => {
     return right.updatedMs - left.updatedMs
       || right.window.startMs - left.window.startMs
@@ -564,13 +562,13 @@ onUnmounted(() => {
       <header class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <h1 class="text-lg text-gray-900 font-semibold dark:text-white">
-            <span class="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/55 px-4 py-2 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
+            <span class="inline-flex items-center gap-2 border border-white/60 rounded-full bg-white/55 px-4 py-2 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
               <span class="text-base text-[var(--theme-primary)]"><span class="i-carbon-events block" /></span>
               活动中心
             </span>
           </h1>
           <span class="text-xs text-gray-400">{{ activityCards.length }} 个活动</span>
-          <div class="inline-flex rounded-full border border-white/55 bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="活动状态筛选">
+          <div class="inline-flex border border-white/55 rounded-full bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="活动状态筛选">
             <button
               v-for="filter in activityStatusFilters"
               :key="filter.key"
@@ -668,14 +666,22 @@ onUnmounted(() => {
       <QingMeiActivityPanel :activity="qingmeiActivity" :loading="heluLoading" @refresh="refreshAll" />
     </div>
     <div v-else-if="selectedActivityCard?.adaptedKey === 'wish-sign' && selectedActivityCard.status === 'active'" class="space-y-3">
-      <button class="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900 dark:hover:text-white" @click="selectedActivity = null"><span class="i-carbon-arrow-left" />返回活动列表</button>
+      <button class="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900 dark:hover:text-white" @click="selectedActivity = null">
+        <span class="i-carbon-arrow-left" />返回活动列表
+      </button>
       <WishShareActivityPanel v-if="wishSignActivityActive && currentAccountId" kind="wish" :activity="wishSignActivity" :loading="wishSignLoading" @refresh="refreshAll" />
-      <div v-else-if="wishSignActivityActive && !currentAccountId" class="rounded-lg bg-white p-10 text-center text-sm text-gray-500 shadow dark:bg-gray-800">{{ L.needAccount }}</div>
+      <div v-else-if="wishSignActivityActive && !currentAccountId" class="rounded-lg bg-white p-10 text-center text-sm text-gray-500 shadow dark:bg-gray-800">
+        {{ L.needAccount }}
+      </div>
     </div>
     <div v-else-if="selectedActivityCard?.adaptedKey === 'share-reward' && selectedActivityCard.status === 'active'" class="space-y-3">
-      <button class="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900 dark:hover:text-white" @click="selectedActivity = null"><span class="i-carbon-arrow-left" />返回活动列表</button>
+      <button class="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900 dark:hover:text-white" @click="selectedActivity = null">
+        <span class="i-carbon-arrow-left" />返回活动列表
+      </button>
       <WishShareActivityPanel v-if="shareRewardActivityActive && currentAccountId" kind="share" :activity="shareRewardActivity" :loading="shareRewardLoading" @refresh="refreshAll" />
-      <div v-else-if="shareRewardActivityActive && !currentAccountId" class="rounded-lg bg-white p-10 text-center text-sm text-gray-500 shadow dark:bg-gray-800">{{ L.needAccount }}</div>
+      <div v-else-if="shareRewardActivityActive && !currentAccountId" class="rounded-lg bg-white p-10 text-center text-sm text-gray-500 shadow dark:bg-gray-800">
+        {{ L.needAccount }}
+      </div>
     </div>
     <!--
       萌宠日记面板自带游戏风格顶栏与返回按钮，且直接读 usePetDiaryStore，
@@ -684,7 +690,7 @@ onUnmounted(() => {
     <div v-else-if="selectedActivityCard?.adaptedKey === 'milk-tea' && selectedActivityCard.status === 'active'">
       <MilkTeaActivityPanel @back="selectedActivity = null" />
     </div>
-    <div v-else-if="selectedActivityCard?.adaptedKey === 'pet-diary'  && selectedActivityCard.status === 'active'">
+    <div v-else-if="selectedActivityCard?.adaptedKey === 'pet-diary' && selectedActivityCard.status === 'active'">
       <PetDiaryActivityPanel v-if="petDiaryActivityActive && currentAccountId" @back="selectedActivity = null" />
       <div v-else-if="petDiaryActivityActive && !currentAccountId" class="space-y-3">
         <button class="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-900 dark:hover:text-white" @click="selectedActivity = null">

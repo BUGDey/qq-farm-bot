@@ -25,10 +25,10 @@ body {
 /* Color theme variables - Dashboard Theme */
 :root {
   --theme-bg: transparent;
-  --theme-text: #2C3E50;
-  --theme-primary: #2ECC71;
-  --theme-secondary: #3498DB;
-  --theme-gradient: linear-gradient(135deg, #2ECC71 0%, #3498DB 100%);
+  --theme-text: #2c3e50;
+  --theme-primary: #2ecc71;
+  --theme-secondary: #3498db;
+  --theme-gradient: linear-gradient(135deg, #2ecc71 0%, #3498db 100%);
   --app-bg: transparent;
   --surface-1: rgba(255, 255, 255, 0.75);
   --surface-2: rgba(255, 255, 255, 0.6);
@@ -37,7 +37,7 @@ body {
   --surface-border-strong: rgba(255, 255, 255, 0.6);
   --surface-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   --surface-shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.06);
-  --muted-text: #7F8C8D;
+  --muted-text: #7f8c8d;
   --input-bg: rgba(255, 255, 255, 0.88);
   --panel-glow: rgba(46, 204, 113, 0.08);
 }
@@ -51,7 +51,7 @@ body {
   --surface-border-strong: rgba(255, 255, 255, 0.15);
   --surface-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   --surface-shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.2);
-  --muted-text: #95A5A6;
+  --muted-text: #95a5a6;
   --input-bg: rgba(0, 0, 0, 0.3);
   --panel-glow: rgba(46, 204, 113, 0.06);
 }
@@ -80,7 +80,11 @@ body {
 
 .ui-card {
   border: 1px solid var(--surface-border);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 90%, rgba(34, 197, 94, 0.04) 10%), var(--surface-1));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-1) 90%, rgba(34, 197, 94, 0.04) 10%),
+    var(--surface-1)
+  );
   box-shadow: var(--surface-shadow-soft);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -88,7 +92,11 @@ body {
 
 .ui-card-elevated {
   border: 1px solid var(--surface-border-strong);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 86%, rgba(34, 197, 94, 0.06) 14%), var(--surface-1));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-1) 86%, rgba(34, 197, 94, 0.06) 14%),
+    var(--surface-1)
+  );
   box-shadow: var(--surface-shadow);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -196,7 +204,8 @@ body {
 
 /* Pastoral decorative floating leaves animation */
 @keyframes float-leaf {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
     opacity: 0.6;
   }

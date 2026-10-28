@@ -45,6 +45,7 @@ const { registerAdminCareerRoutes } = require("./admin-career-routes");
 const { registerAdminCaptureRoutes, setEmbeddedCapture } = require("./admin-capture-routes");
 const { createCaptureCore } = require("../capture/index");
 const { registerAdminCurrentUserRoutes } = require("./admin-current-user-routes");
+const { registerAnnouncementRoutes } = require("./announcement-routes");
 const {
   registerAdminFarmOperationRoutes,
 } = require("./admin-farm-operation-routes");
@@ -410,7 +411,42 @@ function startAdminServer(dataProvider) {
   const webDist = path.join(__dirname, "../../../web/dist");
   configureCorsMiddleware(app);
   configureStaticAssets(app, webDist);
-  app.use("/game-config", express.static(getResourcePath("gameConfig")));
+  app.use(
+    "/game-config",
+    express.static(getResourcePath("gameConfig"), {
+      setHeaders(res) {
+        // 子版本号机制兜底：素材变化时前端会主动刷新缓存，可放心使用长强缓存
+        res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
+      },
+    }),
+    // 素材插件回退链：宿主目录没命中的请求，依次在已激活 provider 的
+    // <dir>/assets 下查找。provider 列表由 gameConfig 模块维护，插件激活/停用
+    // 时自动更新，因此这里动态读取保证每次请求都能拿到最新列表。
+    (req, res, next) => {
+      const { getExternalGameConfigProviders } = require("../config/gameConfig");
+      const providers = getExternalGameConfigProviders();
+      // req.path 里非 ASCII 字符仍是 URL 编码，磁盘文件名是原始中文，
+      // 必须先 decodeURIComponent 才能正确拼 fs 路径
+      const rawPath = req.path.startsWith("/") ? req.path.slice(1) : req.path;
+      const subPath = rawPath.includes("%") ? decodeURIComponent(rawPath) : rawPath;
+      function tryNext(index) {
+        if (index >= providers.length) return next();
+        const root = path.join(providers[index].dir, "assets");
+        const candidate = path.join(root, subPath);
+        if (!candidate.startsWith(path.resolve(root))) return tryNext(index + 1);
+        if (!fs.existsSync(candidate) || fs.statSync(candidate).isDirectory()) return tryNext(index + 1);
+        return express.static(root, {
+          setHeaders(resp) {
+            resp.setHeader("Cache-Control", "public, max-age=2592000, immutable");
+          },
+        })(req, res, (e) => {
+          if (e) return next(e);
+          tryNext(index + 1);
+        });
+      }
+      tryNext(0);
+    },
+  );
   const loginAssetsDir = getDataFile("login-assets");
   fs.mkdirSync(loginAssetsDir, { recursive: true });
   app.use(
@@ -616,6 +652,12 @@ function startAdminServer(dataProvider) {
     store,
     getAccountsForUser,
   });
+  registerAnnouncementRoutes({
+    app,
+    requireAdminToken,
+    requireAdminRole,
+    store,
+  });
   registerAdminAccountRoutes({
     app,
     provider,
@@ -637,6 +679,93 @@ function startAdminServer(dataProvider) {
   registerAdminNapcatLoginRoutes({ app });
   registerAdminProxyRoutes({ app, logger: adminLogger });
   registerAdminYYBRoutes({ app, store });
+
+  // ==================== 活动插件宿主 ====================
+  // 顺序敏感：插件路由必须先于 SPA fallback 注册（ctx.route 会自动插到 '*' 之前，
+  // 但启动恢复在这里完成可保证与手工注册的路由顺序一致）。
+  const { createPluginHost } = require("../plugins/host");
+  const {
+    getAuthorizedAccountId: getAuthorizedPluginAccountId,
+    requireConnectedAccount,
+  } = require("./admin-activity-route-helpers");
+  const pluginHost = createPluginHost({
+    app,
+    provider,
+    requireAdminRole,
+    getAuthorizedAccountId: getAuthorizedPluginAccountId,
+    requireConnectedAccount,
+    getAccountIdFromRequest,
+    canAccessAccount,
+    sendProviderError,
+    log: (tag, msg, meta) =>
+      (String(tag || "") === "错误" ? adminLogger.error : adminLogger.info)(
+        String(msg || ""),
+        { module: "plugin", tag, ...(meta || {}) },
+      ),
+  });
+
+  // 插件静态资源（前端 ESM 产物 + 素材）。挂在 /api 之外，运行时新装插件
+  // 无需重新挂载 —— 处理器每次请求查注册表。
+  const { readRegistry } = require("../plugins/registry");
+  const sendPluginFile = (res, rootDir, relative) => {
+    const root = path.resolve(rootDir);
+    // 允许请求路径重复携带 assets/ 前缀（前端既可能拼 "${assetPrefix}/x.png"，
+    // 也可能拼 "${assetPrefix}/assets/x.png"），两种都解析到插件 assets 目录。
+    const candidates = [relative];
+    if (/^assets[\\/]/i.test(relative)) candidates.push(relative.replace(/^assets[\\/]/i, ""));
+    else candidates.push(`assets/${relative}`);
+    for (const candidate of candidates) {
+      const target = path.resolve(root, candidate);
+      if (!target.startsWith(root + path.sep)) continue;
+      if (!fs.existsSync(target) || !fs.statSync(target).isFile()) continue;
+      res.set("Cache-Control", "no-cache");
+      res.set("X-Content-Type-Options", "nosniff");
+      return res.sendFile(target);
+    }
+    return res.status(404).json({ ok: false, error: "Not Found" });
+  };
+  app.use("/plugins", (req, res) => {
+    const parts = String(req.path || "")
+      .split("/")
+      .filter(Boolean);
+    if (parts.length < 3) return res.status(404).json({ ok: false, error: "Not Found" });
+    const [pluginId, version, ...rest] = parts;
+    const entry = readRegistry().plugins.find((item) => item.id === pluginId);
+    if (!entry || String(entry.version) !== String(version)) {
+      return res.status(404).json({ ok: false, error: "Not Found" });
+    }
+    return sendPluginFile(res, entry.dir, rest.join("/"));
+  });
+  app.use("/activity", (req, res, next) => {
+    // 命中插件声明的 assetPrefix 时由插件目录提供素材；其余路径必须放行给后续
+    // 中间件（web/dist 公共目录 / SPA fallback）——前端本身就有 /activity 路由，
+    // 未命中插件时返回 404 会把活动页刷新变成 JSON 错误。
+    const firstSegment = String(req.path || "").split("/").filter(Boolean)[0] || "";
+    const entry = firstSegment
+      ? readRegistry().plugins.find(
+          (item) =>
+            item.enabled === true &&
+            item.manifest?.frontend?.assetPrefix === `/activity/${firstSegment}`,
+        )
+      : null;
+    if (!entry) return next();
+    const rest = String(req.path || "").slice(`/${firstSegment}/`.length);
+    if (!rest) return next();
+    return sendPluginFile(res, path.join(entry.dir, "assets"), rest);
+  });
+
+  pluginHost.restoreAll();
+  const { registerAdminPluginRoutes } = require("./admin-plugin-routes");
+  registerAdminPluginRoutes({
+    app,
+    pluginHost,
+    provider,
+    requireAdminRole,
+    sendProviderError,
+  });
+  // 供 runtime-engine 把插件宿主注入 worker-manager（新 worker 启动时下发插件清单）
+  startAdminServer.pluginHost = pluginHost;
+
   registerSpaFallback(app, webDist);
 
   const subscribeSocketToAccount = (socket, accountRef = "") => {

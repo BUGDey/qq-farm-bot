@@ -250,7 +250,7 @@ onUnmounted(() => {
   >
     <div class="rounded-lg bg-white shadow dark:bg-gray-800">
       <!-- Header with Title and Actions -->
-      <div class="flex flex-col items-stretch justify-between gap-2 border-b border-gray-100 p-2.5 sm:flex-row sm:items-center sm:p-3 dark:border-gray-700">
+      <div class="flex flex-col items-stretch justify-between gap-2 border-b border-gray-100 p-2.5 sm:flex-row sm:items-center dark:border-gray-700 sm:p-3">
         <h3 class="flex items-center gap-2 text-lg font-bold">
           <div class="i-carbon-grid text-xl" />
           土地详情
@@ -259,7 +259,7 @@ onUnmounted(() => {
           <button
             v-for="op in operations"
             :key="op.type"
-            class="flex items-center justify-center gap-1 rounded px-2 py-1.5 text-xs text-white transition disabled:cursor-not-allowed disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
+            class="flex items-center justify-center gap-1 rounded px-2 py-1.5 text-xs text-white transition disabled:cursor-not-allowed sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm disabled:opacity-50"
             :class="op.color"
             :disabled="operating"
             @click="handleOperate(op.type)"
@@ -269,7 +269,7 @@ onUnmounted(() => {
             <span class="sm:hidden">{{ op.type === 'clear' ? '务农' : op.label.replace('一键', '') }}</span>
           </button>
           <button
-            class="flex items-center justify-center gap-1 rounded bg-red-600 px-2 py-1.5 text-xs text-white transition disabled:cursor-not-allowed hover:bg-red-700 disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm"
+            class="flex items-center justify-center gap-1 rounded bg-red-600 px-2 py-1.5 text-xs text-white transition disabled:cursor-not-allowed sm:gap-1.5 hover:bg-red-700 sm:px-3 sm:py-2 sm:text-sm disabled:opacity-50"
             :disabled="operating"
             @click="handleRemoveAllPlants"
           >

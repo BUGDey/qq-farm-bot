@@ -3,8 +3,8 @@ import { onMounted } from 'vue'
 import AdminSystemPanel from '@/components/admin/AdminSystemPanel.vue'
 import DeviceProtocolCard from '@/components/settings/DeviceProtocolCard.vue'
 import YYBConfigCard from '@/components/settings/YYBConfigCard.vue'
-import { useAdminSystemConfig } from '@/composables/useAdminSystemConfig'
 import { useUserSettings } from '@/composables/settings/useUserSettings'
+import { useAdminSystemConfig } from '@/composables/useAdminSystemConfig'
 import { useToastStore } from '@/stores/toast'
 
 // 从设置页「系统配置」tab 迁入管理后台「全局设置」：

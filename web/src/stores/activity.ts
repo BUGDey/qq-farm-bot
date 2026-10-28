@@ -452,7 +452,8 @@ export const useActivityStore = defineStore('activity', () => {
     wishSignLoading.value = true
     try {
       const { data } = await api.get('/api/activity/wish-sign', { headers: { 'x-account-id': accountId } })
-      if (data.ok && isCurrentAccount(String(accountId))) wishSignActivity.value = data.activity || null
+      if (data.ok && isCurrentAccount(String(accountId)))
+        wishSignActivity.value = data.activity || null
       return data
     }
     finally { wishSignLoading.value = false }
@@ -462,7 +463,8 @@ export const useActivityStore = defineStore('activity', () => {
     shareRewardLoading.value = true
     try {
       const { data } = await api.get('/api/activity/share-reward', { headers: { 'x-account-id': accountId } })
-      if (data.ok && isCurrentAccount(String(accountId))) shareRewardActivity.value = data.activity || null
+      if (data.ok && isCurrentAccount(String(accountId)))
+        shareRewardActivity.value = data.activity || null
       return data
     }
     finally { shareRewardLoading.value = false }

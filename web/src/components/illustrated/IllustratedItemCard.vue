@@ -31,7 +31,6 @@ const L = {
 watch(() => props.item?.image, () => {
   imageError.value = false
 })
-
 </script>
 
 <template>

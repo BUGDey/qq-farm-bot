@@ -157,7 +157,7 @@ watch(expanded, (value) => {
             {{ tab.label }}
           </button>
         </div>
-        <input v-model="search" type="search" aria-label="搜索果实" placeholder="搜索名称 / ID" class="h-8 w-32 border border-gray-200 rounded-md bg-transparent px-2 text-xs outline-none focus:border-[var(--theme-primary)] sm:w-40 dark:border-gray-600">
+        <input v-model="search" type="search" aria-label="搜索果实" placeholder="搜索名称 / ID" class="h-8 w-32 border border-gray-200 rounded-md bg-transparent px-2 text-xs outline-none sm:w-40 dark:border-gray-600 focus:border-[var(--theme-primary)]">
         <button type="button" class="h-8 shrink-0 text-xs text-[var(--theme-primary)] disabled:opacity-50" :disabled="loading" @click="refresh">
           {{ loading ? '读取中…' : '刷新' }}
         </button>

@@ -254,9 +254,9 @@ async function handleAccountSaved() {
       :aria-expanded="showAccountDropdown"
       :aria-controls="dropdownId"
       aria-label="选择和管理账号"
-      @keydown.escape="closeDropdown"
       class="max-w-[min(76vw,280px)] flex items-center gap-3 rounded-xl px-3 py-2 text-left transition"
       :class="light ? 'hover:bg-white/15' : 'hover:bg-gray-100/70 dark:hover:bg-gray-700/50'"
+      @keydown.escape="closeDropdown"
       @click="toggleDropdown"
     >
       <!-- 头像不放 openCareer：它会同时冒泡触发外层 toggleDropdown，下拉菜单里已有“角色生涯”入口 -->
@@ -314,10 +314,10 @@ async function handleAccountSaved() {
         ref="menuSurface"
         role="region"
         aria-label="账号列表与管理"
-        @keydown.escape.stop.prevent="closeDropdown"
-        @focusout="onMenuFocusout"
         class="account-menu-surface fixed z-[9999] overflow-y-auto border border-white/60 rounded-xl bg-white/60 py-1 shadow-xl backdrop-blur-xl backdrop-saturate-150"
         :style="{ top: `${dropdownPos.top}px`, left: `${dropdownPos.left}px`, width: `${dropdownPos.width}px`, maxHeight: `${dropdownPos.maxHeight}px` }"
+        @keydown.escape.stop.prevent="closeDropdown"
+        @focusout="onMenuFocusout"
       >
         <div class="custom-scrollbar max-h-72 overflow-y-auto">
           <template v-if="accounts.length > 0">

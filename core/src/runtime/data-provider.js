@@ -81,7 +81,20 @@ function createDataProvider(deps) {
         return callWorkerReadOnce(key, accountId, 'getIllustratedList', type, level);
     }
 
+    /** 向全部 worker 广播消息（活动插件宿主装载/卸载用） */
+    function sendToWorkers(message) {
+        for (const worker of Object.values(workers || {})) {
+            try {
+                if (worker && worker.process) worker.process.send(message);
+            } catch { /* worker 已退出 */ }
+        }
+    }
+
     return {
+        /** 活动插件宿主使用：向全部 worker 广播消息 / 按账号同步配置快照 */
+        sendToWorkers,
+        broadcastConfigToWorkers,
+        callWorker: (ref, method, ...args) => callWorkerApi(resolveAccountId(ref), method, ...args),
         /** 获取账号运行状态 */
         getStatus: (ref) => {
             const id = resolveAccountId(ref);
@@ -369,22 +382,26 @@ function createDataProvider(deps) {
         // ========== 账号管理 ==========
         getAccounts: () => {
             const data = getAccounts();
-            // 访问凭证有效期倒计时数据：到期时刻 = credentialUpdatedAt + 有效期时长。
-            // wx 凭证 refreshtoken 约 2h 过期、每 30 分钟保活（保活成功会更新 loginBuffer
-            // 并重新打点），时长取系统配置的估算值；绝对时间戳交给前端逐秒递减，
-            // 不轮询接口也不会累积漂移。仅带凭证的账号（微信扫码）有倒计时。
+            // 凭证有效期按账号首次加入时间估算，凭证保活/刷新不会重置倒计时。
+            // 绝对时间戳交给前端逐秒递减，不轮询接口也不会累积漂移。
             const sysConfig = store.getSystemConfig() || {};
-            const validityMs = (Number(sysConfig.credentialValidityHours) || 2) * 3600 * 1000;
+            const validityHours = Number(sysConfig.credentialValidityHours) || 2;
+            const validityMs = validityHours * 3600 * 1000;
             data.accounts.forEach(acc => {
                 const worker = workers[acc.id];
                 acc.running = !!worker;
-                acc.hasWxCredential = !!acc.loginBuffer;
+                acc.online = !!(worker && worker.status && worker.status.connection
+                    && worker.status.connection.connected);
+                acc.hasWxCredential = acc.platform === 'wx' && !!acc.loginBuffer;
                 delete acc.loginBuffer;
                 delete acc.refreshtoken;
                 delete acc.accesstoken;
-                acc.credentialValidityHours = Number(sysConfig.credentialValidityHours) || 2;
-                acc.credentialExpireAt = acc.credentialUpdatedAt
-                    ? Number(acc.credentialUpdatedAt) + validityMs
+                acc.credentialValidityHours = validityHours;
+                const createdAt = Number(acc.createdAt);
+                acc.credentialExpireAt = acc.hasWxCredential
+                    && Number.isFinite(createdAt)
+                    && createdAt > 0
+                    ? createdAt + validityMs
                     : 0;
                 if (worker && worker.status && worker.status.status && worker.status.status.name) {
                     acc.nick = worker.status.status.name;

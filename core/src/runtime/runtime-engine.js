@@ -93,13 +93,7 @@ function createRuntimeEngine(options = {}) {
     });
 
     // 创建 Worker 管理器
-    const {
-        startWorker,
-        stopWorker,
-        restartWorker,
-        callWorkerApi,
-        getResourceStatus
-    } = createWorkerManager({
+    const workerManager = createWorkerManager({
         fork,
         WorkerThread: Worker,
         runtimeMode,
@@ -137,6 +131,14 @@ function createRuntimeEngine(options = {}) {
             if (onLog) onLog(entry, accountId, accountName);
         }
     });
+
+    const {
+        startWorker,
+        stopWorker,
+        restartWorker,
+        callWorkerApi,
+        getResourceStatus
+    } = workerManager;
 
     engine.startWorker = startWorker;
     engine.restartWorker = restartWorker;
@@ -248,6 +250,12 @@ function createRuntimeEngine(options = {}) {
 
         if (shouldStartAdmin && startAdminServer) {
             startAdminServer(dataProvider);
+            // 插件宿主在管理服务器启动时创建，随后注入 worker-manager，
+            // 保证之后新起的 worker 都能收到 plugin_sync 清单。
+            const pluginHost = startAdminServer.pluginHost;
+            if (pluginHost && typeof workerManager.setPluginHost === 'function') {
+                workerManager.setPluginHost(pluginHost);
+            }
         }
 
         if (shouldAutoStart) {

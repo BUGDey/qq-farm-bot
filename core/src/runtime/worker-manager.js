@@ -31,6 +31,10 @@ function createWorkerManager(deps) {
         onWorkerLog
     } = deps;
 
+    // 活动插件宿主允许启动后注入（runtime-engine 先建 manager，admin server 建好插件宿主
+    // 后调用 setPluginHost；新 worker 启动时据此下发插件清单）
+    let pluginHostRef = deps.pluginHost || null;
+
     const scheduler = createScheduler('worker_manager');
     const resourceMonitor = createResourceMonitor();
     const restartHistory = new Map();
@@ -363,6 +367,8 @@ function createWorkerManager(deps) {
                 type: 'config_sync',
                 config: buildConfigSnapshotForAccount(account.id)
             });
+            // 下发已启用的活动插件清单，worker 据此加载插件后端
+            proc.send({ type: 'plugin_sync', plugins: pluginHostRef ? pluginHostRef.listForWorkerSync() : [] });
         } catch { }
 
         // 监听 Worker 消息
@@ -845,6 +851,8 @@ function createWorkerManager(deps) {
         stopWorker,
         restartWorker,
         callWorkerApi,
+        // 插件宿主注入点：admin server 侧建好 host 后回填，供新 worker 启动时同步插件清单
+        setPluginHost: (host) => { pluginHostRef = host || null; },
         getResourceStatus: () => ({
             policy: resourcePolicy,
             runtime: resourceMonitor.snapshot(),

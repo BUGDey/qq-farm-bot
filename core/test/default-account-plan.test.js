@@ -55,6 +55,24 @@ test('new accounts inherit an enabled user default plan', () => {
   assert.equal(config.goldenBugRoundLimit, 12);
 });
 
+test('updating an account cannot overwrite its original createdAt', () => {
+  const created = store.addOrUpdateAccount({
+    name: 'WeChat account',
+    platform: 'wx',
+    loginBuffer: 'buffer-original',
+  }).accounts.at(-1);
+  const createdAt = created.createdAt;
+
+  const updated = store.addOrUpdateAccount({
+    id: created.id,
+    createdAt: createdAt + 60 * 60 * 1000,
+    loginBuffer: 'buffer-refreshed',
+  }).accounts.find(account => account.id === created.id);
+
+  assert.equal(updated.createdAt, createdAt);
+  assert.equal(updated.loginBuffer, 'buffer-refreshed');
+});
+
 test('saving an existing default plan overwrites it on disk', () => {
   const before = store.getUserDefaultAccountPlan('alice');
   const saved = store.setUserDefaultAccountPlan('alice', {

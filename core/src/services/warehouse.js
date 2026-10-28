@@ -545,6 +545,11 @@ async function sellAllFruits() {
       const id = toNum(item.id);
       const count = toNum(item.count);
       const reservedForTea = require('./activity-milk-tea').reserveMilkTeaFruit(id, isAutomationOn('milk_tea_craft'), getServerTimeSec());
+      // 活动插件可注册果实保留谓词（如奶茶营业期保护活动果实不被自动卖）
+      const reservedByPlugin = require('../plugins/worker-host-bridge').reserveFruit(id, {
+        automation: require('../models/store').getAutomation(),
+        nowSec: getServerTimeSec(),
+      });
       if (activityService.reserveQingmeiFruit(id, qingmeiWineActive)) {
         log('仓库', '青梅为活动专属果实，酿造活动进行中已跳过普通出售', { module: 'warehouse', event: '跳过活动专属果实', result: 'skip', itemId: id, count });
         continue;
@@ -553,7 +558,7 @@ async function sellAllFruits() {
         log('仓库', `${getFruitName(id)}在不卖白名单中，已跳过出售`, { module: 'warehouse', event: '跳过白名单果实', result: 'skip', itemId: id, count });
         continue;
       }
-      if (isFruitItemId(id) && count > 0 && !reservedForTea) {
+      if (isFruitItemId(id) && count > 0 && !reservedForTea && !reservedByPlugin) {
         fruits.push(item);
       }
     }

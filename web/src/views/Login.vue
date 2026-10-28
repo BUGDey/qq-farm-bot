@@ -2,9 +2,11 @@
 import type { ApiResult } from '@/stores/user'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import UpdateLogModal from '@/components/login/UpdateLogModal.vue'
+import { APP_VERSION } from '@/data/update-log'
+import { useAppStore } from '@/stores/app'
 import { useToastStore } from '@/stores/toast'
 import {
-
   useUserStore,
 } from '@/stores/user'
 
@@ -13,12 +15,19 @@ type TabKey = 'login' | 'register' | 'reset'
 const router = useRouter()
 const userStore = useUserStore()
 const toast = useToastStore()
+const appStore = useAppStore()
 
 const tab = ref<TabKey>('login')
 const loading = ref(false)
+const showUpdateLog = ref(false)
+const showPassword = ref(false)
+
+const GITHUB_URL = 'https://github.com/BUGDey/qq-farm-bot'
+const REMEMBER_KEY = 'qqfarm:remembered-username'
 
 // 登录
 const loginForm = ref({ username: '', password: '' })
+const rememberUsername = ref(false)
 
 // 注册
 const registerForm = ref({ username: '', password: '', confirm: '', cardCode: '' })
@@ -30,11 +39,13 @@ const claimingCard = ref(false)
 const resetStep = ref<1 | 2>(1)
 const resetForm = ref({ username: '', cardCode: '', newPassword: '' })
 
-const tabs: { key: TabKey, label: string, icon: string }[] = [
-  { key: 'login', label: '登录', icon: 'i-carbon-login' },
-  { key: 'register', label: '注册', icon: 'i-carbon-user-follow' },
-  { key: 'reset', label: '找回密码', icon: 'i-carbon-password' },
+const tabs: { key: TabKey, label: string }[] = [
+  { key: 'login', label: '登录' },
+  { key: 'register', label: '注册' },
+  { key: 'reset', label: '找回密码' },
 ]
+
+const loginSubtitle = computed(() => appStore.loginPageConfig.loginSubtitle || '欢迎回来，开启智慧农耕之旅')
 
 const passwordMismatch = computed(
   () => registerForm.value.confirm.length > 0
@@ -73,6 +84,16 @@ async function handleLogin() {
   try {
     const result = await userStore.login(loginForm.value.username, loginForm.value.password)
     if (result.ok) {
+      // 记住账号仅保存用户名，绝不落地密码
+      try {
+        if (rememberUsername.value)
+          localStorage.setItem(REMEMBER_KEY, loginForm.value.username)
+        else
+          localStorage.removeItem(REMEMBER_KEY)
+      }
+      catch {
+        // 隐私模式下 localStorage 不可用，忽略
+      }
       await userStore.fetchUserInfo()
       toast.success('登录成功')
       router.push('/')
@@ -186,244 +207,354 @@ function submit() {
   return handleReset()
 }
 
+function switchTab(next: TabKey) {
+  tab.value = next
+  resetStep.value = 1
+  showPassword.value = false
+}
+
 onMounted(() => {
+  appStore.fetchLoginPageConfig()
+  try {
+    const saved = localStorage.getItem(REMEMBER_KEY)
+    if (saved) {
+      loginForm.value.username = saved
+      rememberUsername.value = true
+    }
+  }
+  catch {
+    // 忽略存储异常
+  }
   if (userStore.isLoggedIn && !userStore.isExpired)
     router.replace('/')
 })
 </script>
 
 <template>
-  <div class="login-page relative min-h-screen w-full flex items-center justify-center overflow-hidden p-4">
-    <!-- 新版登录页背景图（移动端自动切换竖版） -->
+  <div class="login-page relative min-h-screen w-full overflow-hidden">
+    <!-- 全屏农场插画背景（移动端自动切换竖版） -->
     <div class="login-bg" />
-    <div
-      class="pointer-events-none absolute h-96 w-96 rounded-full opacity-40 blur-3xl -left-40 -top-40"
-      style="background: radial-gradient(circle, color-mix(in srgb, var(--theme-primary) 55%, transparent), transparent 70%);"
-    />
-    <div
-      class="pointer-events-none absolute h-96 w-96 rounded-full opacity-30 blur-3xl -bottom-40 -right-32"
-      style="background: radial-gradient(circle, color-mix(in srgb, var(--theme-primary) 45%, transparent), transparent 70%);"
-    />
+    <div class="login-bg-mask" />
 
-    <div class="ui-card-elevated relative z-1 max-w-md w-full rounded-2xl p-6 md:p-8">
-      <div class="mb-6 flex flex-col items-center gap-2 text-center">
-        <div class="h-14 w-14 flex items-center justify-center overflow-hidden rounded-2xl ring-1 ring-gray-200 dark:ring-gray-700">
-          <img src="/icon.png" alt="logo" class="h-full w-full object-cover">
-        </div>
-        <h1 class="text-xl text-gray-900 font-bold dark:text-gray-100">
-          QQ 农场智能助手
-        </h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400">
-          多用户账号系统 · 注册需绑定卡密
-        </p>
-      </div>
-
-      <!-- Tab 切换 -->
-      <div class="grid grid-cols-3 mb-6 gap-1 rounded-xl p-1" style="background: var(--surface-2);">
-        <button
-          v-for="item in tabs"
-          :key="item.key"
-          class="flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-all"
-          :class="tab === item.key
-            ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100'
-            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-          @click="tab = item.key"
-        >
-          <div :class="item.icon" class="text-sm" />
-          <span>{{ item.label }}</span>
-        </button>
-      </div>
-
-      <form class="space-y-4" @submit.prevent="submit">
-        <!-- 登录 -->
-        <template v-if="tab === 'login'">
-          <div>
-            <label class="mb-1.5 block text-xs text-gray-600 font-medium dark:text-gray-300">用户名</label>
-            <input
-              v-model="loginForm.username"
-              type="text"
-              autocomplete="username"
-              placeholder="请输入用户名"
-              class="focus:border-primary w-full border rounded-xl px-3 py-2.5 text-sm outline-none transition"
-              style="border-color: var(--surface-border); background: var(--input-bg); color: var(--theme-text);"
-            >
+    <div class="relative z-1 mx-auto max-w-[1220px] min-h-screen w-full flex items-center justify-center gap-12 px-4 py-8 lg:justify-between lg:px-10">
+      <!-- 左侧品牌区（桌面端展示） -->
+      <div class="hidden flex-col gap-3 lg:flex">
+        <div class="flex items-center gap-3">
+          <div class="h-14 w-14 flex items-center justify-center overflow-hidden rounded-2xl bg-white/80 shadow-lg ring-1 ring-white/70 backdrop-blur">
+            <img src="/icon.png" alt="logo" class="h-full w-full object-cover">
           </div>
           <div>
-            <label class="mb-1.5 block text-xs text-gray-600 font-medium dark:text-gray-300">密码</label>
-            <input
-              v-model="loginForm.password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="请输入密码"
-              class="focus:border-primary w-full border rounded-xl px-3 py-2.5 text-sm outline-none transition"
-              style="border-color: var(--surface-border); background: var(--input-bg); color: var(--theme-text);"
-              @keyup.enter="submit"
-            >
-          </div>
-        </template>
-
-        <!-- 注册 -->
-        <template v-else-if="tab === 'register'">
-          <div>
-            <label class="mb-1.5 block text-xs text-gray-600 font-medium dark:text-gray-300">用户名</label>
-            <input
-              v-model="registerForm.username"
-              type="text"
-              placeholder="3-32 位字母/数字/下划线"
-              class="focus:border-primary w-full border rounded-xl px-3 py-2.5 text-sm outline-none transition"
-              style="border-color: var(--surface-border); background: var(--input-bg); color: var(--theme-text);"
-            >
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="mb-1.5 block text-xs text-gray-600 font-medium dark:text-gray-300">密码</label>
-              <input
-                v-model="registerForm.password"
-                type="password"
-                placeholder="至少 6 位"
-                class="focus:border-primary w-full border rounded-xl px-3 py-2.5 text-sm outline-none transition"
-                style="border-color: var(--surface-border); background: var(--input-bg); color: var(--theme-text);"
-              >
-            </div>
-            <div>
-              <label class="mb-1.5 block text-xs text-gray-600 font-medium dark:text-gray-300">确认密码</label>
-              <input
-                v-model="registerForm.confirm"
-                type="password"
-                placeholder="再次输入"
-                class="focus:border-primary w-full border rounded-xl px-3 py-2.5 text-sm outline-none transition"
-                :style="{
-                  borderColor: passwordMismatch ? '#ef4444' : 'var(--surface-border)',
-                  background: 'var(--input-bg)',
-                  color: 'var(--theme-text)',
-                }"
-              >
-            </div>
-          </div>
-          <div>
-            <div class="mb-1.5 flex items-center justify-between">
-              <label class="block text-xs text-gray-600 font-medium dark:text-gray-300">
-                卡密（决定账号有效期）
-              </label>
-              <button
-                type="button"
-                class="flex items-center gap-1 text-xs font-medium transition disabled:opacity-50"
-                style="color: var(--theme-primary);"
-                :disabled="claimingCard"
-                @click="handleClaimFreeCard"
-              >
-                <div :class="claimingCard ? 'i-svg-spinners-90-ring-with-bg' : 'i-carbon-gift'" />
-                {{ claimingCard ? '领取中…' : '领取免费卡密' }}
-              </button>
-            </div>
-            <input
-              v-model="registerForm.cardCode"
-              type="text"
-              placeholder="例如 XXXX-XXXX-XXXX-XXXX"
-              class="focus:border-primary w-full border rounded-xl px-3 py-2.5 text-sm font-mono outline-none transition"
-              style="border-color: var(--surface-border); background: var(--input-bg); color: var(--theme-text);"
-              @input="scheduleCardPreview"
-            >
-            <div v-if="checkingCard" class="mt-1.5 text-xs text-gray-400">
-              正在校验卡密…
-            </div>
-            <div
-              v-else-if="cardPreview"
-              class="mt-1.5 flex items-center gap-1.5 text-xs"
-              :class="cardPreview.ok ? 'text-green-600 dark:text-green-400' : 'text-red-500'"
-            >
-              <div :class="cardPreview.ok ? 'i-carbon-checkmark-filled' : 'i-carbon-warning-filled'" />
-              <span v-if="cardPreview.ok">
-                {{ cardPreview.data?.type === 'quota' ? `额度卡 · +${cardPreview.data?.value} 个账号` : `加时卡 · ${cardPreview.data?.isPermanent ? '永久' : `${cardPreview.data?.durationValue}${cardPreview.data?.durationUnit === 'hour' ? ' 小时' : ' 天'}`}` }}
-              </span>
-              <span v-else>{{ cardPreview.error }}</span>
-            </div>
-            <p v-if="passwordMismatch" class="mt-1.5 text-xs text-red-500">
-              两次输入的密码不一致
+            <h1 class="text-2xl text-gray-900 font-bold drop-shadow-sm">
+              {{ appStore.loginPageConfig.title || 'QQ 农场智能助手' }}
+            </h1>
+            <p class="mt-0.5 text-sm text-gray-700/80">
+              种下希望 收获快乐
             </p>
           </div>
-        </template>
+        </div>
+      </div>
 
-        <!-- 找回密码 -->
-        <template v-else>
-          <div>
-            <label class="mb-1.5 block text-xs text-gray-600 font-medium dark:text-gray-300">用户名</label>
-            <input
-              v-model="resetForm.username"
-              type="text"
-              placeholder="请输入用户名"
-              class="focus:border-primary w-full border rounded-xl px-3 py-2.5 text-sm outline-none transition"
-              style="border-color: var(--surface-border); background: var(--input-bg); color: var(--theme-text);"
-            >
+      <!-- 右侧登录卡片 -->
+      <div class="login-card max-w-[420px] w-full rounded-3xl p-6 md:p-7">
+        <!-- 移动端品牌 -->
+        <div class="mb-5 flex flex-col items-center gap-2 text-center lg:hidden">
+          <div class="h-14 w-14 flex items-center justify-center overflow-hidden rounded-2xl bg-white/80 shadow-md ring-1 ring-white/70">
+            <img src="/icon.png" alt="logo" class="h-full w-full object-cover">
           </div>
-          <div>
-            <label class="mb-1.5 block text-xs text-gray-600 font-medium dark:text-gray-300">
-              曾用卡密（用于验证身份）
-            </label>
-            <input
-              v-model="resetForm.cardCode"
-              type="text"
-              placeholder="该账号核销过的卡密"
-              class="focus:border-primary w-full border rounded-xl px-3 py-2.5 text-sm font-mono outline-none transition"
-              style="border-color: var(--surface-border); background: var(--input-bg); color: var(--theme-text);"
-            >
+          <h1 class="text-xl text-gray-900 font-bold">
+            {{ appStore.loginPageConfig.title || 'QQ 农场智能助手' }}
+          </h1>
+        </div>
+
+        <div class="mb-5 text-center lg:text-left">
+          <h2 class="text-xl text-gray-900 font-bold">
+            {{ tab === 'register' ? '创建账号' : tab === 'reset' ? '找回密码' : '欢迎回来' }}
+          </h2>
+          <p class="mt-1 text-xs text-gray-500">
+            {{ tab === 'login' ? loginSubtitle : tab === 'register' ? '注册需绑定卡密，额度卡可提升可添加账号数' : '使用该账号核销过的卡密验证身份' }}
+          </p>
+        </div>
+
+        <!-- Tab 切换 -->
+        <div class="mb-5 flex items-center gap-1 border-b border-gray-200/70">
+          <button
+            v-for="item in tabs"
+            :key="item.key"
+            type="button"
+            class="relative px-3 pb-2 text-sm font-medium transition-colors"
+            :class="tab === item.key ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'"
+            @click="switchTab(item.key)"
+          >
+            {{ item.label }}
+            <span v-if="tab === item.key" class="absolute inset-x-2 h-0.5 rounded-full bg-emerald-500 -bottom-px" />
+          </button>
+        </div>
+
+        <form class="space-y-3.5" @submit.prevent="submit">
+          <!-- 登录 -->
+          <template v-if="tab === 'login'">
+            <div class="login-input">
+              <div class="i-carbon-user text-base text-gray-400" />
+              <input
+                v-model="loginForm.username"
+                type="text"
+                autocomplete="username"
+                placeholder="请输入账号"
+              >
+            </div>
+            <div class="login-input">
+              <div class="i-carbon-locked text-base text-gray-400" />
+              <input
+                v-model="loginForm.password"
+                :type="showPassword ? 'text' : 'password'"
+                autocomplete="current-password"
+                placeholder="请输入密码"
+                @keyup.enter="submit"
+              >
+              <button
+                type="button"
+                class="shrink-0 text-gray-400 transition hover:text-gray-600"
+                :title="showPassword ? '隐藏密码' : '显示密码'"
+                @click="showPassword = !showPassword"
+              >
+                <div :class="showPassword ? 'i-carbon-view-off' : 'i-carbon-view'" class="text-base" />
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between text-xs">
+              <label class="flex cursor-pointer select-none items-center gap-1.5 text-gray-600">
+                <input v-model="rememberUsername" type="checkbox" class="h-3.5 w-3.5 rounded accent-emerald-500">
+                记住账号
+              </label>
+              <button type="button" class="text-gray-500 transition hover:text-emerald-600" @click="switchTab('reset')">
+                忘记密码?
+              </button>
+            </div>
+          </template>
+
+          <!-- 注册 -->
+          <template v-else-if="tab === 'register'">
+            <div class="login-input">
+              <div class="i-carbon-user text-base text-gray-400" />
+              <input v-model="registerForm.username" type="text" placeholder="用户名（3-32 位字母/数字/下划线）">
+            </div>
+            <div class="login-input">
+              <div class="i-carbon-locked text-base text-gray-400" />
+              <input v-model="registerForm.password" type="password" placeholder="密码（至少 6 位）">
+            </div>
+            <div class="login-input" :style="{ borderColor: passwordMismatch ? '#ef4444' : '' }">
+              <div class="i-carbon-locked text-base text-gray-400" />
+              <input v-model="registerForm.confirm" type="password" placeholder="再次输入密码">
+            </div>
+            <div>
+              <div class="mb-1.5 flex items-center justify-between">
+                <span class="text-xs text-gray-600 font-medium">卡密（决定账号有效期）</span>
+                <button
+                  type="button"
+                  class="flex items-center gap-1 text-xs text-emerald-600 font-medium transition disabled:opacity-50"
+                  :disabled="claimingCard"
+                  @click="handleClaimFreeCard"
+                >
+                  <div :class="claimingCard ? 'i-svg-spinners-90-ring-with-bg' : 'i-carbon-gift'" />
+                  {{ claimingCard ? '领取中…' : '领取免费卡密' }}
+                </button>
+              </div>
+              <div class="login-input font-mono">
+                <div class="i-carbon-ticket text-base text-gray-400" />
+                <input
+                  v-model="registerForm.cardCode"
+                  type="text"
+                  placeholder="例如 XXXX-XXXX-XXXX-XXXX"
+                  @input="scheduleCardPreview"
+                >
+              </div>
+              <div v-if="checkingCard" class="mt-1.5 text-xs text-gray-400">
+                正在校验卡密…
+              </div>
+              <div v-else-if="cardPreview" class="mt-1.5 flex items-center gap-1.5 text-xs" :class="cardPreview.ok ? 'text-green-600' : 'text-red-500'">
+                <div :class="cardPreview.ok ? 'i-carbon-checkmark-filled' : 'i-carbon-warning-filled'" />
+                <span v-if="cardPreview.ok">
+                  {{ cardPreview.data?.type === 'quota' ? `额度卡 · +${cardPreview.data?.value} 个账号` : `加时卡 · ${cardPreview.data?.isPermanent ? '永久' : `${cardPreview.data?.durationValue}${cardPreview.data?.durationUnit === 'hour' ? ' 小时' : ' 天'}`}` }}
+                </span>
+                <span v-else>{{ cardPreview.error }}</span>
+              </div>
+              <p v-if="passwordMismatch" class="mt-1.5 text-xs text-red-500">
+                两次输入的密码不一致
+              </p>
+            </div>
+          </template>
+
+          <!-- 找回密码 -->
+          <template v-else>
+            <div class="login-input">
+              <div class="i-carbon-user text-base text-gray-400" />
+              <input v-model="resetForm.username" type="text" placeholder="请输入用户名">
+            </div>
+            <div class="login-input font-mono">
+              <div class="i-carbon-ticket text-base text-gray-400" />
+              <input v-model="resetForm.cardCode" type="text" placeholder="曾用卡密（用于验证身份）">
+            </div>
+            <div v-if="resetStep === 2" class="login-input">
+              <div class="i-carbon-locked text-base text-gray-400" />
+              <input v-model="resetForm.newPassword" type="password" placeholder="新密码（至少 6 位）">
+            </div>
+          </template>
+
+          <button
+            type="submit"
+            :disabled="!canSubmit"
+            class="bg-gradient-primary w-full rounded-xl py-2.5 text-sm text-white font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:opacity-90"
+          >
+            <span v-if="loading" class="i-svg-spinners-90-ring-with-bg align-middle" />
+            <span v-else class="inline-flex items-center justify-center gap-1.5">
+              <div v-if="tab === 'login'" class="i-carbon-login" />
+              {{ tab === 'login' ? '登录' : tab === 'register' ? '注册并激活' : resetStep === 1 ? '验证身份' : '重置密码' }}
+            </span>
+          </button>
+        </form>
+
+        <!-- 快捷入口 -->
+        <div class="mt-6">
+          <div class="flex items-center gap-2 text-[11px] text-gray-400">
+            <span class="h-px flex-1 bg-gray-200" />
+            快捷入口
+            <span class="h-px flex-1 bg-gray-200" />
           </div>
-          <div v-if="resetStep === 2">
-            <label class="mb-1.5 block text-xs text-gray-600 font-medium dark:text-gray-300">新密码</label>
-            <input
-              v-model="resetForm.newPassword"
-              type="password"
-              placeholder="至少 6 位"
-              class="focus:border-primary w-full border rounded-xl px-3 py-2.5 text-sm outline-none transition"
-              style="border-color: var(--surface-border); background: var(--input-bg); color: var(--theme-text);"
-            >
+          <div class="grid grid-cols-3 mt-3 gap-2">
+            <button type="button" class="quick-entry" @click="router.push('/account')">
+              <div class="i-carbon-renew text-lg text-emerald-500" />
+              <span>账号续费</span>
+            </button>
+            <button type="button" class="quick-entry" @click="showUpdateLog = true">
+              <div class="i-carbon-document text-lg text-emerald-500" />
+              <span>更新日志</span>
+            </button>
+            <a class="quick-entry" :href="GITHUB_URL" target="_blank" rel="noopener noreferrer" title="GitHub 开源地址">
+              <div class="i-carbon-logo-github text-lg text-emerald-500" />
+              <span>GitHub</span>
+            </a>
           </div>
-        </template>
+        </div>
 
-        <button
-          type="submit"
-          :disabled="!canSubmit"
-          class="bg-gradient-primary w-full rounded-xl py-2.5 text-sm text-white font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:opacity-90"
-        >
-          <span v-if="loading" class="i-svg-spinners-90-ring-with-bg align-middle" />
-          <span v-else>
-            {{ tab === 'login' ? '登录' : tab === 'register' ? '注册并激活' : resetStep === 1 ? '验证身份' : '重置密码' }}
-          </span>
-        </button>
-      </form>
+        <p v-if="tab === 'login'" class="mt-5 text-center text-xs text-gray-500">
+          还没有账号？
+          <button type="button" class="text-emerald-600 font-medium transition hover:text-emerald-700" @click="switchTab('register')">
+            立即注册
+          </button>
+        </p>
+        <p v-else class="mt-5 text-center text-xs text-gray-500">
+          已有账号？
+          <button type="button" class="text-emerald-600 font-medium transition hover:text-emerald-700" @click="switchTab('login')">
+            返回登录
+          </button>
+        </p>
 
-      <p class="mt-5 text-center text-[11px] text-gray-400 leading-relaxed">
-        注册需使用加时卡激活账号；额度卡用于提升可添加农场账号数量。<br>
-        忘记密码时可用已核销过的卡密验证身份。
-      </p>
-
-      <div class="mt-4 flex justify-center">
-        <a
-          href="https://github.com/BUGDey/qq-farm-bot"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="flex items-center gap-1.5 text-xs text-gray-500 transition-colors dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-          title="GitHub 项目主页"
-        >
-          <div class="i-carbon-logo-github text-base" />
-          <span>GitHub 开源项目</span>
-        </a>
+        <p class="mt-3 text-center text-[11px] text-gray-400">
+          当前版本 v{{ APP_VERSION }}
+        </p>
       </div>
     </div>
+
+    <UpdateLogModal :show="showUpdateLog" @close="showUpdateLog = false" />
   </div>
 </template>
 
 <style scoped>
+.login-page {
+  position: relative;
+}
+
 .login-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
   background: url('/backgrounds/pc-login-bg.jpg') center / cover no-repeat;
+  transform: scale(1.02);
+}
+
+/* 轻微压暗边缘，保证卡片文字可读 */
+.login-bg-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 22% 30%, rgba(255, 255, 255, 0.18), transparent 55%),
+    linear-gradient(90deg, rgba(12, 30, 20, 0.18), rgba(12, 30, 20, 0.02) 45%, rgba(12, 30, 20, 0.22));
+}
+
+.login-card {
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 24px 60px rgba(15, 45, 30, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.login-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
+  background: rgba(249, 250, 251, 0.9);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.login-input:focus-within {
+  border-color: rgba(34, 197, 94, 0.6);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.login-input input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.login-input input::placeholder {
+  color: #9ca3af;
+}
+
+.quick-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #4b5563;
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.quick-entry:hover {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: #fff;
+  color: #15803d;
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {
   .login-bg {
     background: url('/backgrounds/mobile-login-bg.jpg') center / cover no-repeat;
+  }
+
+  .login-bg-mask {
+    background: linear-gradient(180deg, rgba(12, 30, 20, 0.12), rgba(12, 30, 20, 0.28));
   }
 }
 </style>

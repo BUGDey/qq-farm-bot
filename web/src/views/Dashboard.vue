@@ -949,37 +949,37 @@ useIntervalFn(updateCountdowns, 1000)
       </div>
 
       <!-- 运行日志面板 -->
-  <div class="home-log-panel">
-    <div class="home-log-head">
-      <h3>运行日志</h3>
-      <button class="home-log-latest" @click="scrollHomeLogToBottom">
-        最新
-        <span class="i-carbon-arrow-down" />
-      </button>
-    </div>
-    <div class="home-log-filters">
-      <select v-model="homeLogFilter.module" class="home-log-filter-item" title="按模块筛选">
-        <option v-for="m in modules" :key="`hm-${m.value}`" :value="m.value">
-          {{ m.label }}
-        </option>
-      </select>
-      <select v-model="homeLogFilter.event" class="home-log-filter-item" title="按事件筛选">
-        <option v-for="e in homeLogEvents" :key="`he-${e.value}`" :value="e.value">
-          {{ e.label }}
-        </option>
-      </select>
-      <select v-model="homeLogFilter.level" class="home-log-filter-item" title="按级别筛选">
-        <option v-for="l in homeLogLevels" :key="`hl-${l.value}`" :value="l.value">
-          {{ l.label }}
-        </option>
-      </select>
-      <input v-model="homeLogFilter.keyword" class="home-log-filter-item home-log-keyword" placeholder="关键词...">
-      <button v-if="hasHomeLogFilter" class="home-log-filter-item home-log-clear" title="清空筛选条件" @click="resetHomeLogFilter">
-        <span class="i-carbon-trash-can" />
-        清空
-      </button>
-    </div>
-    <div ref="homeLogContainer" class="home-log-list" @scroll="onHomeLogScroll">
+      <div class="home-log-panel">
+        <div class="home-log-head">
+          <h3>运行日志</h3>
+          <button class="home-log-latest" @click="scrollHomeLogToBottom">
+            最新
+            <span class="i-carbon-arrow-down" />
+          </button>
+        </div>
+        <div class="home-log-filters">
+          <select v-model="homeLogFilter.module" class="home-log-filter-item" title="按模块筛选">
+            <option v-for="m in modules" :key="`hm-${m.value}`" :value="m.value">
+              {{ m.label }}
+            </option>
+          </select>
+          <select v-model="homeLogFilter.event" class="home-log-filter-item" title="按事件筛选">
+            <option v-for="e in homeLogEvents" :key="`he-${e.value}`" :value="e.value">
+              {{ e.label }}
+            </option>
+          </select>
+          <select v-model="homeLogFilter.level" class="home-log-filter-item" title="按级别筛选">
+            <option v-for="l in homeLogLevels" :key="`hl-${l.value}`" :value="l.value">
+              {{ l.label }}
+            </option>
+          </select>
+          <input v-model="homeLogFilter.keyword" class="home-log-filter-item home-log-keyword" placeholder="关键词...">
+          <button v-if="hasHomeLogFilter" class="home-log-filter-item home-log-clear" title="清空筛选条件" @click="resetHomeLogFilter">
+            <span class="i-carbon-trash-can" />
+            清空
+          </button>
+        </div>
+        <div ref="homeLogContainer" class="home-log-list" @scroll="onHomeLogScroll">
           <div v-if="!homeLogs.length" class="home-log-empty">
             暂无日志
           </div>
@@ -2055,7 +2055,9 @@ useIntervalFn(updateCountdowns, 1000)
   font-size: 12px;
   line-height: 1.4;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .home-log-filter-item:focus {

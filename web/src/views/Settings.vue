@@ -25,18 +25,6 @@ const route = useRoute()
 const isAdminUser = computed(() => userStore.isAdmin)
 /** 管理后台仅超级管理员可见 */
 const isSuperAdminUser = computed(() => userStore.isSuperAdmin)
-const currentAccount = computed(() => accounts.value.find((acc: any) => acc.id === currentAccountId.value))
-/** 账号配置编辑权限：超级管理员可操作任意账号，普通用户只能操作自己添加的账号 */
-const isCurrentAccountEditable = computed(() => {
-  if (!currentAccount.value)
-    return false
-  if (userStore.isSuperAdmin)
-    return true
-  const owner = String(currentAccount.value.owner || currentAccount.value.username || '').trim()
-  const me = String(userStore.username || '').trim()
-  return !!owner && owner === me
-})
-
 type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'my-account' | 'admin-panel'
 
 const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'my-account', 'admin-panel']
@@ -184,6 +172,20 @@ const {
   openClearStoppedConfirm,
   confirmClearStopped,
 } = useAccountSettings(showAlert)
+
+// 当前选中的账号（依赖 useAccountSettings 解构出的 accounts / currentAccountId）
+const currentAccount = computed(() => accounts.value.find((acc: any) => acc.id === currentAccountId.value))
+
+/** 账号配置编辑权限：超级管理员可操作任意账号，普通用户只能操作自己添加的账号 */
+const isCurrentAccountEditable = computed(() => {
+  if (!currentAccount.value)
+    return false
+  if (userStore.isSuperAdmin)
+    return true
+  const owner = String(currentAccount.value.owner || currentAccount.value.username || '').trim()
+  const me = String(userStore.username || '').trim()
+  return !!owner && owner === me
+})
 
 const {
   localAutomationSettings,
@@ -361,7 +363,7 @@ onMounted(async () => {
   <div class="settings-page">
     <div class="mb-4">
       <h1 class="text-2xl text-gray-900 font-bold dark:text-gray-100">
-        <span class="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/55 px-4 py-2 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
+        <span class="inline-flex items-center gap-2 border border-white/60 rounded-full bg-white/55 px-4 py-2 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/10">
           <span class="text-lg text-[var(--theme-primary)]"><span class="i-carbon-settings block" /></span>
           设置
         </span>

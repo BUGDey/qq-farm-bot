@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
+import AnnouncementPopup from '@/components/AnnouncementPopup.vue'
 import MobileTabBar from '@/components/game/MobileTabBar.vue'
 import MysteryMerchantBanner from '@/components/shop/MysteryMerchantBanner.vue'
 import TopAccountMenu from '@/components/TopAccountMenu.vue'
@@ -218,6 +219,9 @@ function onSearchBlur() {
     </main>
 
     <MobileTabBar />
+
+    <!-- 系统公告：登录后自动弹出（按用户 + 公告更新时间判断是否已读） -->
+    <AnnouncementPopup />
   </div>
 </template>
 

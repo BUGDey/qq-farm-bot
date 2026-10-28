@@ -116,7 +116,7 @@ onMounted(fetchRanking)
         </h1>
       </div>
 
-      <div class="mb-3 inline-flex period-group border border-white/55 rounded-lg bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="排行周期">
+      <div class="period-group mb-3 inline-flex border border-white/55 rounded-lg bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="排行周期">
         <button
           v-for="p in periods"
           :key="p.key"
@@ -129,7 +129,7 @@ onMounted(fetchRanking)
         </button>
       </div>
 
-      <div class="mb-4 type-group flex items-center gap-2">
+      <div class="type-group mb-4 flex items-center gap-2">
         <button
           class="type-btn inline-flex items-center gap-1.5 rounded-full font-medium transition"
           :class="type === 'earn' ? 'bg-amber-100 text-amber-800 shadow-sm' : 'text-gray-500 hover:text-gray-800'"

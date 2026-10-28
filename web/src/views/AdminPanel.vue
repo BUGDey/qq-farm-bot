@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { LoginLog, Redemption } from '@/stores/user'
 import { onMounted, ref, watch } from 'vue'
+import AdminAnnouncementPanel from '@/components/admin/AdminAnnouncementPanel.vue'
 import AdminCardPanel from '@/components/admin/AdminCardPanel.vue'
 import AdminGlobalSettingsPanel from '@/components/admin/AdminGlobalSettingsPanel.vue'
+import AdminPluginsPanel from '@/components/admin/AdminPluginsPanel.vue'
 import AdminUserPanel from '@/components/admin/AdminUserPanel.vue'
 import { useToastStore } from '@/stores/toast'
 import { useUserStore } from '@/stores/user'
@@ -10,7 +12,7 @@ import { useUserStore } from '@/stores/user'
 const userStore = useUserStore()
 const toast = useToastStore()
 
-type TabKey = 'users' | 'cards' | 'redemptions' | 'logs' | 'settings'
+type TabKey = 'users' | 'cards' | 'redemptions' | 'logs' | 'settings' | 'announcement' | 'plugins'
 const tab = ref<TabKey>('users')
 const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'users', label: '用户管理', icon: 'i-carbon-user-multiple' },
@@ -18,6 +20,8 @@ const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'redemptions', label: '核销流水', icon: 'i-carbon-receipt' },
   { key: 'logs', label: '登录日志', icon: 'i-carbon-document' },
   { key: 'settings', label: '全局设置', icon: 'i-carbon-settings' },
+  { key: 'announcement', label: '公告', icon: 'i-carbon-notification' },
+  { key: 'plugins', label: '插件', icon: 'i-carbon-plug' },
 ]
 
 const redemptions = ref<Redemption[]>([])
@@ -282,6 +286,10 @@ onMounted(() => {
 
     <!-- 全局设置 -->
     <AdminGlobalSettingsPanel v-else-if="tab === 'settings'" />
+
+    <!-- 插件管理（活动插件 / 素材插件） -->
+    <AdminAnnouncementPanel v-else-if="tab === 'announcement'" />
+    <AdminPluginsPanel v-else-if="tab === 'plugins'" />
   </div>
 </template>
 

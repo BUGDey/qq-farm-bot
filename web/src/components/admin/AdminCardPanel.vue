@@ -155,7 +155,7 @@ function exportBatchTxt(list: Card[]) {
   )
   const content = ['创建时间\t卡密内容\t卡密类型', ...lines].join('\r\n')
   // 加 BOM，避免 Windows 记事本 / Excel 打开乱码
-  const blob = new Blob([`\ufeff${content}`], { type: 'text/plain;charset=utf-8' })
+  const blob = new Blob([`\uFEFF${content}`], { type: 'text/plain;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

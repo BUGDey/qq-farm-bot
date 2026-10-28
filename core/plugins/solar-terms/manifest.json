@@ -1,0 +1,24 @@
+{
+  "id": "solar-terms",
+  "name": "节令小札",
+  "version": "1.1.0",
+  "apiVersion": 1,
+  "description": "查看各节令赠礼与领取状态，自动领取节令奖励与答题附加奖励",
+  "activityIds": [],
+  "windows": [
+    { "key": "permanent", "startTime": 0, "endTime": 0 }
+  ],
+  "automation": [
+    { "key": "star_solar_claim", "label": "自动领取节令奖励", "detail": "各节令开放期间自动领取赠礼", "type": "boolean", "default": false },
+    { "key": "star_solar_quiz_claim", "label": "自动领取答题附加奖励", "detail": "按官方节令答题时间自动作答并领取附加奖励（答题时间以官方开放为准）", "type": "boolean", "default": false }
+  ],
+  "frontend": {
+    "entry": "frontend/plugin.mjs",
+    "css": ""
+  },
+  "card": {
+    "icon": "i-carbon-notebook",
+    "image": "",
+    "updatedMs": 1788460800000
+  }
+}

@@ -23,6 +23,14 @@ const plantPhaseImageMap = new Map();// assetName → { phase: imageUrl }
 let plantPhaseManifestPath = '';
 let plantPhaseManifestMtimeMs = -1;
 const skinDetailImageMap = new Map();// itemId → skinDetailImageUrl
+
+// 外部素材提供者（活动插件）。目录约定：
+//   <dir>/catalog/EventPlants.json
+//   <dir>/assets/seed_images_named/
+//   <dir>/assets/seed_images_named/skinDetail/
+//   <dir>/assets/plant_images/manifest.json
+// 宿主目录优先，provider 只补充缺失内容。
+const externalGameConfigProviders = [];
 const staticItemInfoMap = new Map([
     [6001, { id: 6001, name: '烟花·玉兔望月', type: 23, can_use: 1 }],
     [204010, { id: 204010, name: '玉兔邀月' }],
@@ -129,13 +137,44 @@ function loadConfigs() {
         // 活动植物通常早于全量静态配置发布，使用轻量增量表补齐植物、
         // 种子和果实三者的关系，避免土地与图鉴显示裸 ID。
         const eventPlantPath = path.join(basePath, 'EventPlants.json');
+        const mergedEventPlants = [];
         if (fs.existsSync(eventPlantPath)) {
-            const eventPlants = JSON.parse(fs.readFileSync(eventPlantPath, 'utf8'));
-            for (const entry of eventPlants) {
+            mergedEventPlants.push(...JSON.parse(fs.readFileSync(eventPlantPath, 'utf8')));
+        }
+        // 外部 provider（素材插件）追加的活动植物增量。插件优先级低于宿主，
+        // 宿主 basePath 里已存在的 EventPlants.json 条目优先。
+        for (const provider of externalGameConfigProviders) {
+            const p = path.join(provider.dir, 'catalog', 'EventPlants.json');
+            if (fs.existsSync(p)) {
+                try { mergedEventPlants.push(...JSON.parse(fs.readFileSync(p, 'utf8'))); } catch {}
+            }
+        }
+        if (mergedEventPlants.length) {
+            // EventPlants 可能包含官方 Plant.json 没有的补充字段：
+            //   size / grow_phases / all_state_spine / mutant_effect_plant / planting_priority / seasons
+            // 官方 Plant 更新后可能已经收录同一 seed_id 的条目，但这些补充字段仍在 EventPlants 里。
+            // 因此不是整行跳过，而是做字段级补全：宿主已有条目时，把 EventPlants 有但宿主缺的
+            // 额外字段 merge 进去；宿主没有条目时才创建新条目。
+            const supplementFields = ['size', 'grow_phases', 'all_state_spine', 'mutant_effect_plant', 'planting_priority', 'seasons'];
+            for (const entry of mergedEventPlants) {
                 if (isInvalidPlant(entry)) continue;
                 const plantId = Number(entry.id);
                 const seedId = Number(entry.seed_id) || 0;
-                if (plantMap.has(plantId) || (seedId > 0 && seedToPlant.has(seedId))) continue;
+                const existing = plantMap.get(plantId) || (seedId > 0 ? seedToPlant.get(seedId) : null);
+                if (existing) {
+                    // 宿主已有：只补 EventPlants 有而宿主缺的字段
+                    for (const f of supplementFields) {
+                        if (entry[f] != null && entry[f] !== ''
+                            && (existing[f] == null || existing[f] === '')) {
+                            existing[f] = entry[f];
+                        }
+                    }
+                    // size 特殊处理：如果 EventPlants 声明更大的 size（如 2x2），以 EventPlants 为准
+                    if (entry.size != null && Number(entry.size) > Number(existing.size || 1)) {
+                        existing.size = Number(entry.size);
+                    }
+                    continue;
+                }
                 const plant = {
                     ...entry,
                     id: plantId,
@@ -157,7 +196,7 @@ function loadConfigs() {
                 if (plant.fruit.id) fruitToPlant.set(plant.fruit.id, plant);
             }
             plantConfig = [...plantMap.values()];
-            console.warn(`[配置] 已合并活动植物配置 (${  eventPlants.length  } 种)`);
+            console.warn(`[配置] 已合并活动植物配置 (${  mergedEventPlants.length  } 种)`);
         }
     } catch (err) {
         console.warn('[配置] 加载 Plant.json 失败:', err.message);
@@ -183,9 +222,18 @@ function loadConfigs() {
         }
 
         const eventPlantPath = path.join(basePath, 'EventPlants.json');
+        const mergedEventPlants2 = [];
         if (fs.existsSync(eventPlantPath)) {
-            const eventPlants = JSON.parse(fs.readFileSync(eventPlantPath, 'utf8'));
-            for (const entry of eventPlants) {
+            mergedEventPlants2.push(...JSON.parse(fs.readFileSync(eventPlantPath, 'utf8')));
+        }
+        for (const provider of externalGameConfigProviders) {
+            const p = path.join(provider.dir, 'catalog', 'EventPlants.json');
+            if (fs.existsSync(p)) {
+                try { mergedEventPlants2.push(...JSON.parse(fs.readFileSync(p, 'utf8'))); } catch {}
+            }
+        }
+        if (mergedEventPlants2.length) {
+            for (const entry of mergedEventPlants2) {
                 if (isInvalidPlant(entry)) continue;
                 const seedId = Number(entry.seed_id);
                 const plant = seedToPlant.get(seedId);
@@ -241,14 +289,15 @@ function loadConfigs() {
 
     // 4. 加载种子图片映射
     try {
-        const seedImagesPath = path.join(basePath, 'seed_images_named');
         seedImageMap.clear();
         seedAssetImageMap.clear();
-        if (fs.existsSync(seedImagesPath)) {
-            const files = fs.readdirSync(seedImagesPath);
+        function indexSeedImageDir(dir, urlPrefix) {
+            if (!fs.existsSync(dir)) return;
+            const prefix = urlPrefix || '/game-config';
+            const files = fs.readdirSync(dir);
             for (const filename of files) {
                 const name = String(filename || '');
-                const imageUrl = `/game-config/seed_images_named/${  encodeURIComponent(filename)}`;
+                const imageUrl = `${prefix}/seed_images_named/${  encodeURIComponent(filename)}`;
 
                 // 匹配 {id}_xxx.png 格式
                 const namedMatch = name.match(/^(\d+)_.*\.(?:png|jpg|jpeg|webp|gif)$/i);
@@ -277,8 +326,12 @@ function loadConfigs() {
                     }
                 }
             }
-            console.warn(`[配置] 已加载种子图片映射 (${  seedImageMap.size  } 项)`);
         }
+        indexSeedImageDir(path.join(basePath, 'seed_images_named'), '/game-config');
+        for (const provider of externalGameConfigProviders) {
+            indexSeedImageDir(path.join(provider.dir, 'assets', 'seed_images_named'), provider.urlPrefix || '/game-config');
+        }
+        console.warn(`[配置] 已加载种子图片映射 (${  seedImageMap.size  } 项)`);
     } catch (err) {
         console.warn('[配置] 加载 seed_images_named 失败:', err.message);
     }
@@ -290,13 +343,13 @@ function loadConfigs() {
 
     // 6. 加载装扮道具图片映射
     try {
-        const skinDetailPath = path.join(basePath, 'seed_images_named', 'skinDetail');
-        skinDetailImageMap.clear();
-        if (fs.existsSync(skinDetailPath)) {
-            const skinFiles = fs.readdirSync(skinDetailPath);
+        function indexSkinDir(dir, urlPrefix) {
+            if (!fs.existsSync(dir)) return;
+            const prefix = urlPrefix || '/game-config';
+            const skinFiles = fs.readdirSync(dir);
             for (const skinFile of skinFiles) {
                 const skinName = String(skinFile || '');
-                const skinUrl = `/game-config/seed_images_named/skinDetail/${  encodeURIComponent(skinFile)}`;
+                const skinUrl = `${prefix}/seed_images_named/skinDetail/${  encodeURIComponent(skinFile)}`;
                 const skinMatch = skinName.match(/^(\d+)_img_(?:skin|nangua)_.*\.(?:png|jpg|jpeg|webp|gif)$/i);
                 if (skinMatch) {
                     const skinId = Number(skinMatch[1]) || 0;
@@ -305,8 +358,13 @@ function loadConfigs() {
                     }
                 }
             }
-            console.warn(`[配置] 已加载装扮道具图片映射 (${  skinDetailImageMap.size  } 项)`);
         }
+        skinDetailImageMap.clear();
+        indexSkinDir(path.join(basePath, 'seed_images_named', 'skinDetail'), '/game-config');
+        for (const provider of externalGameConfigProviders) {
+            indexSkinDir(path.join(provider.dir, 'assets', 'seed_images_named', 'skinDetail'), provider.urlPrefix || '/game-config');
+        }
+        console.warn(`[配置] 已加载装扮道具图片映射 (${  skinDetailImageMap.size  } 项)`);
     } catch (err) {
         console.warn('[配置] 加载 skinDetail 失败:', err.message);
     }
@@ -516,24 +574,51 @@ function getSeedImageBySeedId(seedId) {
  * 重新加载官方植物阶段图片清单。导出工具更新 manifest 后无需重启服务。
  */
 function loadPlantPhaseManifest(force = false) {
-    if (!plantPhaseManifestPath) return;
-    try {
-        const stat = fs.statSync(plantPhaseManifestPath);
-        if (!force && stat.mtimeMs === plantPhaseManifestMtimeMs) return;
-        const manifest = JSON.parse(fs.readFileSync(plantPhaseManifestPath, 'utf8'));
-        const nextMap = new Map();
-        for (const [assetName, phases] of Object.entries(manifest)) {
-            nextMap.set(assetName, phases || {});
-        }
-        plantPhaseImageMap.clear();
-        for (const [assetName, phases] of nextMap) plantPhaseImageMap.set(assetName, phases);
-        plantPhaseManifestMtimeMs = stat.mtimeMs;
-        console.warn(`[配置] 已加载植物阶段图片映射 (${  plantPhaseImageMap.size  } 种)`);
-    } catch (err) {
-        if (force || err.code !== 'ENOENT') {
-            console.warn('[配置] 加载 plant_images 失败:', err.message);
+    if (!plantPhaseManifestPath && externalGameConfigProviders.length === 0) return;
+    const nextMap = new Map();
+    let needsLoad = force;
+    function mergeManifestFile(manifestPath, urlPrefix) {
+        if (!manifestPath || !fs.existsSync(manifestPath)) return;
+        try {
+            const stat = fs.statSync(manifestPath);
+            if (!force && stat.mtimeMs <= (plantPhaseManifestMtimeMs || 0)) return;
+            needsLoad = true;
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            for (const [assetName, phases] of Object.entries(manifest)) {
+                if (!assetName) continue;
+                const cleaned = {};
+                for (const [phaseKey, imagePath] of Object.entries(phases || {})) {
+                    // provider manifest 里可能写 "plant_images/Crop_1/1.png"，也可能直接写完整 URL
+                    let url = String(imagePath || '');
+                    if (!/^https?:\/\//.test(url) && !url.startsWith(urlPrefix)) {
+                        url = `${urlPrefix}/${url.replace(/^\//, '')}`;
+                    }
+                    cleaned[phaseKey] = url;
+                }
+                // 宿主 basePath 的 asset 优先，provider 的只补充缺失
+                if (!nextMap.has(assetName)) nextMap.set(assetName, cleaned);
+                else {
+                    const existing = nextMap.get(assetName);
+                    for (const [pk, pv] of Object.entries(cleaned)) {
+                        if (!existing[pk]) existing[pk] = pv;
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn(`[配置] 加载 plant_images manifest ${manifestPath} 失败: ${err.message}`);
         }
     }
+    mergeManifestFile(plantPhaseManifestPath, '/game-config');
+    for (const provider of externalGameConfigProviders) {
+        mergeManifestFile(path.join(provider.dir, 'assets', 'plant_images', 'manifest.json'), provider.urlPrefix || '/game-config');
+    }
+    if (!needsLoad) return;
+    plantPhaseImageMap.clear();
+    for (const [assetName, phases] of nextMap) plantPhaseImageMap.set(assetName, phases);
+    try {
+        plantPhaseManifestMtimeMs = fs.existsSync(plantPhaseManifestPath) ? fs.statSync(plantPhaseManifestPath).mtimeMs : Date.now();
+    } catch { plantPhaseManifestMtimeMs = Date.now(); }
+    console.warn(`[配置] 已加载植物阶段映射 (${  plantPhaseImageMap.size  } 种)`);
 }
 
 /**
@@ -738,10 +823,71 @@ function getMutantEffectsByIds(ids) {
         .filter(effect => effect !== undefined);
 }
 
+/**
+ * 自举扫描仓库内置插件目录，自动注册 gameConfig.provides=true 的素材插件。
+ * 这样 gameConfig 独立加载（测试、开发模式）时也能拿到素材，不依赖 host.js 激活。
+ * host.js 激活时会再用 data/plugins/installed/ 下的版本注册一次——同内容不同目录，
+ * merge 是 first-wins 所以不会出错。
+ */
+function autoRegisterBuiltinGameConfigProviders() {
+    const pluginsDir = path.resolve(__dirname, '../../plugins');
+    if (!fs.existsSync(pluginsDir)) return;
+    for (const entry of fs.readdirSync(pluginsDir, { withFileTypes: true })) {
+        if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'builtin') continue;
+        const manifestPath = path.join(pluginsDir, entry.name, 'manifest.json');
+        if (!fs.existsSync(manifestPath)) continue;
+        let manifest;
+        try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch { continue; }
+        if (manifest?.gameConfig?.provides !== true) continue;
+        const providerDir = path.join(pluginsDir, entry.name);
+        const urlPrefix = manifest.gameConfig.urlPrefix || '/game-config';
+        if (!externalGameConfigProviders.some(p => p.dir === providerDir)) {
+            externalGameConfigProviders.push({ dir: providerDir, urlPrefix });
+        }
+    }
+}
+
 // 启动时加载配置
+autoRegisterBuiltinGameConfigProviders();
 loadConfigs();
 
+/**
+ * 注册一个外部素材提供者（素材插件安装目录）。
+ * 目录约定：<dir>/catalog/EventPlants.json、<dir>/assets/seed_images_named/、
+ * <dir>/assets/plant_images/manifest.json 等。宿主目录优先，provider 只补充缺失。
+ *
+ * @param {string} dir       - provider 安装目录绝对路径
+ * @param {string} [urlPrefix] - 前端访问前缀，默认 "/game-config"
+ */
+function registerExternalGameConfigProvider(dir, urlPrefix) {
+    const idx = externalGameConfigProviders.findIndex(p => p.dir === dir);
+    const normalized = { dir, urlPrefix: urlPrefix || '/game-config' };
+    if (idx >= 0) externalGameConfigProviders[idx] = normalized;
+    else externalGameConfigProviders.push(normalized);
+    loadConfigs();
+}
+
+/** 卸载 provider：从列表移除并重新加载 */
+function unregisterExternalGameConfigProvider(dir) {
+    const before = externalGameConfigProviders.length;
+    for (let i = before - 1; i >= 0; i -= 1) {
+        if (externalGameConfigProviders[i].dir === dir) externalGameConfigProviders.splice(i, 1);
+    }
+    if (externalGameConfigProviders.length !== before) loadConfigs();
+}
+
+/**
+ * 供 admin.js 等动态读取当前已注册 provider 列表（只读副本）。
+ * admin 静态路由在运行时遍历它们做素材回退。
+ */
+function getExternalGameConfigProviders() {
+    return externalGameConfigProviders.slice();
+}
+
 module.exports = {
+    registerExternalGameConfigProvider,
+    unregisterExternalGameConfigProvider,
+    getExternalGameConfigProviders,
     loadConfigs,
     getAllPlants,
     getAllSeeds,

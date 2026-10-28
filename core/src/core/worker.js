@@ -107,6 +107,21 @@ const { runWithRequestPriority } = require('../utils/request-priority');
 const { loadProto } = require('../utils/proto');
 const { setLogHook, log, toNum } = require('../utils/utils');
 const { resourcePolicy, createResourceMonitor } = require('../runtime/resource-policy');
+const { createWorkerPluginHost } = require('../plugins/worker-host');
+const { setWorkerPluginHost } = require('../plugins/worker-host-bridge');
+
+// 活动插件宿主：加载/卸载由 worker-manager 通过 plugin_sync/plugin_load/plugin_unload 驱动；
+// 自动化 runner 挂在活动自动化心跳里，api 方法经 handleApiCall 兜底分发。
+// 必须在 log 导入之后创建（顶层引用 log，放前面会触发 TDZ 使 worker 启动即崩）。
+const pluginWorkerHost = createWorkerPluginHost({
+    sendMsgAsync: require('../utils/network').sendMsgAsync,
+    getUserState: () => require('../utils/network').getUserState(),
+    getBag: () => require('../services/warehouse').getBag(),
+    getBagItems: reply => require('../services/warehouse').getBagItems(reply),
+    getServerTimeSec: () => require('../utils/utils').getServerTimeSec(),
+    log
+});
+setWorkerPluginHost(pluginWorkerHost);
 
 // 设置环境变量中的账号ID
 if (parentPort && workerData && workerData.accountId && !process.env.FARM_ACCOUNT_ID) {
@@ -487,6 +502,8 @@ async function runStarActivityAutoClaims() {
     if (!loginReady || friendSyncPaused || starActivityClaimRunning) return;
 
     const automation = getAutomation() || {};
+    // 活动插件的自动化开关（由插件 manifest 动态注册，宿主未知具体 key）
+    const pluginAutomationEnabled = pluginWorkerHost.hasEnabledAutomation(automation);
     const milkTeaEnabled = Object.keys(require('../services/activity-milk-tea').AUTO_ACTIONS).some(key => automation[key] === true);
     const claimPassport = automation.star_passport_claim === true;
     const claimSolarTerms = automation.star_solar_claim === true;
@@ -947,6 +964,15 @@ async function runStarActivityAutoClaims() {
                 }
             }
         }
+        // 限时活动插件的自动化：各插件 runner 自行做开关、阶段与前置条件判断，
+        // 单个插件异常只落日志，不影响其他插件与内置活动。
+        if (pluginAutomationEnabled) {
+            await pluginWorkerHost.runAutomation({
+                automation: getAutomation() || {},
+                getServerTimeSec: require('../utils/utils').getServerTimeSec,
+                isAccountReady: () => loginReady && !friendSyncPaused
+            });
+        }
         if (petDiaryAnyEnabled) {
             await runPetDiaryAutomation({
                 adopt: petDiaryAdoptEnabled,
@@ -1337,7 +1363,8 @@ function applyRuntimeConfig(config, syncStatusAfter = false) {
                 'pet_diary_treasure_open',
                 'pet_diary_compensation_claim',
                 'pet_diary_battle',
-                'pet_diary_charm_equip'
+                'pet_diary_charm_equip',
+                ...pluginWorkerHost.getAutomationKeys()
             ].some(key => !prevAuto?.[key] && newAuto?.[key]);
             if (starClaimBecameEnabled) {
                 workerScheduler.setTimeoutTask('star_activity_claim_after_save', 2000, () => {
@@ -1432,6 +1459,13 @@ onMasterMessage(async (msg) => {
             handleApiCall(msg);
         } else if (msg.type === 'config_sync') {
             applyRuntimeConfig(msg.config || {}, true);
+        } else if (msg.type === 'plugin_sync') {
+            // worker 启动时由主进程下发一次；之后安装/卸载走 plugin_load/plugin_unload
+            pluginWorkerHost.sync(msg.plugins || []);
+        } else if (msg.type === 'plugin_load') {
+            if (msg.plugin) pluginWorkerHost.load(msg.plugin);
+        } else if (msg.type === 'plugin_unload') {
+            if (msg.pluginId) pluginWorkerHost.unload(msg.pluginId);
         } else if (msg.type === 'watchdog_ping') {
             sendToMaster({ type: 'watchdog_pong', at: msg.at || Date.now() });
         } else if (msg.type === 'task_permit_granted') {
@@ -2153,8 +2187,15 @@ async function handleApiCall(msg) {
                 }
                 break;
             }
-            default:
-                error = 'Unknown method';
+            default: {
+                // 内置方法未命中时兜底分发给活动插件注册的 api 方法
+                const dispatched = await pluginWorkerHost.callApiMethod(method, args);
+                if (dispatched.found) {
+                    result = dispatched.result;
+                } else {
+                    error = 'Unknown method';
+                }
+            }
         }
     } catch (err) {
         error = err.message;

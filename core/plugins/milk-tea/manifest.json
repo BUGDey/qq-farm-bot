@@ -1,0 +1,55 @@
+{
+  "id": "milk-tea",
+  "name": "奶茶热销中",
+  "version": "1.1.0",
+  "apiVersion": 1,
+  "description": "经营奶茶小店、兑换商店与兼职工作",
+  "activityIds": [2026110100],
+  "windows": [
+    { "key": "activity", "startTime": 1792029600, "endTime": 1794844799 },
+    { "key": "business", "startTime": 1792029600, "endTime": 1794671998 }
+  ],
+  "automation": [
+    { "key": "mall_coupon_gift_buy", "label": "自动购买点券礼包", "detail": "买完奶茶点券礼包剩余限额，余额不足时跳过", "window": "activity", "type": "boolean", "default": false },
+    { "key": "milk_tea_cashier", "label": "自动领取收益", "detail": "领取店铺累计营业收益", "window": "activity", "type": "boolean", "default": false },
+    { "key": "milk_tea_wages", "label": "自动领取工资", "detail": "领取已结算的打工工资", "window": "activity", "type": "boolean", "default": false },
+    { "key": "milk_tea_share_daily", "label": "自动领取每日快乐值", "detail": "领取每日快乐值奖励", "window": "activity", "type": "boolean", "default": false },
+    { "key": "milk_tea_share_rewards", "label": "自动领取快乐值奖励", "detail": "领取已达成的快乐值档位奖励", "window": "activity", "type": "boolean", "default": false },
+    { "key": "milk_tea_fund_rewards", "label": "自动领取成长基金奖励", "detail": "仅领取已解锁且达到条件的奖励", "window": "activity", "type": "boolean", "default": false },
+    { "key": "milk_tea_upgrade", "label": "自动升级店铺", "detail": "营业额达到要求后升级", "window": "business", "type": "boolean", "default": false },
+    { "key": "milk_tea_craft", "label": "自动制作奶茶", "detail": "加工全部已解锁配方对应的果实", "window": "business", "type": "boolean", "default": false },
+    { "key": "milk_tea_boost", "label": "自动使用宣传喇叭", "detail": "使用背包中已有的宣传喇叭", "window": "business", "type": "boolean", "default": false },
+    { "key": "milk_tea_hire", "label": "自动雇佣员工", "detail": "按列表顺序选择首个符合类型的空闲好友", "window": "business", "type": "boolean", "default": false },
+    { "key": "milk_tea_work_interact", "label": "自动打工互动", "detail": "被雇佣后自动选择一种互动方式", "window": "business", "type": "boolean", "default": false },
+    { "key": "milk_tea_seed_buy", "label": "自动购买已解锁种子", "detail": "不使用钻石", "window": "business", "type": "boolean", "default": false },
+    { "key": "milk_tea_hire_duration", "label": "雇佣时长", "detail": "自动雇佣时选择的班次时长", "window": "business", "type": "select", "default": 1, "options": [
+      { "value": 1, "label": "4 小时" },
+      { "value": 2, "label": "12 小时" },
+      { "value": 3, "label": "24 小时" }
+    ] },
+    { "key": "milk_tea_hire_talent", "label": "雇佣类型", "detail": "自动雇佣时优先选择的好友类型", "window": "business", "type": "select", "default": 0, "options": [
+      { "value": 0, "label": "任意好友" },
+      { "value": 9001, "label": "金牌销售" },
+      { "value": 9002, "label": "金牌宣传" },
+      { "value": 9003, "label": "金牌服务" },
+      { "value": 9004, "label": "实习员工（默默搬砖）" }
+    ] },
+    { "key": "milk_tea_work_interact_type", "label": "打工互动方式", "detail": "自动打工互动使用的互动类型", "window": "business", "type": "select", "default": 1, "options": [
+      { "value": 1, "label": "宣传推广" },
+      { "value": 2, "label": "花式摇杯" },
+      { "value": 3, "label": "招牌试饮" },
+      { "value": 4, "label": "划水摸鱼" },
+      { "value": 5, "label": "申请涨薪" }
+    ] }
+  ],
+  "frontend": {
+    "entry": "frontend/plugin.mjs",
+    "css": "frontend/plugin.css",
+    "assetPrefix": "/activity/milk-tea"
+  },
+  "card": {
+    "icon": "i-carbon-cafe",
+    "image": "/activity/milk-tea/img_s4Main_bg.png",
+    "updatedMs": 1792029600000
+  }
+}

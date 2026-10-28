@@ -56,9 +56,8 @@ function isOwnedAccount(acc: any) {
 }
 
 // ==================== 访问凭证有效期倒计时 ====================
-// credentialExpireAt 是后端绝对时间戳（credentialUpdatedAt + 有效期时长），本地只需
-// 每秒刷新一次时钟做递减，不轮询接口也不会累积漂移。保活成功（每 30 分钟）会刷新
-// loginBuffer 并重新打点，倒计时自动回到满额。
+// credentialExpireAt 是后端按账号首次加入时间估算的绝对到期时间，本地只需
+// 每秒刷新一次时钟做递减，不轮询接口也不会累积漂移；凭证刷新不会重置倒计时。
 const nowTick = ref(Date.now())
 let nowTimer: ReturnType<typeof setInterval> | null = null
 
@@ -82,8 +81,11 @@ function credentialRemainingMs(acc: any) {
 /** 中文格式：剩余 1 小时 49 分 59 秒（跳过为 0 的高位单位） */
 function formatCredentialRemaining(acc: any) {
   const ms = credentialRemainingMs(acc)
-  if (ms <= 0)
+  if (ms <= 0) {
+    if (acc?.online)
+      return '已超过预计凭证时长，账号当前在线'
     return '已过期，请重新扫码或刷新凭证'
+  }
   const totalSec = Math.floor(ms / 1000)
   const days = Math.floor(totalSec / 86400)
   const hours = Math.floor((totalSec % 86400) / 3600)
@@ -102,6 +104,8 @@ function formatCredentialRemaining(acc: any) {
 
 function credentialCountdownClass(acc: any) {
   const ms = credentialRemainingMs(acc)
+  if (ms <= 0 && acc?.online)
+    return 'text-gray-700 dark:text-gray-200'
   if (ms <= 30 * 60 * 1000)
     return 'text-red-500'
   return 'text-gray-700 dark:text-gray-200'
@@ -221,7 +225,7 @@ function accountAvatar(acc: any) {
                   {{ getPlatformLabel(acc.platform) }}
                 </span>
                 <span
-                  class="max-w-full truncate rounded bg-gray-100 px-1.5 py-0.5 text-[11px] leading-tight text-gray-500 sm:text-[10px] dark:bg-gray-700 dark:text-gray-400"
+                  class="max-w-full truncate rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-500 leading-tight dark:bg-gray-700 sm:text-[10px] dark:text-gray-400"
                   :title="`创建者：${ownerLabel(acc)}`"
                 >
                   创建者：{{ ownerLabel(acc) }}
@@ -237,7 +241,7 @@ function accountAvatar(acc: any) {
             <BaseButton
               variant="secondary"
               size="sm"
-              class="border rounded-full px-4 shadow-sm transition-all duration-500 ease-in-out sm:w-20 sm:px-2 active:scale-95"
+              class="border rounded-full px-4 shadow-sm transition-all duration-500 ease-in-out sm:w-20 active:scale-95 sm:px-2"
               :class="acc.running ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 focus:ring-red-500 active:border-red-300 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 dark:focus:ring-red-500 dark:active:border-red-700' : 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100 focus:ring-green-500 active:border-green-300 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30 dark:focus:ring-green-500 dark:active:border-green-700'"
               :disabled="!isOwnedAccount(acc) || (!acc.running && isAccountOpsDisabled)"
               :title="!isOwnedAccount(acc) ? '仅账号归属用户或超级管理员可以操作' : (!acc.running && isAccountOpsDisabled ? '账号已到期，无法启动账号' : '')"
@@ -250,7 +254,7 @@ function accountAvatar(acc: any) {
         </div>
 
         <div class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-700">
-          <div class="hidden shrink-0 items-center gap-2 text-sm whitespace-nowrap text-gray-500 sm:flex">
+          <div class="hidden shrink-0 items-center gap-2 whitespace-nowrap text-sm text-gray-500 sm:flex">
             <span class="flex items-center gap-1">
               <div class="h-2 w-2 rounded-full" :class="acc.running ? 'bg-green-500' : 'bg-gray-300'" />
               {{ acc.running ? '运行中' : '已停止' }}
@@ -261,7 +265,7 @@ function accountAvatar(acc: any) {
             <BaseButton
               :data-testid="`set-default-plan-${acc.id}`"
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] sm:flex-initial lt-sm:!p-3"
               :loading="defaultPlanSettingId === String(acc.id)"
               :disabled="!isOwnedAccount(acc) || !!defaultPlanSettingId || !!defaultPlanApplyingId"
               aria-label="设置默认方案"
@@ -276,7 +280,7 @@ function accountAvatar(acc: any) {
             <BaseButton
               :data-testid="`apply-default-plan-${acc.id}`"
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] sm:flex-initial lt-sm:!p-3"
               :loading="defaultPlanApplyingId === String(acc.id)"
               :disabled="!isOwnedAccount(acc) || !!defaultPlanSettingId || !!defaultPlanApplyingId"
               aria-label="应用默认方案"
@@ -290,7 +294,7 @@ function accountAvatar(acc: any) {
             </BaseButton>
             <BaseButton
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] sm:flex-initial lt-sm:!p-3"
               :disabled="!isOwnedAccount(acc)"
               aria-label="设置"
               :title="isOwnedAccount(acc) ? '设置' : '仅账号归属用户或超级管理员可以配置'"
@@ -303,7 +307,7 @@ function accountAvatar(acc: any) {
             </BaseButton>
             <BaseButton
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 lt-sm:min-h-[46px] lt-sm:min-w-[46px] sm:flex-initial lt-sm:!p-3"
               :disabled="!isOwnedAccount(acc)"
               aria-label="编辑"
               :title="isOwnedAccount(acc) ? '编辑' : '仅账号归属用户或超级管理员可以编辑'"
@@ -316,7 +320,7 @@ function accountAvatar(acc: any) {
             </BaseButton>
             <BaseButton
               variant="ghost"
-              class="group relative min-h-[36px] min-w-[36px] flex-1 text-red-500 lt-sm:min-h-[46px] lt-sm:min-w-[46px] lt-sm:!p-3 sm:flex-initial dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 disabled:text-red-300 disabled:opacity-60 dark:disabled:text-red-400/60"
+              class="group relative min-h-[36px] min-w-[36px] flex-1 text-red-500 lt-sm:min-h-[46px] lt-sm:min-w-[46px] sm:flex-initial dark:text-red-400 disabled:text-red-300 hover:text-red-600 disabled:opacity-60 lt-sm:!p-3 dark:disabled:text-red-400/60 dark:hover:text-red-300"
               :disabled="!isOwnedAccount(acc)"
               aria-label="删除"
               :title="isOwnedAccount(acc) ? '删除' : '仅账号归属用户或超级管理员可以删除'"
@@ -334,7 +338,7 @@ function accountAvatar(acc: any) {
         <div
           v-if="acc.running && acc.credentialExpireAt"
           class="mt-3 flex items-center gap-1.5 border-t border-gray-100 pt-3 text-xs dark:border-gray-700"
-          :title="`以凭证更新时间 + ${acc.credentialValidityHours ?? 2} 小时估算（可在管理后台全局设置调整）；每 30 分钟保活成功后自动重置`"
+          :title="`以账号首次加入时间 + ${acc.credentialValidityHours ?? 2} 小时估算（可在管理后台全局设置调整）；凭证刷新不会重置`"
         >
           <div class="i-carbon-timer text-sm" :class="credentialCountdownClass(acc)" />
           <span class="text-gray-500 dark:text-gray-400">访问凭证:</span>

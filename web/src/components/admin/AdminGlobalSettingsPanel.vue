@@ -112,7 +112,8 @@ async function toggleFreeCard(value: boolean | undefined) {
 onMounted(() => {
   loadFreeCardStatus()
   loadVisibility()
-})</script>
+})
+</script>
 
 <template>
   <div class="flex flex-col gap-4">
