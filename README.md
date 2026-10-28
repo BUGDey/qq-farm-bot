@@ -35,7 +35,7 @@
 - 补充 full / source 两种包的对照表，以及管理员密码在 `.env` 的 `FARM_ADMIN_PASSWORD`。
 - 完整历史见 [更新记录](docs/CHANGELOG.md)，登录页「更新日志」同步保留全部版本。
 
-## 📦 发行版安装（免编译，推荐）## <th><img src="https://cdn.simpleicons.org/wechat/07C160" height="20" alt="微信" /></th> 微信扫码登录
+## <th><img src="https://cdn.simpleicons.org/wechat/07C160" height="20" alt="微信" /></th> 微信扫码登录
 
 微信玩家可直接在“添加账号 → 微信扫码”中完成登录。扫码链路已内置到 Bot 进程，通过应用宝 OAuth 获取微信会话，并使用内置 MMTLS 协议换取农场短时效 Code，无需额外部署 YYB-GO、第三方登录 API 或代理容器。
 
