@@ -46,6 +46,7 @@ const { registerAdminCaptureRoutes, setEmbeddedCapture } = require("./admin-capt
 const { createCaptureCore } = require("../capture/index");
 const { registerAdminCurrentUserRoutes } = require("./admin-current-user-routes");
 const { registerAnnouncementRoutes } = require("./announcement-routes");
+const { registerPublicRenewRoutes } = require("./public-renew-routes");
 const {
   registerAdminFarmOperationRoutes,
 } = require("./admin-farm-operation-routes");
@@ -95,6 +96,7 @@ const PUBLIC_API_PATHS = new Set([
 const PUBLIC_API_PREFIXES = [
   "/card/info/",
   "/public/renew",
+  "/public/account-status",
   "/public/reset-password/",
 ];
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -658,6 +660,8 @@ function startAdminServer(dataProvider) {
     requireAdminRole,
     store,
   });
+  // 登录页「账号续费」：未登录也能用「账号 + 卡密」给过期账号续费
+  registerPublicRenewRoutes({ app });
   registerAdminAccountRoutes({
     app,
     provider,

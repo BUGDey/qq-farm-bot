@@ -27,11 +27,22 @@ flowchart TB
 
     P --> Q[2026-10-29 · v2.9.0<br/>登录页改版与插件系统]
 
+    Q --> R[2026-10-29 · v2.9.1<br/>登录页续费弹窗与品牌位置]
+
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R seed;
 ```
 
 ## 详细记录
+
+### 2026-10-29 · v2.9.1 · 登录页续费弹窗与品牌位置调整
+
+- 登录页品牌区（Logo + 标题 + 标语）改为固定左上角，不再与登录卡片同排居中。
+- 修复登录页「账号续费」点击无反应：原先跳转 `/account` 会被登录守卫弹回，现改为直接弹出续费窗口。
+- 新增登录页续费窗口 `web/src/components/login/LoginRenewModal.vue`：输入账号 + 卡密即可核销，复用免登录接口 `POST /api/public/renew`（与「我的账户 → 卡密续费」同一套 `userStore.renewUser` 逻辑），因此**已过期、无法登录的账号也能续费**。
+- 新增只读辅助接口 `GET /api/public/account-status`（`core/src/controllers/public-renew-routes.js`），续费前提示「该账号已过期 / 有效期至」，并按 IP 复用登录限流。
+- 续费成功后自动把账号回填登录框并记住账号，可直接登录；未开放公开续费时提示改用登录后的卡密续费入口。
+- 前后端包版本统一更新为 `2.9.1`。
 
 ### 2026-10-29 · v2.9.0 · 登录页改版、系统公告与活动插件系统
 

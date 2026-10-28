@@ -2,6 +2,7 @@
 import type { ApiResult } from '@/stores/user'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import LoginRenewModal from '@/components/login/LoginRenewModal.vue'
 import UpdateLogModal from '@/components/login/UpdateLogModal.vue'
 import { APP_VERSION } from '@/data/update-log'
 import { useAppStore } from '@/stores/app'
@@ -20,6 +21,7 @@ const appStore = useAppStore()
 const tab = ref<TabKey>('login')
 const loading = ref(false)
 const showUpdateLog = ref(false)
+const showRenew = ref(false)
 const showPassword = ref(false)
 
 const GITHUB_URL = 'https://github.com/BUGDey/qq-farm-bot'
@@ -213,6 +215,22 @@ function switchTab(next: TabKey) {
   showPassword.value = false
 }
 
+/** 登录页续费成功后，把账号回填到登录框，方便直接登录 */
+function handleRenewDone(username: string) {
+  if (!username)
+    return
+  loginForm.value.username = username
+  loginForm.value.password = ''
+  tab.value = 'login'
+  try {
+    localStorage.setItem(REMEMBER_KEY, username)
+    rememberUsername.value = true
+  }
+  catch {
+    // 隐私模式下 localStorage 不可用，忽略
+  }
+}
+
 onMounted(() => {
   appStore.fetchLoginPageConfig()
   try {
@@ -236,23 +254,26 @@ onMounted(() => {
     <div class="login-bg" />
     <div class="login-bg-mask" />
 
-    <div class="relative z-1 mx-auto max-w-[1220px] min-h-screen w-full flex items-center justify-center gap-12 px-4 py-8 lg:justify-between lg:px-10">
-      <!-- 左侧品牌区（桌面端展示） -->
-      <div class="hidden flex-col gap-3 lg:flex">
-        <div class="flex items-center gap-3">
-          <div class="h-14 w-14 flex items-center justify-center overflow-hidden rounded-2xl bg-white/80 shadow-lg ring-1 ring-white/70 backdrop-blur">
-            <img src="/icon.png" alt="logo" class="h-full w-full object-cover">
-          </div>
-          <div>
-            <h1 class="text-2xl text-gray-900 font-bold drop-shadow-sm">
-              {{ appStore.loginPageConfig.title || 'QQ 农场智能助手' }}
-            </h1>
-            <p class="mt-0.5 text-sm text-gray-700/80">
-              种下希望 收获快乐
-            </p>
-          </div>
+    <!-- 左上角品牌区（桌面端展示，贴左上角） -->
+    <div class="login-brand hidden flex-col gap-3 lg:flex">
+      <div class="flex items-center gap-3">
+        <div class="h-14 w-14 flex items-center justify-center overflow-hidden rounded-2xl bg-white/80 shadow-lg ring-1 ring-white/70 backdrop-blur">
+          <img src="/icon.png" alt="logo" class="h-full w-full object-cover">
+        </div>
+        <div>
+          <h1 class="text-2xl text-gray-900 font-bold drop-shadow-sm">
+            {{ appStore.loginPageConfig.title || 'QQ 农场智能助手' }}
+          </h1>
+          <p class="mt-0.5 text-sm text-gray-700/80">
+            种下希望 收获快乐
+          </p>
         </div>
       </div>
+    </div>
+
+    <div class="relative z-1 mx-auto max-w-[1220px] min-h-screen w-full flex items-center justify-center gap-12 px-4 py-8 lg:justify-between lg:px-10">
+      <!-- 占位块：品牌区已固定到左上角，保留占位以维持卡片原有位置 -->
+      <div class="hidden shrink-0 lg:block lg:w-[320px]" aria-hidden="true" />
 
       <!-- 右侧登录卡片 -->
       <div class="login-card max-w-[420px] w-full rounded-3xl p-6 md:p-7">
@@ -421,7 +442,7 @@ onMounted(() => {
             <span class="h-px flex-1 bg-gray-200" />
           </div>
           <div class="grid grid-cols-3 mt-3 gap-2">
-            <button type="button" class="quick-entry" @click="router.push('/account')">
+            <button type="button" class="quick-entry" @click="showRenew = true">
               <div class="i-carbon-renew text-lg text-emerald-500" />
               <span>账号续费</span>
             </button>
@@ -456,6 +477,12 @@ onMounted(() => {
     </div>
 
     <UpdateLogModal :show="showUpdateLog" @close="showUpdateLog = false" />
+    <LoginRenewModal
+      :show="showRenew"
+      :default-username="loginForm.username"
+      @close="showRenew = false"
+      @done="handleRenewDone"
+    />
   </div>
 </template>
 
@@ -480,6 +507,15 @@ onMounted(() => {
   background:
     radial-gradient(circle at 22% 30%, rgba(255, 255, 255, 0.18), transparent 55%),
     linear-gradient(90deg, rgba(12, 30, 20, 0.18), rgba(12, 30, 20, 0.02) 45%, rgba(12, 30, 20, 0.22));
+}
+
+/* 左上角品牌区：桌面端固定贴左上角，不再随卡片垂直居中 */
+.login-brand {
+  position: absolute;
+  top: clamp(20px, 5vh, 52px);
+  left: clamp(20px, 3.5vw, 64px);
+  z-index: 2;
+  pointer-events: none;
 }
 
 .login-card {

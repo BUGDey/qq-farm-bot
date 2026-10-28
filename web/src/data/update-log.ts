@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.9.0'
+export const APP_VERSION = '2.9.1'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.9.1',
+    date: '2026-10-29',
+    items: [
+      '登录页品牌区（Logo + 标题 + 标语）移到左上角，不再和登录卡片挤在一行。',
+      '修复登录页「账号续费」点击无反应：改为直接弹出续费窗口。',
+      '续费窗口支持输入账号 + 卡密，未登录也能给已过期账号续费（与「我的账户 → 卡密续费」同一套核销逻辑），核销成功后自动把账号回填到登录框。',
+    ],
+  },
   {
     version: '2.9.0',
     date: '2026-10-29',
