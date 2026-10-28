@@ -1,0 +1,294 @@
+name: Release
+
+# 发布流程：推送 v* 标签（或在 Actions 页面手动触发）后自动
+#   1) 构建前端 web/dist
+#   2) 分别打出 Windows / Linux × 完整部署包 / 源码包 四个 zip
+#   3) 创建 GitHub Release 并上传 zip（发布说明里固定写明管理员密码在哪里看）
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的标签，必须与 web/package.json 的版本一致（例如 v2.9.1）'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 校验标签与版本号一致，避免出现「tag 是 v2.9.1、代码里还是 2.9.0」的发布事故
+  # ---------------------------------------------------------------------------
+  prepare:
+    name: 校验版本
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 读取版本号并校验标签
+        id: meta
+        shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./web/package.json').version")"
+          if [ -n "${INPUT_TAG:-}" ]; then
+            TAG="${INPUT_TAG}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          if [ "v${VERSION}" != "${TAG}" ]; then
+            echo "::error::标签 ${TAG} 与 web/package.json 的版本 v${VERSION} 不一致。请先改版本号再打标签。"
+            exit 1
+          fi
+          core_version="$(node -p "require('./core/package.json').version")"
+          if [ "${core_version}" != "${VERSION}" ]; then
+            echo "::warning::core/package.json 版本 ${core_version} 与 web 版本 ${VERSION} 不一致"
+          fi
+          {
+            echo "version=${VERSION}"
+            echo "tag=${TAG}"
+          } >> "$GITHUB_OUTPUT"
+          echo "准备发布 ${TAG}"
+
+  # ---------------------------------------------------------------------------
+  # 前端产物在 CI 里构建（web/dist 不进仓库），四个包共用这一份
+  # ---------------------------------------------------------------------------
+  build-web:
+    name: 构建前端
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+          fetch-depth: 1
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建前端
+        run: pnpm -C web build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+          retention-days: 3
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # 四个产物：win-x64-full / win-x64-source / linux-x64-full / linux-x64-source
+  #   full   = 源码 + 预构建的 web/dist，解压后跑脚本即可（脚本会自动装后端依赖）
+  #   source = 纯源码，脚本会在首次启动时自动构建前端
+  # ---------------------------------------------------------------------------
+  package:
+    name: 打包 ${{ matrix.target }}-${{ matrix.flavor }}
+    needs: [prepare, build-web]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: win
+            flavor: full
+          - target: win
+            flavor: source
+          - target: linux
+            flavor: full
+          - target: linux
+            flavor: source
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+          fetch-depth: 1
+
+      - name: 下载前端产物
+        if: matrix.flavor == 'full'
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+      - name: 组装发布目录
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          TARGET: ${{ matrix.target }}
+          FLAVOR: ${{ matrix.flavor }}
+        run: |
+          set -euo pipefail
+          NAME="qq-farm-bot-v${VERSION}-${TARGET}-x64-${FLAVOR}"
+          STAGE="stage/${NAME}"
+          mkdir -p "${STAGE}"
+
+          # 复制源码，排除版本库、依赖、运行数据与构建中间产物
+          # 注意：rsync 的模式前加 / 才是「只匹配仓库根目录」，
+          # 否则 data/ 会把 web/src/data（update-log.ts 所在）一起排除掉，源码包会构建失败
+          rsync -a \
+            --exclude '/.git/' \
+            --exclude '/.github/' \
+            --exclude '/.workbuddy/' \
+            --exclude '/stage/' \
+            --exclude '/out/' \
+            --exclude '/node_modules/' \
+            --exclude 'node_modules/' \
+            --exclude '/core/data/' \
+            --exclude '/data/' \
+            --exclude '/logs/' \
+            --exclude '/.env' \
+            --exclude '*.log' \
+            --exclude '*.bak' \
+            --exclude '/web/dist*' \
+            --exclude '/core/docs/' \
+            ./ "${STAGE}/"
+
+          # 完整部署包：带上构建好的前端产物（源码包不带，首次启动时自行构建）
+          if [ "${FLAVOR}" = "full" ]; then
+            mkdir -p "${STAGE}/web"
+            cp -a web/dist "${STAGE}/web/dist"
+          fi
+
+          # 按平台裁剪启动脚本
+          if [ "${TARGET}" = "win" ]; then
+            rm -f "${STAGE}/start.sh" "${STAGE}/compose.sh" "${STAGE}/deploy.sh"
+            # 批处理必须是 CRLF，否则 cmd 解析括号块会出错
+            for f in "${STAGE}"/*.bat; do
+              sed -i 's/\r$//; s/$/\r/' "$f"
+            done
+          else
+            rm -f "${STAGE}/start.bat" "${STAGE}/stop.bat"
+            find "${STAGE}" -type f -name '*.sh' -exec chmod +x {} \;
+          fi
+
+          # 包里放一份纯文本快速上手说明（解压后第一眼能看到，不用翻网页）
+          if [ "${TARGET}" = "win" ]; then
+            LAUNCH_TEXT='双击 start.bat 启动；停止服务双击 stop.bat'
+          else
+            LAUNCH_TEXT='执行 chmod +x start.sh && ./start.sh 启动；停止服务 ./start.sh stop'
+          fi
+          cat > "${STAGE}/使用说明.txt" <<EOF
+          QQ 农场智能助手 ${NAME}
+          构建时间：$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M')（北京时间）
+
+          ------------------------------------------------------------
+          一、怎么启动
+          ------------------------------------------------------------
+            ${LAUNCH_TEXT}
+            需要 Node.js 20 及以上；没有 pnpm 时脚本会自动用 corepack 安装。
+            启动后浏览器打开 http://localhost:3007（服务器则用 http://服务器IP:3007）
+
+          ------------------------------------------------------------
+          二、管理后台账号密码在哪里看
+          ------------------------------------------------------------
+            账号：默认 admin，可在项目根目录 .env 里用 FARM_ADMIN_USERNAME 修改。
+            密码：在项目根目录的 .env 文件里，看 FARM_ADMIN_PASSWORD 这一行。
+            首次启动会自动生成随机密码并写入 .env：
+              Windows：由 core\scripts\init-env.js 生成，并在窗口里打印出来；
+              Linux  ：由 ./start.sh 生成，并在终端打印「初始管理员账号」方框。
+            之后随时可以打开 .env 文件查看。
+            注意：.env 里的密码只在第一次创建管理员时生效。如果
+            core/data/users.json（Docker 模式是 ./data/users.json）里已经有
+            admin，请继续使用旧密码。
+
+          ------------------------------------------------------------
+          三、忘记密码（先停止服务）
+          ------------------------------------------------------------
+            Windows： cd core
+                      node scripts/reset-admin-password.js 新密码
+            Linux  ： cd core && node scripts/reset-admin-password.js 新密码
+                      或直接： ./start.sh reset-admin
+            Docker ： docker compose run --rm --entrypoint node qq-farm-bot scripts/reset-admin-password.js 新密码
+
+          ------------------------------------------------------------
+          四、数据与升级
+          ------------------------------------------------------------
+            运行数据（用户、卡密、账号配置）在 core/data/；Docker 模式在 ./data/。
+            升级时保留该目录即可，压缩包里不含 .env、node_modules、core/data。
+            更新内容见 docs/CHANGELOG.md，面板登录页的「更新日志」也有完整记录。
+          EOF
+
+          # Windows 包里的文本说明转成 CRLF，避免记事本显示成一整行
+          if [ "${TARGET}" = "win" ]; then
+            sed -i 's/\r$//; s/$/\r/' "${STAGE}/使用说明.txt"
+          fi
+
+          mkdir -p out
+          ( cd stage && zip -q -r -X "../out/${NAME}.zip" "${NAME}" )
+          ls -lh "out/${NAME}.zip"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.target }}-${{ matrix.flavor }}
+          path: out/*.zip
+          retention-days: 7
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # 汇总四个 zip → 创建 Release（发布说明里固定包含管理员密码说明）
+  # ---------------------------------------------------------------------------
+  publish:
+    name: 发布 Release
+    needs: [prepare, package]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+          fetch-depth: 1
+
+      - name: 收集产物
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pkg-*
+          path: dist
+          merge-multiple: true
+
+      - name: 生成发布说明
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -euo pipefail
+          DATE_NOW="$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M')"
+          # 说明正文统一放在 .github/release-notes.md，这里只做占位符替换
+          # （模板里的反引号、表格、代码块都不会被 shell 二次解析）
+          sed -e "s|__TAG__|${TAG}|g" \
+              -e "s|__VERSION__|${VERSION}|g" \
+              -e "s|__DATE__|${DATE_NOW}|g" \
+              .github/release-notes.md > release-notes.md
+          echo "发布说明 $(wc -l < release-notes.md) 行"
+          sed -n '1,8p' release-notes.md
+
+      - name: 发布
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: QQ 农场智能助手 ${{ needs.prepare.outputs.tag }}
+          body_path: release-notes.md
+          files: dist/*.zip
+          draft: false
+          prerelease: false
