@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.9.1'
+export const APP_VERSION = '2.9.2'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.9.2',
+    date: '2026-10-29',
+    items: [
+      'README 新增「发行版安装」章节：不用装 Git / pnpm，直接下载打包好的 zip 解压就能跑。',
+      'Windows 下载 full 包双击 start.bat 即可启动；Linux 提供一条命令取最新版、下载、解压并启动。',
+      '补充 full / source 两种包的对照表，并写明管理员密码在项目根目录 .env 的 FARM_ADMIN_PASSWORD、忘了怎么重置。',
+    ],
+  },
   {
     version: '2.9.1',
     date: '2026-10-29',

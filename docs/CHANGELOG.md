@@ -29,11 +29,22 @@ flowchart TB
 
     Q --> R[2026-10-29 · v2.9.1<br/>登录页续费弹窗与品牌位置]
 
+    R --> S[2026-10-29 · v2.9.2<br/>README 发行版安装说明]
+
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S seed;
 ```
 
 ## 详细记录
+
+### 2026-10-29 · v2.9.2 · README 发行版安装说明
+
+- README 新增「📦 发行版安装（免编译，推荐）」章节：不必安 Git / pnpm，直接下载 Releases 里的 zip 解压启动。
+- Windows：下载 `*-win-x64-full.zip` 解压后双击 `start.bat`，首次启动自动生成 `.env` 与随机管理员密码并打印在窗口里。
+- Linux：给出一条命令取最新版本并下载、解压、`./start.sh` 启动（含 `full` → `source` 替换、钉版本号、免菜单 `./start.sh 1|2`、`status|logs|restart|stop`、无 `unzip` 时用 `python3 -m zipfile -e` 的写法）。
+- 补充 full / source 两种包的对照表，并说明管理员密码在项目根目录 `.env` 的 `FARM_ADMIN_PASSWORD`、忘记密码用 `node scripts/reset-admin-password.js` 重置。
+- 顺手修正「详细部署与运维见 docs/部署说明.md」处缺失的反引号。
+- 前后端包版本统一更新为 `2.9.2`。
 
 ### 2026-10-29 · v2.9.1 · 登录页续费弹窗与品牌位置调整
 

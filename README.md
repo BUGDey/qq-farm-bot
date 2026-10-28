@@ -28,14 +28,14 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.9.1
+## 🎉 最新更新 · v2.9.2
 
-- 登录页品牌区移到左上角，登录卡片位置保持不变。
-- 修复登录页「账号续费」点不开的问题，改为弹出续费窗口。
-- 登录页续费窗口支持「账号 + 卡密」核销，未登录也能给**已过期账号**续费，核销成功后自动回填账号到登录框。
+- README 新增「发行版安装」章节：不用装 Git / pnpm，直接下载打包好的 zip。
+- Linux 一条命令下载最新发行版、解压并启动；Windows 解压双击 `start.bat` 即可。
+- 补充 full / source 两种包的对照表，以及管理员密码在 `.env` 的 `FARM_ADMIN_PASSWORD`。
 - 完整历史见 [更新记录](docs/CHANGELOG.md)，登录页「更新日志」同步保留全部版本。
 
-## <th><img src="https://cdn.simpleicons.org/wechat/07C160" height="20" alt="微信" /></th> 微信扫码登录
+## 📦 发行版安装（免编译，推荐）## <th><img src="https://cdn.simpleicons.org/wechat/07C160" height="20" alt="微信" /></th> 微信扫码登录
 
 微信玩家可直接在“添加账号 → 微信扫码”中完成登录。扫码链路已内置到 Bot 进程，通过应用宝 OAuth 获取微信会话，并使用内置 MMTLS 协议换取农场短时效 Code，无需额外部署 YYB-GO、第三方登录 API 或代理容器。
 
@@ -48,6 +48,61 @@
 | 工程 | pnpm workspace、Docker |
 
 管理面板默认住在 `3007` 端口。
+
+## 📦 发行版安装（免编译，推荐）
+
+不想装 Git、pnpm，也不想自己构建前端？直接下载打包好的发行版就行，包在 [Releases](https://github.com/BUGDey/qq-farm-bot/releases) 页面。
+
+每个版本提供 4 个包，功能完全一致，区别只有「前端是否已经构建好」：
+
+| 包 | 平台 | 前端 | 适合谁 |
+| --- | --- | --- | --- |
+| `*-win-x64-full.zip` | Windows | 已构建 | 大多数人，解压双击 `start.bat` 就能跑 |
+| `*-win-x64-source.zip` | Windows | 未构建 | 想自己改前端，首次启动自动构建 |
+| `*-linux-x64-full.zip` | Linux | 已构建 | 服务器部署，`./start.sh` 一键装依赖并启动 |
+| `*-linux-x64-source.zip` | Linux | 未构建 | 想自己改前端，首次启动自动构建 |
+
+前置依赖只有 **Node.js 20+**（脚本发现没有 pnpm 会自动用 corepack 安装）；要用「QQ 登录版」（NapCat）再装 Docker 即可。
+
+### Windows
+
+1. 下载 `qq-farm-bot-v<版本>-win-x64-full.zip`；
+2. 解压到任意目录（路径尽量别带空格和中文）；
+3. 双击 `start.bat`：首次运行会自动生成 `.env`、随机管理员密码，并直接打印在窗口里；
+4. 浏览器打开 <http://localhost:3007>，用账号 `admin` + 窗口里的密码登录；
+5. 停止服务：双击 `stop.bat`。
+
+### Linux
+
+在服务器上一条命令取最新版本、下载、解压并启动：
+
+```bash
+V=$(curl -fsSL https://api.github.com/repos/BUGDey/qq-farm-bot/releases/latest | sed -n 's/.*"tag_name" *: *"v\([^"]*\)".*/\1/p')
+curl -fL -o qq-farm-bot.zip "https://github.com/BUGDey/qq-farm-bot/releases/download/v${V}/qq-farm-bot-v${V}-linux-x64-full.zip"
+unzip -q qq-farm-bot.zip && cd "qq-farm-bot-v${V}-linux-x64-full"
+chmod +x start.sh && ./start.sh
+```
+
+- 想装源码包：把文件名里的 `full` 换成 `source`；
+- 想钉住某个版本：把 `${V}` 直接换成版本号，例如 `2.9.2`；
+- 跳过菜单直接启动：默认版 `./start.sh 1`，QQ 登录版 `./start.sh 2`；
+- 日常运维：`./start.sh status|logs|restart|stop`；
+- 机器上没有 `unzip`：用 `python3 -m zipfile -e qq-farm-bot.zip .` 解压。
+
+### 管理员密码在哪看
+
+首次启动会生成随机密码，写进项目根目录 `.env` 的 `FARM_ADMIN_PASSWORD`：
+
+- Linux：`./start.sh` 启动时打印在终端，之后随时 `cat .env`；
+- Windows：`start.bat` 启动时打印在窗口，之后用记事本打开 `.env`。
+
+忘记密码就重置（先停服务）：
+
+```bash
+cd core && node scripts/reset-admin-password.js 新密码
+```
+
+> 每个 Release 的说明里也固定写了这段，不用回来翻 README。
 
 ## 🚜 开始种田
 
@@ -97,7 +152,7 @@ cd qq-farm-bot
 也可跳过菜单：`./start.sh 1` / `./start.sh 2`；
 运维：`./start.sh status|logs|restart|stop`；本地开发：`./start.sh dev`。
 
-详细部署与运维见 `docs/部署说明.md。
+详细部署与运维见 `docs/部署说明.md`。
 
 ## 🐳 Docker 部署
 
