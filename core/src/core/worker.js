@@ -1,6 +1,9 @@
 const process = require('node:process');
 const { parentPort, workerData } = require('node:worker_threads');
 
+const { withAutomationLock } = require('../services/automation-lock');
+const { classifyError } = require('../utils/error-classifier');
+
 const { CONFIG } = require('../config/config');
 const { getLevelExpProgress } = require('../config/gameConfig');
 const {
@@ -100,6 +103,7 @@ const {
     getWs,
     getUserState,
     getGatewayHealth,
+    isGatewayHealthyForBusiness,
     networkEvents
 } = require('../utils/network');
 const { nextBusinessBackoffMs } = require('../utils/gateway-health');
@@ -267,7 +271,15 @@ function getLocalDateKey() {
 
 // ==================== 每日任务 ====================
 
-async function runDailyRoutines(force = false, options = {}) {
+/**
+ * 每日例行任务入口（互斥）：与农场/好友 tick、活动领取共用账号锁，
+ * 避免登录后多个任务同时操作同一账号。
+ */
+function runDailyRoutines(force = false, options = {}) {
+    return withAutomationLock('daily-routine', () => runDailyRoutinesInternal(force, options));
+}
+
+async function runDailyRoutinesInternal(force = false, options = {}) {
     if (!loginReady || friendSyncPaused) return;
     try {
         const automation = getAutomation() || {};
@@ -288,6 +300,37 @@ async function runDailyRoutines(force = false, options = {}) {
     }
 }
 
+/**
+ * 登录启动序列：串行跑完"每日例行 → 任务领取 → 活动领取 → 神秘商人 → 放虫放草"，
+ * 之后才由定时器接管后续轮次。目的是把登录瞬间的并发发包降到 1 条链路。
+ */
+async function runStartupSequence() {
+    if (!loginReady) return;
+    try {
+        await withAutomationLock('startup.daily', () => runDailyRoutinesInternal(true, { skipTask: false }));
+    } catch (err) {
+        log('系统', `启动序列-每日例行失败: ${err.message}`, { module: 'system', event: '启动序列', result: 'error' });
+    }
+    if (!loginReady) return;
+    try {
+        await runStarActivityAutoClaims();
+    } catch (err) {
+        log('系统', `启动序列-活动领取失败: ${err.message}`, { module: 'system', event: '启动序列', result: 'error' });
+    }
+    if (!loginReady) return;
+    try {
+        await runMysteryShopAutoBuy();
+    } catch (err) {
+        log('系统', `启动序列-神秘商人失败: ${err.message}`, { module: 'system', event: '启动序列', result: 'error' });
+    }
+    if (!loginReady) return;
+    try {
+        await runBadOnceOnStartup(true);
+    } catch (err) {
+        log('系统', `启动序列-放虫放草失败: ${err.message}`, { module: 'system', event: '启动序列', result: 'error' });
+    }
+}
+
 function stopDailyRoutineTimer() {
     workerScheduler.clear('daily_routine_interval');
 }
@@ -295,7 +338,7 @@ function stopDailyRoutineTimer() {
 function startDailyRoutineTimer() {
     stopDailyRoutineTimer();
     lastDailyRunDate = getLocalDateKey();
-    runDailyRoutines(true, { skipTask: true }).catch(() => null);
+    // 首次执行由 runStartupSequence() 串行触发，这里只负责"跨天"检查
 
     // 每 60 秒检查一次日期是否变化
     workerScheduler.setIntervalTask('daily_routine_interval', 60000, () => {
@@ -498,7 +541,11 @@ async function runPetDiaryAutomation(flags) {
     }
 }
 
-async function runStarActivityAutoClaims() {
+function runStarActivityAutoClaims() {
+    return withAutomationLock('star-activity-claim', () => runStarActivityAutoClaimsInternal());
+}
+
+async function runStarActivityAutoClaimsInternal() {
     if (!loginReady || friendSyncPaused || starActivityClaimRunning) return;
 
     const automation = getAutomation() || {};
@@ -1011,9 +1058,6 @@ function stopStarActivityClaimTimer() {
 
 function startStarActivityClaimTimer() {
     stopStarActivityClaimTimer();
-    workerScheduler.setTimeoutTask('star_activity_claim_initial', 10000, () => {
-        runStarActivityAutoClaims().catch(() => null);
-    });
     workerScheduler.setIntervalTask('star_activity_claim_interval', 5 * 60 * 1000, () => {
         runStarActivityAutoClaims().catch(() => null);
     }, { preventOverlap: true });
@@ -1028,16 +1072,15 @@ function stopMysteryShopAutoBuyTimer() {
 
 function runMysteryShopAutoBuy() {
     if (!loginReady || getAutomation().mystery_shop_auto_buy !== true) return Promise.resolve();
-    const { checkAndAutoBuyMysteryShop } = require('../services/mystery-shop');
-    return checkAndAutoBuyMysteryShop();
+    return withAutomationLock('mystery-shop', () => {
+        const { checkAndAutoBuyMysteryShop } = require('../services/mystery-shop');
+        return checkAndAutoBuyMysteryShop();
+    });
 }
 
 function startMysteryShopAutoBuyTimer() {
     const { AUTO_BUY_CHECK_INTERVAL_MS } = require('../services/mystery-shop');
     stopMysteryShopAutoBuyTimer();
-    workerScheduler.setTimeoutTask('mystery_shop_auto_buy_initial', 10000, () => {
-        runMysteryShopAutoBuy().catch(() => null);
-    });
     workerScheduler.setIntervalTask('mystery_shop_auto_buy_interval', AUTO_BUY_CHECK_INTERVAL_MS, () => {
         runMysteryShopAutoBuy().catch(() => null);
     }, { preventOverlap: true });
@@ -1067,6 +1110,31 @@ function applyIntervalsToRuntime(intervals) {
 
     // 偷菜巡查时机由 friend-maturity-plan 的成熟度计划动态计算（见 runScheduledStealCheck /
     // getNextStealDelayMs），不再受用户配置的固定区间控制，此处无需处理 steal 相关字段。
+}
+
+/** 网关不健康时的业务退避时长（0 = 健康）；进入/恢复各打一条日志，避免刷屏 */
+let businessBackoffMs = 0;
+
+/**
+ * 网关不健康（心跳漏过 / 有请求卡住超过 5 秒）时：
+ * 跳过本轮定时业务并让后续 tick 指数退避（30s → 封顶 60s），恢复后立即清零。
+ */
+function shouldSkipBusinessForGateway() {
+    const health = isGatewayHealthyForBusiness();
+    if (health.healthy) {
+        if (businessBackoffMs > 0) {
+            businessBackoffMs = 0;
+            log('系统', '网关已恢复，定时任务恢复正常节奏', {
+                module: 'system', event: '网关恢复', result: 'ok'
+            });
+        }
+        return false;
+    }
+    businessBackoffMs = nextBusinessBackoffMs(businessBackoffMs);
+    log('系统', `网关不健康（${health.reason}），本轮定时任务跳过，${Math.round(businessBackoffMs / 1000)}s 后重试`, {
+        module: 'system', event: '网关退避', result: 'warn', reason: health.reason
+    });
+    return true;
 }
 
 /** 在 [minMs, maxMs] 范围内随机取一个毫秒数 */
@@ -1242,12 +1310,24 @@ async function runUnifiedTick() {
 
     if (!shouldFarm && !shouldHelp && !shouldSteal) return;
 
+    // 网关不健康时跳过本轮，并把下次 tick 推后（退避），避免越卡越发、越发越卡
+    if (shouldSkipBusinessForGateway()) {
+        const retryAt = Date.now() + Math.max(30000, businessBackoffMs);
+        if (shouldFarm) nextFarmRunAt = retryAt;
+        if (shouldHelp) nextHelpRunAt = retryAt;
+        if (shouldSteal) nextStealRunAt = retryAt;
+        return;
+    }
+
     const permit = await acquireTaskPermit();
     try {
-        const autoConfig = getAutomation();
-        if (shouldFarm) await runFarmTick(autoConfig);
-        if (shouldHelp) await runHelpTick(autoConfig);
-        if (shouldSteal) await runStealTick(autoConfig);
+        // 与其他自动任务（每日例行 / 活动领取 / 神秘商人 / 面板手动操作）共用账号锁
+        await withAutomationLock('scheduler.tick', async () => {
+            const autoConfig = getAutomation();
+            if (shouldFarm) await runFarmTick(autoConfig);
+            if (shouldHelp) await runHelpTick(autoConfig);
+            if (shouldSteal) await runStealTick(autoConfig);
+        });
     } finally {
         releaseTaskPermit(permit);
     }
@@ -1646,16 +1726,7 @@ async function startBot(config) {
             await openFertilizerGiftPacksSilently().catch(() => 0);
         }
 
-        // 延迟执行放虫放草
-        workerScheduler.setTimeoutTask('bad_startup_once', 15000, async () => {
-            try {
-                await runBadOnceOnStartup();
-            } catch (err) {
-                log('好友', `启动时放虫放草执行失败: ${  err.message}`, {
-                    module: 'friend', event: '启动放虫放草失败', error: err.message
-                });
-            }
-        });
+        // 放虫放草已并入 runStartupSequence()，这里不再单独起定时器（避免重复执行）
 
         // 启动各检查循环
         startFarmCheckLoop({ externalScheduler: true });
@@ -1669,11 +1740,14 @@ async function startBot(config) {
             startUnifiedScheduler();
         }
 
-        // 启动每日定时器
+        // 启动每日定时器（只挂定时器，首次执行交给下面的串行启动序列）
         initTaskSystem();
         startDailyRoutineTimer();
         startStarActivityClaimTimer();
         startMysteryShopAutoBuyTimer();
+
+        // 登录启动序列：串行执行，避免登录瞬间多个任务同时发包把网关卡住
+        runStartupSequence().catch(() => null);
 
         syncStatus();
     };
@@ -1759,7 +1833,40 @@ function onReconnectFailed(info) {
 
 // ==================== API 调用处理 ====================
 
+/**
+ * 会改动服务端状态的接口方法：与自动任务共用账号锁，
+ * 避免"用户在面板点一下"和定时巡检同时操作同一块地/同一批道具。
+ * 只读方法不进入锁，保证面板响应速度。
+ */
+const MANUAL_WRITE_METHODS = new Set([
+    'sellItems', 'doFarmOp', 'useItem', 'buyFertilizer', 'checkAndBuyFertilizer',
+    'fertilizeLand', 'removePlant', 'removeAllPlants',
+    'buyGoods', 'buyMallGoods', 'buyMysteryShopGoods', 'buyActivityShopItem', 'refreshActivityShop',
+    'claimDogSkillGifts', 'feedDog', 'activateDog', 'deployDog', 'withdrawDog',
+    'claimStarRecordRewards', 'exchangeStarShopItem',
+    'buildQixiBridge', 'sendQixiSachet', 'useQixiDew',
+    'claimSeasonPassportRewards', 'claimSolarTermsReward',
+    'claimQingmeiSeeds', 'brewAndSellQingmeiWine',
+    'claimIllustratedRewards', 'operateMilkTea', 'operatePetDiary'
+]);
+
 async function handleApiCall(msg) {
+    if (!msg || !MANUAL_WRITE_METHODS.has(String(msg.method || ''))) {
+        return handleApiCallInternal(msg);
+    }
+    const method = String(msg.method);
+    try {
+        return await withAutomationLock(`manual.${method}`, () => handleApiCallInternal(msg), { lockTimeoutMs: 30000 });
+    } catch (err) {
+        if (err && err.errorType === 'automation_busy') {
+            sendToMaster({ type: 'api_response', id: msg.id, result: null, error: err.message, errorType: classifyError(err, { phase: 'manual' }).errorType });
+            return;
+        }
+        throw err;
+    }
+}
+
+async function handleApiCallInternal(msg) {
     const { id, method, args } = msg;
     let result = null;
     let error = null;
@@ -2212,7 +2319,8 @@ async function handleApiCall(msg) {
         type: 'api_response',
         id,
         result,
-        error
+        error,
+        ...(error ? { errorType: classifyError(error, { phase: 'api' }).errorType } : {}),
     });
 }
 

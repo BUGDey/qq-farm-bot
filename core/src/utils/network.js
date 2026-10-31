@@ -64,7 +64,14 @@ const pendingStartedAt = new Map();
 // 收菜/做奶茶/好友/任务等多任务并发触发时，底层平滑排队按人类手速发包，
 // 避免瞬间打出上百个包被腾讯网关风控静默拉黑——黑名单不回包的典型表现
 // 就是「请求超时 → 心跳无响应 → 心跳超时掉线」循环（2026-10-19 实测）。
-const requestGate = createRequestGate({ maxActive: 2, maxQueued: 100 });
+const requestGate = createRequestGate({
+    maxActive: 2,
+    maxQueued: 100,
+    // 分班次容量：心跳/前台优先，后台只在空闲时发（见 request-priority.js）
+    starvationMs: 4000,
+    nonForegroundActiveCap: 1,
+    backgroundIdleOnly: true,
+});
 let wsErrorState = { code: 0, at: 0, message: '' };
 const networkScheduler = createScheduler('network');
 let tsdkRuntime = null;
@@ -726,6 +733,47 @@ function getGatewayHealth() {
     };
 }
 
+/** 可被业务调度器直接使用的健康判定（不含队列详情，只回答"现在能不能跑业务"） */
+function isGatewayHealthyForBusiness() {
+    const now = Date.now();
+    const health = evaluateGatewayHealth({
+        connected: isConnected(),
+        heartbeatAgeMs: now - lastHeartbeatResponse,
+        oldestPendingAgeMs: getOldestPendingAgeMs(pendingStartedAt.values(), now),
+        heartbeatLimitMs: HEARTBEAT_TIMEOUT,
+        pendingLimitMs: 5000,
+    });
+    return { ...health, heartbeatMissCount, pending: pendingCallbacks.size };
+}
+
+/**
+ * 低优先级（background）请求的空闲判定：
+ * 有在途请求、有排队、心跳漏过、或有请求卡超过 5 秒，都视为"不空闲"。
+ */
+function isGatewayIdleForLowPriority() {
+    if (!isConnected()) return false;
+    if (heartbeatMissCount > 0) return false;
+    if (pendingCallbacks.size > 0) return false;
+    if (getOldestPendingAgeMs(pendingStartedAt.values()) > 5000) return false;
+    const snap = requestGate.snapshot();
+    if (snap.active > 0 || snap.queued > 0) return false;
+    return true;
+}
+
+/**
+ * 等待网关进入空闲状态（最多 maxWaitMs），超时返回 false 由调用方"留到下一轮"。
+ */
+async function waitForGatewayIdle(maxWaitMs = 8000, pollMs = 200) {
+    const limit = Math.max(0, Number(maxWaitMs) || 0);
+    const step = Math.max(50, Number(pollMs) || 200);
+    const deadline = Date.now() + limit;
+    while (Date.now() < deadline) {
+        if (isGatewayIdleForLowPriority()) return true;
+        await new Promise(resolve => setTimeout(resolve, step));
+    }
+    return isGatewayIdleForLowPriority();
+}
+
 function startHeartbeat() {
     networkScheduler.clear('heartbeat_interval');
     lastHeartbeatResponse = Date.now();
@@ -966,6 +1014,9 @@ module.exports = {
     getUserState,
     getWsErrorState,
     getGatewayHealth,
+    isGatewayHealthyForBusiness,
+    isGatewayIdleForLowPriority,
+    waitForGatewayIdle,
     getAceStatus,
     buildLoginDeviceInfo,
     buildLoginBody,

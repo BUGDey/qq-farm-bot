@@ -23,6 +23,7 @@ const { sendMsgAsync, networkEvents, getUserState } = require('../utils/network'
 const { types } = require('../utils/proto');
 const { toLong, toNum, log, logWarn, sleep, getServerTimeSec } = require('../utils/utils');
 const { FIREWORK_ITEM_ID, createFireworkUse } = require('./firework-use');
+const { evaluateSellCondition } = require('../config/sell-conditions');
 const { compareBagSeedGameOrder } = require('../utils/bag-seed-order');
 const { updateStatusGold } = require('./status');
 
@@ -455,6 +456,12 @@ async function getBagDetail() {
       effectivePriceId === 1005 ? '金豆豆' :
       effectivePriceId === 200 ? '点券' : '金';
 
+    // 出售条件：活动结束后 / 活动区间外 / 道具过期后才能卖的，本地也要拦住
+    const sellCondition = evaluateSellCondition(info, {
+      nowSec: getServerTimeSec(),
+      expireTime: item.expire_time || item.expireTime || 0,
+    });
+
     if (!merged.has(id)) {
       merged.set(id, {
         id,
@@ -466,7 +473,9 @@ async function getBagDetail() {
         priceId: effectivePriceId,
         price: effectivePrice,
         priceUnit,
-        sellable: Boolean(directSell || getPlantByFruitId(id)),
+        sellable: Boolean((directSell || getPlantByFruitId(id)) && sellCondition.sellable),
+        sellBlockedReason: sellCondition.sellable ? '' : sellCondition.reason,
+        sellAvailableAt: sellCondition.availableAt || 0,
         usable: Number(info && info.can_use) === 1 || interactionType === 'use',
         level: info ? Number(info.level) || 0 : 0,
         rarity: seedPlant ? Math.max(

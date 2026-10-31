@@ -35,11 +35,27 @@ flowchart TB
 
     T --> U[2026-10-29 · v2.9.4<br/>修复构建时依赖源不可用]
 
+    U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥]
+
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V seed;
 ```
 
 ## 详细记录
+
+### 2026-10-31 · v2.10.0 · 网络调度与自动任务互斥
+
+- 新增 `core/src/services/automation-lock.js`：按账号维护一把可重入的互斥锁，自动任务（每日例行、星空领取、神秘商人、巡田计划、放虫放草、面板写操作等）串行执行，碰到正在执行的同类任务会友好让位。
+- 重写 `core/src/utils/request-priority.js`：拆出 critical / foreground / farm / friend / background 五个班次，各自有在途与排队上限，并为心跳/活动并发预留专属槽位。
+- background 班次增加空闲闸门：前台有请求在飞、心跳漏拍、或有请求卡住超过 5 秒时直接不发；排队超时抛 `GatewayBusyError` 交给下一轮。
+- 防饿死：低优先级请求排队超过 4 秒自动提升为前台优先级，避免永远轮不到。
+- 网关健康退避：心跳丢失或在途请求卡住时，巡田与好友循检按 30s→60s 指数退避，网关恢复立即重置。
+- 登录后启动序列化：每日例行 → 星空领取 → 神秘商人 → 放虫放草，不再各自开一个定时器抢请求。
+- 新增 `core/src/config/sell-conditions.js`：解析 `ItemInfo.json` 的 `sell_cond` / `cond_sells`，将「活动结束后」「活动区间外」「道具过期后」三种限制落到背包与出售流程，避免把不该卖的道具一键卖掉。
+- 新增 `core/src/utils/error-classifier.js`：`api_response` 增加 `errorType`（offline / timeout / rate_limit / gateway_busy / automation_busy / auth / protocol / server / unknown）与 `retryable`便于前端判断是否自动重试。
+- 天面板等级预测文案：超过一天显示「约 X 天后升级」，并补上还差多少经验。
+- 新增单测：`automation-lock`、`request-gate-lanes`、`sell-conditions`、`error-classifier`，后端测试从 515 增至 542。
+
 
 ### 2026-10-29 · v2.9.4 · 修复构建时依赖源不可用
 

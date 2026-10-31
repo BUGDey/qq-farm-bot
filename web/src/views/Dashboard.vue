@@ -236,11 +236,17 @@ const timeToLevel = computed(() => {
     return ''
 
   const expNeeded = Math.max(0, needed - current)
+  if (expNeeded <= 0)
+    return '经验已满，下次登录即可升级'
+
   const minsToLevel = expNeeded / (ratePerHour / 60)
 
+  // 短时间说明分钟，超过一天说明天，避免出现「约 72.0 小时后升级」这种不好读的说法
   if (minsToLevel < 60)
-    return `约 ${Math.ceil(minsToLevel)} 分钟后升级`
-  return `约 ${(minsToLevel / 60).toFixed(1)} 小时后升级`
+    return `约 ${Math.ceil(minsToLevel)} 分钟后升级·还差 ${Math.ceil(expNeeded).toLocaleString('zh-CN')} 经验`
+  if (minsToLevel < 60 * 24)
+    return `约 ${(minsToLevel / 60).toFixed(1)} 小时后升级·还差 ${Math.ceil(expNeeded).toLocaleString('zh-CN')} 经验`
+  return `约 ${(minsToLevel / 60 / 24).toFixed(1)} 天后升级·还差 ${Math.ceil(expNeeded).toLocaleString('zh-CN')} 经验`
 })
 
 const fertilizerNormal = computed(() => dashboardItems.value.find((item: any) => Number(item.id) === 1011))
