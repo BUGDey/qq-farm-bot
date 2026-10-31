@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.10.0'
+export const APP_VERSION = '2.11.0'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.0',
+    date: '2026-10-31',
+    items: [
+      '新增 tools/ 抓包分析入口：可直接解码抓包目录、核对抓包与本地 Protobuf 的兼容性',
+      '补充 9 篇专题文档：工具脚本、网络并发模型、TSDK 运行约定、配置存储与缓存、游戏版本与资源对齐、雨落成诗活动、商城与神秘商人、好友宠物缓存、个人页宠物协议',
+      'README 增加「抓包协议分析」命令与「项目文档」索引，安装与运维文档集中可查',
+    ],
+  },
   {
     version: '2.10.0',
     date: '2026-10-31',

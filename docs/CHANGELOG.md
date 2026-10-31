@@ -35,13 +35,27 @@ flowchart TB
 
     T --> U[2026-10-29 · v2.9.4<br/>修复构建时依赖源不可用]
 
-    U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥]
+    U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥] --> W[2026-10-31 · v2.11.0<br/>抓包协议分析与专题文档]
 
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W seed;
 ```
 
 ## 详细记录
+
+### 2026-10-31 · v2.11.0 · 抓包协议分析与专题文档
+
+- 新增 `tools/decode-latest-protocols.js`、`tools/audit-capture-compatibility.js`：薄包装 `core/scripts/inspect-protocol-capture.js`，无需 tsx，退出码透传；后者在没写 `--audit` 时自动带上审计。
+- 新增 `docs/tools.md`：npm script、`inspect:protocol` 全部选项、手动脚本清单与写脚本约定。
+- 新增 `docs/network-concurrency.md`：五班次容量表、非前台合计上限、critical 预留槽、4s 防饿死、空闲闸门与 `GatewayBusyError`、网关健康退避 30s→60s、`withAutomationLock` 与 30 个写操作串行化、`runStartupSequence()` 顺序。
+- 新增 `docs/config-storage.md`：数据目录三级优先级、数据文件表、`json-db.js` 原子写、迁移与升级、`gameConfig` 清单与插件素材合并、`sync-config-tables.js` 硬约束。
+- 新增 `docs/tsdk-runtime.md`：TSDK 版本/校验和、wasm 初始化五步、ACE 开关行为、更新流程与常见报错。
+- 新增 `docs/game-update-20261031.md`：当前客户端版本与配置规模、`audit-game-resources.js` 实测覆盖度（种子图 100%、阶段图缺新春红包/枸杞/寒兰）、更新后六步流程。
+- 新增 `docs/weather-activity.md`：雨落成诗活动 id 与 5 个自动化开关、6 个接口、整蛊注意点、特效图抽取。
+- 新增 `docs/shop-protocols.md`：货币 id、商城与神秘商人接口、限购与「点券不足当天不再尝试」、后台路由、充值来源常量。
+- 新增 `docs/friend-pet-cache.md`：已知 GID 四来源与 35 条分批、好友列表与宠物缓存失效策略、每轮 12 个 / 10 分钟冷却、放虫放草上限、免打扰与黑名单。
+- 新增 `docs/pet-protocols.md`：狗的 id 与食物时长、命令串行化、技能礼包、宠物日记、后台路由与缓存。
+- `README.md` 新增「抓包协议分析」命令段，并把「使用文档」升级为「项目文档」索引（链接 9 篇专题）。
 
 ### 2026-10-31 · v2.10.0 · 网络调度与自动任务互斥
 

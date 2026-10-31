@@ -28,12 +28,11 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.10.0
+## 🎉 最新更新 · v2.11.0
 
-- 自动任务互斥：同一账号的自动操作串行执行，面板手动点一下与后台自动任务不再互相打架。
-- 网络分班次调度：心跳 / 农场 / 好友 / 后台任务各走独立通道，后台任务只在空闲时才发，排队太久会主动让位。
-- 网关不健康时自动退避重试；登录后按「每日例行 → 任务领取 → 活动奖励 → 放虫放草」顺序启动。
-- 出售条件判断：活动期间或还没过期的道具不会被一键卖出，背包里会说明为什么不能卖；接口报错也会区分断线、超时、限流等类型。
+- 新增 `tools/` 抓包分析入口：解码抓包目录、核对抓包 RPC 与本地 Protobuf 的兼容性，一条命令搞定。
+- 补齐 9 篇专题文档：工具脚本、网络并发模型、TSDK 运行约定、配置存储与缓存、游戏版本与资源对齐、雨落成诗活动、商城与神秘商人、好友宠物缓存、个人页宠物协议。
+- README 增加「抓包协议分析」命令段与「项目文档」索引，排障先查文档再翻代码。
 - 完整历史见 [更新记录](docs/CHANGELOG.md)，登录页「更新日志」同步保留全部版本。
 
 ## 💬 微信扫码登录
@@ -369,6 +368,24 @@ iPhone及安卓用户也可使用内置抓包登录服务自动获取登录 Code
 
 证书安装、局域网和 Tailscale 配置请查看[抓包登录服务手册](core/docs/capture-service.md)。
 
+## 🔍 抓包协议分析
+
+抓到 HAR 或网关帧目录后，用下面两条命令做解码与兼容性核对（脚本都在 `tools/` 下，
+不需要额外装 tsx / typescript）：
+
+```bash
+# 解码指定抓包目录中的协议帧
+node tools/decode-latest-protocols.js <capture-dir>
+
+# 检查抓包 RPC 与本地 Protobuf 定义的兼容性
+node tools/audit-capture-compatibility.js <capture-dir>
+```
+
+两个命令都支持 `inspect:protocol` 的全部选项（`--service` / `--method` / `--direction` /
+`--shape` / `--audit` / `--decrypt-requests` / `--show-sensitive` / `--pretty`），
+内部直接委派给 `core/scripts/inspect-protocol-capture.js`。
+更多用法见 [工具脚本](docs/tools.md)。
+
 ## 🛠️ 常用命令
 
 | 命令 | 用途 |
@@ -396,7 +413,21 @@ qq-farm-bot/
 └── package.json
 ```
 
-## 📖 使用文档
+## 📚 项目文档
+
+专题说明统一收录在 [`docs/`](docs/)：
+
+- [工具脚本](docs/tools.md)
+- [网络并发模型](docs/network-concurrency.md)
+- [TSDK 运行约定](docs/tsdk-runtime.md)
+- [配置存储、迁移与缓存](docs/config-storage.md)
+- [游戏版本与资源对齐](docs/game-update-20261031.md)
+- [雨落成诗活动协议与实现](docs/weather-activity.md)
+- [神秘商人、游戏商城与购买协议](docs/shop-protocols.md)
+- [好友宠物缓存与每日同步](docs/friend-pet-cache.md)
+- [个人页宠物协议](docs/pet-protocols.md)
+
+其他运行手册：
 
 - [iPhone 抓包登录服务](core/docs/capture-service.md)
 - [限时活动适配手册](core/docs/activity-update-runbook.md)
