@@ -71,9 +71,12 @@ watch(viewMode, (mode) => {
 })
 
 function segmentedButtonClasses(active: boolean) {
-  return active
-    ? 'text-white shadow-sm'
-    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+  return [
+    'inline-flex h-full items-center justify-center whitespace-nowrap align-middle',
+    active
+      ? 'text-white shadow-sm'
+      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700',
+  ]
 }
 
 function getUnlockHint(item: any) {
@@ -218,12 +221,12 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="flex shrink-0 flex-wrap items-center gap-2">
-          <div class="h-9 inline-flex overflow-hidden border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex flex-wrap items-center gap-2 xl:shrink-0">
+          <div class="h-9 max-w-full inline-flex overflow-x-auto border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
             <button
               v-for="item in viewTabs"
               :key="item.value"
-              class="min-w-20 rounded-md px-3 text-sm font-medium transition"
+              class="min-w-16 rounded-md px-2.5 text-sm font-medium transition sm:min-w-20 sm:px-3"
               :class="segmentedButtonClasses(viewMode === item.value)"
               :style="viewMode === item.value ? { backgroundColor: 'var(--theme-primary)' } : {}"
               @click="viewMode = item.value"
@@ -232,11 +235,11 @@ onMounted(() => {
             </button>
           </div>
           <template v-if="isIllustratedMode">
-            <div class="h-9 inline-flex overflow-hidden border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
+            <div class="h-9 max-w-full inline-flex overflow-x-auto border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
               <button
                 v-for="item in filterTabs"
                 :key="item.value"
-                class="min-w-16 rounded-md px-3 text-sm font-medium transition"
+                class="min-w-14 rounded-md px-2.5 text-sm font-medium transition sm:min-w-16 sm:px-3"
                 :class="segmentedButtonClasses(filter === item.value)"
                 :style="filter === item.value ? { backgroundColor: 'var(--theme-primary)' } : {}"
                 @click="filter = item.value"

@@ -11,9 +11,17 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.13.2'
+export const APP_VERSION = '2.13.3'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.13.3',
+    date: '2026-11-02',
+    items: [
+      '修复图鉴页签与筛选按钮文字不居中（改为 flex 居中）',
+      '移动端页签行可横向滚动，不再被裁切',
+    ],
+  },
   {
     version: '2.13.2',
     date: '2026-11-02',
