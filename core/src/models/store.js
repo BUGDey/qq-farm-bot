@@ -236,7 +236,24 @@ const DEFAULT_OFFLINE_REMINDER = {
     smtpPass: '',
     senderName: '',
     recipientEmail: '',
-    emailContent: ''
+    emailContent: '',
+    // 使用管理员在后台配置的全局邮件服务：开启后用户只需填收件人邮箱
+    useGlobalMailer: false
+};
+
+/**
+ * 管理员全局邮件服务（后台设置 → 全局邮件通知）
+ * 供「下线提醒」与「后台批量通知」共用，避免每个用户都自己填 SMTP。
+ */
+const DEFAULT_GLOBAL_MAILER = {
+    enabled: false,
+    smtpHost: '',
+    smtpPort: 465,
+    smtpUser: '',
+    smtpPass: '',
+    senderName: '',
+    subject: 'QQ 农场智能助手通知',
+    content: ''
 };
 
 const DEFAULT_FERTILIZER_LAND_TYPES = ['purple', 'gold', 'black', 'red', 'normal'];
@@ -740,6 +757,9 @@ function normalizeOfflineReminder(raw) {
     const emailContent = input.emailContent !== undefined && input.emailContent !== null
         ? String(input.emailContent).trim() : def.emailContent;
 
+    // 使用管理员全局邮件服务（只有 SMTP 渠道才有意义）
+    const useGlobalMailer = input.useGlobalMailer === true || input.useGlobalMailer === 'true';
+
     return {
         channel,
         reloginUrlMode,
@@ -754,8 +774,40 @@ function normalizeOfflineReminder(raw) {
         smtpPass,
         senderName,
         recipientEmail,
-        emailContent
+        emailContent,
+        useGlobalMailer
     };
+}
+
+function normalizeGlobalMailer(raw) {
+    const input = raw && typeof raw === 'object' ? raw : {};
+    const def = DEFAULT_GLOBAL_MAILER;
+
+    const text = (value, fallback) => (value !== undefined && value !== null
+        ? String(value).trim() : fallback);
+
+    const portRaw = Number.parseInt(input.smtpPort, 10);
+    const smtpPort = (!Number.isFinite(portRaw) || portRaw <= 0 || portRaw > 65535)
+        ? def.smtpPort : portRaw;
+
+    return {
+        enabled: input.enabled === true || input.enabled === 'true',
+        smtpHost: text(input.smtpHost, def.smtpHost),
+        smtpPort,
+        smtpUser: text(input.smtpUser, def.smtpUser),
+        smtpPass: text(input.smtpPass, def.smtpPass),
+        senderName: text(input.senderName, def.senderName),
+        subject: text(input.subject, def.subject),
+        content: input.content !== undefined && input.content !== null
+            ? String(input.content) : def.content
+    };
+}
+
+/** 全局邮件服务是否可用（启用且 SMTP 必填项齐全） */
+function isGlobalMailerReady(config) {
+    const cfg = normalizeGlobalMailer(config || globalConfig.globalMailer);
+    return cfg.enabled === true
+        && !!cfg.smtpHost && !!cfg.smtpUser && !!cfg.smtpPass;
 }
 
 function normalizeTimeString(raw, fallback) {
@@ -881,6 +933,7 @@ const globalConfig = {
     usersSeeAllAccounts: false,
     offlineReminder: { ...DEFAULT_OFFLINE_REMINDER },
     userOfflineReminders: {},
+    globalMailer: { ...DEFAULT_GLOBAL_MAILER },
     adminPasswordHash: '',
     announcement: { content: '', showOnce: true, updatedAt: 0 },
     announcementReadRecords: {},
@@ -1179,6 +1232,9 @@ function loadGlobalConfig() {
                 globalConfig.userOfflineReminders.admin = adminReminder;
             }
         }
+
+        // 管理员全局邮件服务
+        globalConfig.globalMailer = normalizeGlobalMailer(data.globalMailer);
 
         // 管理员密码
         if (typeof data.adminPasswordHash === 'string') {
@@ -1800,6 +1856,36 @@ function deleteUserOfflineReminder(username) {
 }
 
 
+// ==================== 全局邮件服务 ====================
+
+function getGlobalMailer() {
+    const cfg = normalizeGlobalMailer(globalConfig.globalMailer);
+    return { ...cfg, ready: isGlobalMailerReady(cfg) };
+}
+
+function setGlobalMailer(patch = {}) {
+    const current = normalizeGlobalMailer(globalConfig.globalMailer);
+    const merged = { ...current, ...(patch && typeof patch === 'object' ? patch : {}) };
+    // 授权码留空表示「不修改」，避免前端拿到打码值后回写覆盖
+    if (patch && typeof patch === 'object'
+        && (patch.smtpPass === undefined || patch.smtpPass === null || patch.smtpPass === '')) {
+        merged.smtpPass = current.smtpPass;
+    }
+    globalConfig.globalMailer = normalizeGlobalMailer(merged);
+    saveGlobalConfig({ throwOnError: true });
+    return getGlobalMailer();
+}
+
+/** 给普通用户看的全局邮件服务状态（不暴露账号密码） */
+function getGlobalMailerPublic() {
+    const cfg = normalizeGlobalMailer(globalConfig.globalMailer);
+    return {
+        available: isGlobalMailerReady(cfg),
+        senderName: cfg.senderName || ''
+    };
+}
+
+
 // ==================== 账号管理 ====================
 
 function loadAccounts() {
@@ -2340,6 +2426,9 @@ module.exports = {
     getOfflineReminder,
     setOfflineReminder,
     deleteUserOfflineReminder,
+    getGlobalMailer,
+    setGlobalMailer,
+    getGlobalMailerPublic,
     getAccounts,
     addOrUpdateAccount,
     deleteAccount,
@@ -2409,5 +2498,8 @@ module.exports._test = {
     CHARITY_FLOWER_AUTOMATION_KEYS,
     getInactiveActivityAutomationKeys,
     getLocalDateKey,
-    normalizeFriendDogInfoCache
+    normalizeFriendDogInfoCache,
+    normalizeGlobalMailer,
+    normalizeOfflineReminder,
+    isGlobalMailerReady
 };

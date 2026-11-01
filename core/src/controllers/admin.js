@@ -65,6 +65,7 @@ const { registerAdminQrLoginRoutes } = require("./admin-qr-login-routes");
 const { registerAdminNapcatLoginRoutes } = require("./admin-napcat-login-routes");
 const { createAdminRouteHelpers } = require("./admin-route-helpers");
 const { registerAdminSettingsRoutes } = require("./admin-settings-routes");
+const { registerAdminMailerRoutes } = require("./admin-mailer-routes");
 const { registerAdminShopRoutes } = require("./admin-shop-routes");
 const { createAdminSessionManager } = require("./admin-session-manager");
 const { registerAdminSystemRoutes } = require("./admin-system-routes");
@@ -630,6 +631,13 @@ function startAdminServer(dataProvider) {
     getAccountIdFromRequest,
     canAccessAccount,
     requireDangerConfirmation,
+  });
+  registerAdminMailerRoutes({
+    app,
+    store,
+    userStore,
+    requireAdminRole,
+    sendProviderError,
   });
   registerAdminSystemRoutes({
     app,

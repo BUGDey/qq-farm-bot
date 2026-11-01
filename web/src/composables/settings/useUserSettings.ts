@@ -135,7 +135,12 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
     senderName: '',
     recipientEmail: '',
     emailContent: '',
+    useGlobalMailer: false,
   })
+
+  // 管理员是否已配置好全局邮件服务（用户勾选后免填 SMTP 账号密码）
+  const globalMailerAvailable = computed(() => settings.value?.globalMailer?.available === true)
+  const globalMailerSender = computed(() => String(settings.value?.globalMailer?.senderName || ''))
 
   const channelOptions = [
     { label: 'SMTP 邮件', value: 'smtp' },
@@ -408,6 +413,8 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
     channelOptions,
     reloginUrlModeOptions,
     currentChannelDocUrl,
+    globalMailerAvailable,
+    globalMailerSender,
     openChannelDocs,
     fillRandomDeviceMac,
     fillRandomDeviceId,

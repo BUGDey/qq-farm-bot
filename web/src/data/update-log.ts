@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.7'
+export const APP_VERSION = '2.11.8'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.8',
+    date: '2026-11-01',
+    items: [
+      '管理后台「全局设置」新增全局邮件服务：填一次 SMTP，用户就不用各自配置',
+      '通知设置可勾选「使用管理员配置的邮件服务」，只填收件邮箱即可收到掉线提醒',
+      '管理后台新增「邮件通知」页：勾选用户批量发通知，默认跳过已过期用户',
+    ],
+  },
   {
     version: '2.11.7',
     date: '2026-11-01',

@@ -196,11 +196,25 @@ function createReloginReminderService(deps) {
   }
 
   async function sendSmtpReminder(cfg, accountId, accountName, reason, offlineMs) {
-    const smtpHost = String(cfg.smtpHost || '').trim();
-    const smtpPort = Number(cfg.smtpPort) || 465;
-    const smtpUser = String(cfg.smtpUser || '').trim();
-    const smtpPass = String(cfg.smtpPass || '').trim();
-    const senderName = String(cfg.senderName || '').trim();
+    // 用户选择「使用后台邮件服务」时，账号密码全部取自管理员配置，用户只填收件人
+    const useGlobalMailer = cfg.useGlobalMailer === true;
+    let globalMailer = null;
+    if (useGlobalMailer) {
+      const store = require('../models/store');
+      const config = typeof store.getGlobalMailer === 'function' ? store.getGlobalMailer() : null;
+      if (!config || config.ready !== true) {
+        log('错误', '下线提醒使用了后台邮件服务，但管理员尚未配置好全局 SMTP');
+        return;
+      }
+      globalMailer = config;
+    }
+
+    const smtpHost = String(useGlobalMailer ? globalMailer.smtpHost : cfg.smtpHost || '').trim();
+    const smtpPort = Number(useGlobalMailer ? globalMailer.smtpPort : cfg.smtpPort) || 465;
+    const smtpUser = String(useGlobalMailer ? globalMailer.smtpUser : cfg.smtpUser || '').trim();
+    const smtpPass = String(useGlobalMailer ? globalMailer.smtpPass : cfg.smtpPass || '').trim();
+    const senderName = String(useGlobalMailer
+      ? (globalMailer.senderName || cfg.senderName) : cfg.senderName || '').trim();
     const recipientEmail = String(cfg.recipientEmail || '').trim();
     const emailContent = String(cfg.emailContent || cfg.msg || '').trim();
 

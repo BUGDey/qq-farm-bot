@@ -19,16 +19,33 @@ function getOfflineReminderConfig(store, currentUser, body) {
   return { ...(saved || {}), ...(body || {}) };
 }
 
-async function sendOfflineReminderTest(config) {
+async function sendOfflineReminderTest(config, store) {
   const { sendPushooMessage, sendSmtpEmail } = require("../services/push");
   const channel = String(config.channel || "smtp").trim().toLowerCase();
   if (channel === "smtp") {
-    const smtpHost = String(config.smtpHost || "").trim();
-    const smtpPort = Number(config.smtpPort) || 465;
-    const smtpUser = String(config.smtpUser || "").trim();
-    const smtpPass = String(config.smtpPass || "").trim();
-    const senderName = String(config.senderName || "").trim();
+    const useGlobalMailer = config.useGlobalMailer === true;
+    let smtpHost = String(config.smtpHost || "").trim();
+    let smtpPort = Number(config.smtpPort) || 465;
+    let smtpUser = String(config.smtpUser || "").trim();
+    let smtpPass = String(config.smtpPass || "").trim();
+    let senderName = String(config.senderName || "").trim();
     const recipientEmail = String(config.recipientEmail || "").trim();
+
+    if (useGlobalMailer) {
+      const globalMailer =
+        store && typeof store.getGlobalMailer === "function"
+          ? store.getGlobalMailer()
+          : null;
+      if (!globalMailer || globalMailer.ready !== true) {
+        return { error: "管理员尚未配置好后台邮件服务，请先联系管理员或在下方自行填写 SMTP" };
+      }
+      smtpHost = globalMailer.smtpHost;
+      smtpPort = globalMailer.smtpPort;
+      smtpUser = globalMailer.smtpUser;
+      smtpPass = globalMailer.smtpPass;
+      senderName = globalMailer.senderName || senderName;
+    }
+
     if (!smtpHost) return { error: "SMTP服务器地址不能为空" };
     if (!smtpUser) return { error: "邮箱账号不能为空" };
     if (!smtpPass) return { error: "授权码不能为空" };
@@ -42,7 +59,9 @@ async function sendOfflineReminderTest(config) {
       senderName,
       recipientEmail,
       subject: "下线提醒（测试）",
-      content: "这是一封测试邮件，收到它代表你配置邮箱成功了！--For Dot.",
+      content: useGlobalMailer
+        ? "这是一封测试邮件，收到它说明后台全局邮件服务配置成功！"
+        : "这是一封测试邮件，收到它代表你配置邮箱成功了！--For Dot.",
     });
   }
 
@@ -136,6 +155,11 @@ function buildSettingsPayload(store, accountId, currentUser) {
         ? store.getBagSeedFallbackStrategy(accountId)
         : "level",
     ui: store.getUI(),
+    // 管理员是否配置了全局邮件服务（用户可用它免填 SMTP）
+    globalMailer:
+      typeof store.getGlobalMailerPublic === "function"
+        ? store.getGlobalMailerPublic()
+        : { available: false, senderName: "" },
     offlineReminder:
       store.getOfflineReminder && currentUser
         ? store.getOfflineReminder(currentUser.username)
@@ -339,7 +363,7 @@ function registerAdminSettingsRoutes({
       const currentUser = req.currentUser;
       const body = req.body && typeof req.body === "object" ? req.body : {};
       const config = getOfflineReminderConfig(store, currentUser, body);
-      const result = await sendOfflineReminderTest(config);
+      const result = await sendOfflineReminderTest(config, store);
       if (!result) {
         return res
           .status(400)

@@ -2,6 +2,7 @@
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
+import BaseSwitch from '@/components/ui/BaseSwitch.vue'
 
 interface OfflineReminderConfig {
   channel: string
@@ -18,6 +19,7 @@ interface OfflineReminderConfig {
   senderName: string
   recipientEmail: string
   emailContent: string
+  useGlobalMailer: boolean
 }
 
 defineProps<{
@@ -26,6 +28,7 @@ defineProps<{
   saving: boolean
   testing: boolean
   showSave?: boolean
+  globalMailerAvailable?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -72,7 +75,7 @@ const config = defineModel<OfflineReminderConfig>('config', { required: true })
           placeholder="0 表示不删除"
         />
         <BaseInput
-          v-else
+          v-else-if="!config.useGlobalMailer"
           v-model.number="config.smtpPort"
           label="SMTP 端口"
           type="number"
@@ -80,10 +83,34 @@ const config = defineModel<OfflineReminderConfig>('config', { required: true })
           max="65535"
           placeholder="465"
         />
+        <BaseInput
+          v-else
+          v-model.number="config.offlineDeleteSec"
+          label="离线删除账号 (秒)"
+          type="number"
+          min="0"
+          placeholder="0 表示不删除"
+        />
       </div>
 
       <template v-if="config.channel === 'smtp'">
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div class="border border-gray-200 rounded-lg bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
+          <BaseSwitch
+            v-model="config.useGlobalMailer"
+            label="使用管理员配置的邮件服务"
+            :disabled="!globalMailerAvailable"
+          />
+          <p class="mt-1 text-xs text-gray-500 leading-relaxed dark:text-gray-400">
+            <template v-if="globalMailerAvailable">
+              开启后不用填写服务器与授权码，只需填收件邮箱，即可收到本账号下挂机账号的掉线提醒。
+            </template>
+            <template v-else>
+              管理员还没有在「管理后台 → 全局设置」里配置邮件服务，暂时只能自己填写 SMTP。
+            </template>
+          </p>
+        </div>
+
+        <div v-if="!config.useGlobalMailer" class="grid grid-cols-1 gap-3 md:grid-cols-2">
           <BaseInput
             v-model="config.smtpHost"
             label="SMTP 服务器地址"
@@ -98,7 +125,7 @@ const config = defineModel<OfflineReminderConfig>('config', { required: true })
           />
         </div>
 
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div v-if="!config.useGlobalMailer" class="grid grid-cols-1 gap-3 md:grid-cols-2">
           <BaseInput
             v-model="config.smtpPass"
             label="授权码"
@@ -106,19 +133,19 @@ const config = defineModel<OfflineReminderConfig>('config', { required: true })
             placeholder="SMTP 授权码"
           />
           <BaseInput
-            v-model="config.recipientEmail"
-            label="收件人邮箱"
+            v-model="config.senderName"
+            label="发件人名称"
             type="text"
-            placeholder="接收通知的邮箱地址"
+            placeholder="发件人显示名称"
           />
         </div>
 
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
           <BaseInput
-            v-model="config.senderName"
-            label="发件人名称"
+            v-model="config.recipientEmail"
+            label="收件人邮箱"
             type="text"
-            placeholder="发件人显示名称"
+            placeholder="接收通知的邮箱地址"
           />
           <BaseInput
             v-model="config.emailContent"

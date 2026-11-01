@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
 import api from '@/api'
+import AdminMailerCard from '@/components/admin/AdminMailerCard.vue'
 import GlobalConnectionSettings from '@/components/settings/GlobalConnectionSettings.vue'
 import BaseSwitch from '@/components/ui/BaseSwitch.vue'
 import { useToastStore } from '@/stores/toast'
@@ -119,6 +120,9 @@ onMounted(() => {
   <div class="flex flex-col gap-4">
     <!-- 全局连接参数 / 设备协议 / 抓包服务 / YY-GO（自设置页系统配置迁入） -->
     <GlobalConnectionSettings />
+
+    <!-- 全局邮件服务：供用户免填 SMTP 的掉线提醒、后台批量通知使用 -->
+    <AdminMailerCard />
 
     <!-- 普通用户可见全部账号 -->
     <div class="ui-card overflow-hidden rounded-xl p-4">

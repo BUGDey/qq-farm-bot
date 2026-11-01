@@ -138,6 +138,7 @@ const {
   syncLocalOfflineSettings,
   handleSaveOffline,
   handleTestOffline,
+  globalMailerAvailable,
 } = useUserSettings(showAlert)
 
 const {
@@ -474,6 +475,7 @@ onMounted(async () => {
             :saving="offlineSaving"
             :testing="offlineTesting"
             :show-save="false"
+            :global-mailer-available="globalMailerAvailable"
             @open-docs="openChannelDocs"
             @test="handleTestOffline"
           />

@@ -111,6 +111,14 @@ export interface OfflineConfig {
   senderName: string
   recipientEmail: string
   emailContent: string
+  /** 使用管理员在后台配置的全局邮件服务（只需填收件人邮箱） */
+  useGlobalMailer: boolean
+}
+
+/** 管理员全局邮件服务的公开状态（不含账号密码） */
+export interface GlobalMailerStatus {
+  available: boolean
+  senderName: string
 }
 
 export interface OfflineConfigSavePayload extends OfflineConfig {
@@ -141,6 +149,7 @@ export interface SettingsState {
   autoCodeRefresh: AutoCodeRefreshConfig
   ui: UIConfig
   offlineReminder: OfflineConfig
+  globalMailer: GlobalMailerStatus
   fertilizerBuyOrganicCount: number
   fertilizerBuyOrganicThresholdHours: number
   fertilizerBuyNormalCount: number
@@ -166,6 +175,7 @@ function createDefaultOfflineReminder(): OfflineConfig {
     senderName: '',
     recipientEmail: '',
     emailContent: '',
+    useGlobalMailer: false,
   }
 }
 
@@ -198,6 +208,7 @@ export const useSettingStore = defineStore('setting', () => {
     autoCodeRefresh: createDefaultAutoCodeRefresh(),
     ui: {},
     offlineReminder: createDefaultOfflineReminder(),
+    globalMailer: { available: false, senderName: '' },
     fertilizerBuyOrganicCount: 10,
     fertilizerBuyOrganicThresholdHours: 10,
     fertilizerBuyNormalCount: 10,
@@ -230,6 +241,7 @@ export const useSettingStore = defineStore('setting', () => {
       autoCodeRefresh: createDefaultAutoCodeRefresh(),
       ui: {},
       offlineReminder: createDefaultOfflineReminder(),
+      globalMailer: { available: false, senderName: '' },
       fertilizerBuyOrganicCount: 10,
       fertilizerBuyOrganicThresholdHours: 10,
       fertilizerBuyNormalCount: 10,
@@ -268,6 +280,10 @@ export const useSettingStore = defineStore('setting', () => {
         settings.value.ui = d.ui || {}
         settings.value.autoAcceptFriendMinLevel = d.autoAcceptFriendMinLevel ?? 0
         settings.value.offlineReminder = normalizeOfflineReminder(d.offlineReminder)
+        settings.value.globalMailer = {
+          available: d.globalMailer?.available === true,
+          senderName: String(d.globalMailer?.senderName || ''),
+        }
         settings.value.fertilizerBuyOrganicCount = d.fertilizerBuyOrganicCount ?? 10
         settings.value.fertilizerBuyOrganicThresholdHours = d.fertilizerBuyOrganicThresholdHours ?? 10
         settings.value.fertilizerBuyNormalCount = d.fertilizerBuyNormalCount ?? 10
