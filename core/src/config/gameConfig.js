@@ -12,6 +12,7 @@ let plantConfig = null;
 const plantMap = new Map();          // plantId → plant
 const seedToPlant = new Map();       // seedId → plant
 const fruitToPlant = new Map();      // fruitId → plant
+const eventSeedIds = new Set();      // EventPlants 登记的活动植物种子 ID
 
 // 物品配置
 let itemInfoConfig = null;
@@ -126,6 +127,7 @@ function loadConfigs() {
             plantMap.clear();
             seedToPlant.clear();
             fruitToPlant.clear();
+            eventSeedIds.clear();
             for (const plant of plantConfig) {
                 plantMap.set(plant.id, plant);
                 if (plant.seed_id) seedToPlant.set(plant.seed_id, plant);
@@ -160,6 +162,7 @@ function loadConfigs() {
                 if (isInvalidPlant(entry)) continue;
                 const plantId = Number(entry.id);
                 const seedId = Number(entry.seed_id) || 0;
+                if (seedId > 0) eventSeedIds.add(seedId);
                 const existing = plantMap.get(plantId) || (seedId > 0 ? seedToPlant.get(seedId) : null);
                 if (existing) {
                     // 宿主已有：只补 EventPlants 有而宿主缺的字段
@@ -624,6 +627,41 @@ function loadPlantPhaseManifest(force = false) {
     for (const provider of externalGameConfigProviders) {
         mergeManifestFile(path.join(provider.dir, 'assets', 'plant_images', 'manifest.json'), provider.urlPrefix || '/game-config');
     }
+    // manifest 没登记但磁盘上确有阶段图的作物（上游常见：新增图片忘更新清单），
+    // 直接按目录补齐，避免面板显示「暂无阶段图」。
+    function scanPhaseDir(plantImagesDir, urlPrefix) {
+        if (!plantImagesDir || !fs.existsSync(plantImagesDir)) return;
+        let entries = [];
+        try {
+            entries = fs.readdirSync(plantImagesDir, { withFileTypes: true });
+        } catch {
+            return;
+        }
+        for (const entry of entries) {
+            if (!entry.isDirectory()) continue;
+            const assetName = entry.name;
+            if (nextMap.has(assetName)) continue;
+            const dirPath = path.join(plantImagesDir, assetName);
+            let files = [];
+            try {
+                files = fs.readdirSync(dirPath);
+            } catch {
+                continue;
+            }
+            const phases = {};
+            for (const file of files) {
+                const match = /^(\d+)\.png$/i.exec(file);
+                if (match) phases[match[1]] = `${urlPrefix}/plant_images/${assetName}/${file}`;
+            }
+            if (Object.keys(phases).length > 0) nextMap.set(assetName, phases);
+        }
+    }
+    if (needsLoad) {
+        scanPhaseDir(path.join(basePath, 'plant_images'), '/game-config');
+        for (const provider of externalGameConfigProviders) {
+            scanPhaseDir(path.join(provider.dir, 'assets', 'plant_images'), provider.urlPrefix || '/game-config');
+        }
+    }
     if (!needsLoad) return;
     plantPhaseImageMap.clear();
     for (const [assetName, phases] of nextMap) plantPhaseImageMap.set(assetName, phases);
@@ -768,6 +806,11 @@ function getSeedPrice(seedId) {
 function getSeedLevel(seedId) {
     const item = seedItemMap.get(Number(seedId) || 0);
     return item ? Number(item.level) || 0 : 0;
+}
+
+/** 是否为 EventPlants 登记的活动植物种子（其 >=200 的等级是官方占位值，不参与本地等级限制） */
+function isEventSeedId(seedId) {
+    return eventSeedIds.has(Number(seedId) || 0);
 }
 
 /** 获取果实单价 */
@@ -928,6 +971,7 @@ module.exports = {
     getMutantDisplayPlantId,
     getMutantPlantImageByPhase,
     getSeedLevel,
+    isEventSeedId,
     getMutantEffectById,
     getMutantEffectByIcon,
     getAllMutantEffects,

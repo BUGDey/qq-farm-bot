@@ -8,11 +8,12 @@ const {
     getMutantPlantImageByPhase,
     getPlantImageByPhase,
 } = require('../src/config/gameConfig');
+const { resolveGameConfigAsset } = require('./helpers/game-config-asset');
 
 test('活动植物按阶段返回官方植物图片', () => {
     const image = getPlantImageByPhase(1021037, 6);
     assert.equal(image, '/game-config/plant_images/Crop_1037/6.png');
-    assert.equal(fs.existsSync(path.join(__dirname, '..', 'src', image.replace('/game-config/', 'gameConfig/'))), true);
+    assert.notEqual(resolveGameConfigAsset(image), '', `${image} should exist`);
 });
 
 test('2x2 Spine 活动植物可返回完整的静态阶段图', () => {
@@ -20,7 +21,7 @@ test('2x2 Spine 活动植物可返回完整的静态阶段图', () => {
     for (let phase = 2; phase <= 7; phase += 1) {
         const image = getPlantImageByPhase(1029003, phase);
         assert.equal(image, `/game-config/plant_images/Crop_9003/${phase}.png`);
-        assert.equal(fs.existsSync(path.join(__dirname, '..', 'src', image.replace('/game-config/', 'gameConfig/'))), true);
+        assert.notEqual(resolveGameConfigAsset(image), '', `${image} should exist`);
     }
 });
 
@@ -28,7 +29,7 @@ test('所有作物的土地种子阶段共用客户端通用种子贴图', () =>
     const seedImage = '/game-config/plant_images/common/seed.png';
     assert.equal(getPlantImageByPhase(1020128, 1), seedImage);
     assert.equal(getPlantImageByPhase(1026032, 1), seedImage);
-    assert.equal(fs.existsSync(path.join(__dirname, '..', 'src', seedImage.replace('/game-config/', 'gameConfig/'))), true);
+    assert.notEqual(resolveGameConfigAsset(seedImage), '', `${seedImage} should exist`);
 });
 
 test('变异植物映射优先选择完整组合', () => {
@@ -65,7 +66,7 @@ test('乐园变异包含本地官方阶段素材', () => {
         for (let phase = 2; phase <= 7; phase += 1) {
             const image = getMutantPlantImageByPhase(plantId, mutantIds, phase);
             assert.match(image, /^\/game-config\/plant_images\/Plant_/);
-            assert.equal(fs.existsSync(path.join(__dirname, '..', 'src', image.replace('/game-config/', 'gameConfig/'))), true);
+            assert.notEqual(resolveGameConfigAsset(image), '', `${image} should exist`);
         }
     }
 });

@@ -256,7 +256,7 @@ const DEFAULT_GLOBAL_MAILER = {
     content: ''
 };
 
-const DEFAULT_FERTILIZER_LAND_TYPES = ['purple', 'gold', 'black', 'red', 'normal'];
+const DEFAULT_FERTILIZER_LAND_TYPES = ['blue', 'purple', 'gold', 'black', 'red', 'normal'];
 const FERTILIZER_LAND_TYPE_SET = new Set(DEFAULT_FERTILIZER_LAND_TYPES);
 
 /** 默认自动化配置 */

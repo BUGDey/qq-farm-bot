@@ -72,7 +72,7 @@ function position(land: any) {
 }
 
 function textureUrl(land: any) {
-  const level = Math.min(5, Math.max(1, Number(land?.level) || 1))
+  const level = Math.min(6, Math.max(1, Number(land?.level) || 1))
   if (Number(land?.plantSize) > 1)
     return `/game-config/land_images/land_valid${level}_2x2.png`
   if (land?.status === 'locked')

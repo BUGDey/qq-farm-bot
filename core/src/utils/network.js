@@ -147,6 +147,7 @@ function buildTsdkDeviceInfo(deviceProtocol) {
 function createTsdkRuntime(deviceProtocol) {
     return new TsdkRuntime({
         accountId: process.env.FARM_ACCOUNT_ID,
+        platform: CONFIG.platform,
         gameId: CONFIG.tsdkGameId,
         appKey: CONFIG.tsdkAppKey,
         deviceInfo: buildTsdkDeviceInfo(deviceProtocol),

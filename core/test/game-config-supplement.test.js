@@ -10,6 +10,7 @@ const {
   getPlantBySeedId,
   getPlantGrowPhases,
 } = require('../src/config/gameConfig');
+const { resolveGameConfigAsset } = require('./helpers/game-config-asset');
 
 const activityPlants = [
   { asset: 'Crop_9003', seedId: 29003, fruitId: 49003, plantId: 1029003, mutantId: 1049003, name: '星语铃花' },
@@ -29,12 +30,7 @@ const activityPlants = [
 function assertImageExists(itemId, label) {
   const imageUrl = getItemImageById(itemId);
   assert.match(imageUrl, /^\/game-config\/seed_images_named\/.+\.png$/, label);
-  const relativePath = decodeURIComponent(imageUrl.replace('/game-config/', ''));
-  assert.equal(
-    fs.existsSync(path.join(__dirname, '..', 'src', 'gameConfig', relativePath)),
-    true,
-    `${label} file`,
-  );
+  assert.notEqual(resolveGameConfigAsset(imageUrl), '', `${label} file`);
 }
 
 test('supplemental source mappings resolve names and official images', () => {
@@ -102,7 +98,8 @@ test('seed levels come from seed item configuration', () => {
   const seedLevels = new Map(getAllSeeds().map(seed => [seed.seedId, seed.requiredLevel]));
   assert.equal(seedLevels.get(20003), 2, 'carrot seed level');
   assert.equal(seedLevels.get(20129), 81, 'forget-me-not seed level');
-  assert.equal(seedLevels.get(26032), 1, 'evening primrose seed level');
+  // 1.16 数据里月见草已是 21 级活动种子（<200，仍按真实等级限制）
+  assert.equal(seedLevels.get(26032), 21, 'evening primrose seed level');
   assert.equal(seedLevels.get(20416), 1, 'haha pumpkin seed level');
 });
 

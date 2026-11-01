@@ -11,9 +11,20 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.12.0'
+export const APP_VERSION = '2.13.0'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.13.0',
+    date: '2026-11-01',
+    items: [
+      '数据同步官方 1.16.1.6：作物 318 种、物品 1074 项、等级上限 240',
+      'TSDK 升级为双端构建（QQ v3.9.0.1793452320 / 微信 v3.9.0.1793451777）',
+      '新增蓝晶土地（6 级）：可施肥、可渲染，土地类型与统计同步支持',
+      '修复 200 级以上普通种子被误判为活动种子而跳过等级限制的问题',
+      '图鉴按等级升序排列，素材插件升级到 1.2.3（补齐 22 个阶段动画）',
+    ],
+  },
   {
     version: '2.12.0',
     date: '2026-11-01',

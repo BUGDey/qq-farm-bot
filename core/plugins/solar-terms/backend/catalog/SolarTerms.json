@@ -224,6 +224,23 @@
       "audio_id": 2099014,
       "effect": "effect/prefab/jieling/jieqi_shuangjiang",
       "help": "{\"tips\": {\"title\": \"节令说明\", \"txt\": [\"<b>【节令奖励】</b>\", \"节令期间可直接领取基础奖励，答对节令问题后领取额外奖励。<br/>\", \"<b>【领取时间】</b>\", \"霜降：10月23日 ~ 10月29日。\"]}}"
+    },
+    {
+      "id": 403,
+      "name": "立冬",
+      "rewards": "20530:20;1002:200",
+      "title": "gui/texture/activity/jieling/jielingBigImg/img_jieling_title_lidong/spriteFrame",
+      "desc": "gui/texture/activity/jieling/jielingBigImg/img_jieling_txt_lidong/spriteFrame",
+      "open_start": "2026-11-07 0:00:00",
+      "open_end": "2026-11-13 23:59:59",
+      "question": "立冬这天，北方很多地方会吃什么？",
+      "answer": "A.饺子;B.粽子;C.月饼;D.汤圆",
+      "error_tips": "立冬是秋冬之交，老话讲“交子之时”，吃的这个东西名字正好和“交子”谐音。",
+      "answer_index": 0,
+      "question_rewards": "20530:10;1002:100",
+      "audio_id": 2099015,
+      "effect": "effect/prefab/jieling/jieqi_lidong",
+      "help": "{\"tips\": {\"title\": \"节令说明\", \"txt\": [\"<b>【节令奖励】</b>\", \"节令期间可直接领取基础奖励，答对节令问题后领取额外奖励。<br/>\", \"<b>【领取时间】</b>\", \"立冬：11月07日 ~ 11月13日。\"]}}"
     }
   ]
 }

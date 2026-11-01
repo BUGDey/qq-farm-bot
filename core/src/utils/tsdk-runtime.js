@@ -8,11 +8,28 @@ const { performance } = require('node:perf_hooks');
 
 const { ensureDataDir } = require('../config/runtime-paths');
 
-const OFFICIAL_VERSION = 'v3.9.0.1790160550';
-const OFFICIAL_SHA256 = '2c9e377ecc9a4fd9019f12191b589d543a60d6654580eb3e237b35f1fa5b1cb7';
 const DEFAULT_APP_ID = '1112386029';
+const OFFICIAL_VERSION = 'v3.9.0.1793452320';
+const OFFICIAL_SHA256 = '8ea1090bee1cfc9c8e3bc6370b9b41f762a65988dd91b30b6def0b21834a4640';
+// QQ 与微信各自一份 wasm：两份官方构建的导出符号相同，但内部埋点版本与小程应用标识不同，
+// 用错构建会让 ACE 上报与网关版本号不一致。
+const TSDK_BUILDS = Object.freeze({
+    qq: { file: 'tsdk-v3.9.0.1793452320.wasm', version: OFFICIAL_VERSION, sha256: OFFICIAL_SHA256 },
+    wx: { file: 'tsdk-wx-v3.9.0.1793451777.wasm', version: 'v3.9.0.1793451777', sha256: '0b7e8717f8c8c0f5c61da0c67e169b3f4df9d07f9d37a95a4af3e392db82900f' },
+});
+const MINI_PROGRAM_APP_IDS = Object.freeze({
+    qq: DEFAULT_APP_ID,
+    wx: 'wx5306c5978fdb76e4',
+});
+
 const DEFAULT_GAME_ID = 3167;
 const DEFAULT_APP_KEY = '0';
+
+function resolveTsdkPlatform(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'wx' || normalized === 'wechat' ? 'wx' : 'qq';
+}
+
 const OFFICIAL_EXPORTS = {
     memory: 'w',
     createStats: 'y',
@@ -51,12 +68,8 @@ const REQUIRED_EXPORTS = [
     'generateToken', 'encryptData', 'decryptData',
 ];
 const MERGED_DATA_KEY = 1871261153;
-const MERGED_DATA_SEGMENTS = [
-    [1024, 5541], [6580, 8989], [15585, 33], [15643, 1], [15655, 21],
-    [15701, 1], [15713, 21], [15759, 1], [15771, 30], [15826, 14],
-    [15875, 1], [15887, 21], [15933, 1], [15945, 671], [16632, 400],
-    [17040, 103], [67371008, 404],
-];
+// v3.9.0.1792070537 起只需预解密该元数据段，其余数据段由 wasm 的 decrypt_all_data 处理。
+const MERGED_DATA_METADATA = [67371008, 404];
 
 // This 64-byte table is part of the matching official JavaScript host wrapper.
 const OFFICIAL_RUNTIME_TABLE = Buffer.from([
@@ -79,11 +92,14 @@ function asBuffer(value) {
 
 class TsdkRuntime {
     constructor(options = {}) {
+        this.platform = resolveTsdkPlatform(options.platform);
+        this.build = TSDK_BUILDS[this.platform];
         this.accountId = String(options.accountId || process.env.FARM_ACCOUNT_ID || 'unknown');
-        this.appId = String(options.appId || DEFAULT_APP_ID);
+        this.appId = String(options.appId || MINI_PROGRAM_APP_IDS[this.platform]);
         this.gameId = Number(options.gameId || process.env.FARM_TSDK_GAME_ID || DEFAULT_GAME_ID);
         this.appKey = String(options.appKey ?? process.env.FARM_TSDK_APP_KEY ?? DEFAULT_APP_KEY);
-        this.wasmPath = options.wasmPath || path.join(__dirname, 'tsdk-v3.9.0.1790160550.wasm');
+        this.wasmPath = options.wasmPath || path.join(__dirname, this.build.file);
+        this.loadedSha256 = '';
         this.dataDir = options.dataDir || path.join(ensureDataDir(), 'tsdk', this.accountId);
         this.deviceInfo = options.deviceInfo || {};
         this.logger = typeof options.logger === 'function' ? options.logger : () => {};
@@ -210,7 +226,7 @@ class TsdkRuntime {
                     return runtime.writeCString(stack, ptr, capacity)
                         ? Buffer.byteLength(stack, 'utf8') + 1 : 0;
                 },
-                d: stringProvider(() => OFFICIAL_VERSION),
+                d: stringProvider(() => runtime.build.version),
                 e: () => {
                     runtime.warnOnce('acevm', 'TSDK JS integrity VM is unavailable in Node.js; using the official empty-result downgrade.');
                     return 0;
@@ -241,7 +257,7 @@ class TsdkRuntime {
                 k: (ptr, capacity) => runtime.writeBytes(OFFICIAL_RUNTIME_TABLE, ptr, capacity),
                 l: () => 2,
                 m: stringProvider(() => runtime.appId),
-                n: stringProvider(() => DEFAULT_APP_ID),
+                n: stringProvider(() => runtime.appId),
                 o: () => runtime.warnOnce('integrity-functions', 'TSDK mini-program function integrity checks are unavailable in Node.js.'),
                 p: (filePtr) => {
                     try {
@@ -334,9 +350,10 @@ class TsdkRuntime {
             const startedAt = performance.now();
             const wasm = fs.readFileSync(this.wasmPath);
             const actualHash = sha256(wasm);
-            if (actualHash !== OFFICIAL_SHA256) {
-                throw new Error(`TSDK WASM checksum mismatch: expected ${OFFICIAL_SHA256}, got ${actualHash}`);
+            if (actualHash !== this.build.sha256) {
+                throw new Error(`TSDK WASM checksum mismatch: expected ${this.build.sha256}, got ${actualHash}`);
             }
+            this.loadedSha256 = actualHash;
             fs.mkdirSync(this.dataDir, { recursive: true });
             const { instance } = await WebAssembly.instantiate(wasm, this.createImports());
             this.instance = instance;
@@ -347,16 +364,21 @@ class TsdkRuntime {
             if (typeof decryptSegment !== 'function') {
                 throw new TypeError('TSDK merged-data decryptor is missing');
             }
-            // The official mergewasm loader decrypts every active data segment
-            // before running constructors. These values are verified against the
-            // v3.9.0 WASM data section and decrypt_all_data function body.
-            for (const [ptr, length] of MERGED_DATA_SEGMENTS) {
-                this.ensureBounds(ptr, length);
-                decryptSegment(ptr, length, MERGED_DATA_KEY);
+            const decryptAllData = instance.exports.decrypt_all_data;
+            if (typeof decryptAllData !== 'function') {
+                throw new TypeError('TSDK full-data decryptor is missing');
             }
-            if (typeof instance.exports.__wasm_call_ctors === 'function') {
-                instance.exports.__wasm_call_ctors();
+            // v3.9.0.1792070537 起官方 mergewasm 改由 wasm 自身解密全部数据段：
+            // 宿主只预解密元数据段 [67371008, 404]，再调用 decrypt_all_data()，
+            // 最后调用导出 x() 触发构造。与上游仓库接口保持一致，不再逐段手动解密。
+            const [metadataPtr, metadataLength] = MERGED_DATA_METADATA;
+            this.ensureBounds(metadataPtr, metadataLength);
+            decryptSegment(metadataPtr, metadataLength, MERGED_DATA_KEY);
+            decryptAllData();
+            if (typeof instance.exports.x !== 'function') {
+                throw new TypeError('TSDK runtime bootstrap export x is missing');
             }
+            instance.exports.x();
 
             const key = this.allocCString(this.appKey);
             try {
@@ -366,7 +388,7 @@ class TsdkRuntime {
             }
             this.ready = true;
             this.metrics.initializedAt = Date.now();
-            this.logger('info', `ACE 初始化成功：${OFFICIAL_VERSION}，耗时 ${Math.round(performance.now() - startedAt)}ms`);
+            this.logger('info', `ACE 初始化成功：${this.build.version}（${this.platform}），耗时 ${Math.round(performance.now() - startedAt)}ms`);
             return this;
         })().catch((error) => {
             this.metrics.lastError = error.message;
@@ -571,8 +593,10 @@ class TsdkRuntime {
     getStatus() {
         return {
             accountId: this.accountId,
-            version: OFFICIAL_VERSION,
-            wasmSha256: OFFICIAL_SHA256,
+            platform: this.platform,
+            version: this.build.version,
+            wasmPath: this.wasmPath,
+            wasmSha256: this.loadedSha256,
             ready: this.ready,
             destroyed: this.destroyed,
             ...this.metrics,
@@ -597,4 +621,7 @@ module.exports = {
     OFFICIAL_VERSION,
     OFFICIAL_SHA256,
     OFFICIAL_EXPORTS,
+    TSDK_BUILDS,
+    MINI_PROGRAM_APP_IDS,
+    resolveTsdkPlatform,
 };

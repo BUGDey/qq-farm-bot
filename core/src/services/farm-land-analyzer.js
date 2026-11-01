@@ -428,6 +428,7 @@ async function resolveRemovableHarvestedLands(harvestedLandIds, harvestResult) {
 
 function getLandTypeByLevel(level) {
   const lv = toNum(level);
+  if (lv === 6) return 'blue';
   if (lv === 5) return 'purple';
   if (lv === 4) return 'gold';
   if (lv === 3) return 'black';
@@ -437,6 +438,7 @@ function getLandTypeByLevel(level) {
 
 function getLandTypeNameByLevel(level) {
   const typeMap = {
+    blue: '蓝晶土地',
     purple: '紫土地',
     gold: '金土地',
     black: '黑土地',
@@ -613,5 +615,6 @@ module.exports = {
   analyzeLands,
   resolveRemovableHarvestedLands,
   getQixiDewStatus,
-  getLandsDetail
+  getLandsDetail,
+  getLandTypeNameByLevel
 };

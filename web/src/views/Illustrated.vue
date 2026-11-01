@@ -28,11 +28,18 @@ const confirmLoading = ref(false)
 const pendingAction = ref<null | (() => Promise<void>)>(null)
 
 const filteredItems = computed(() => {
-  if (filter.value === 'unlocked')
-    return items.value.filter(item => item.unlocked)
-  if (filter.value === 'locked')
-    return items.value.filter(item => !item.unlocked)
-  return items.value
+  const base = filter.value === 'unlocked'
+    ? items.value.filter(item => item.unlocked)
+    : filter.value === 'locked'
+      ? items.value.filter(item => !item.unlocked)
+      : items.value
+  // 图鉴按等级升序排列：先看能种的，再往后看还差多少级
+  return [...base].sort((a, b) => {
+    const levelDiff = Number(a.level || 0) - Number(b.level || 0)
+    if (levelDiff !== 0)
+      return levelDiff
+    return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN')
+  })
 })
 
 const lockedCount = computed(() => Math.max(0, summary.value.total - summary.value.unlocked))

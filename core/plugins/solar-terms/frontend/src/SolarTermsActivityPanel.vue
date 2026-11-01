@@ -76,10 +76,10 @@ async function answer(payload: { id: number, optionIndex: number }) {
   }
 }
 function poll() {
+  // 页面可见时固定低频轮询：服务端会提前数天下发下个节令（如立冬提前 6 天），
+  // 若按「无进行中节令则静默」节流，新节令上线后面板会一直停在旧列表；
+  // 页面隐藏时停止请求，重新可见时由 visibilitychange 立即刷新。
   if (document.visibilityState !== 'visible') return
-  const now = Math.floor(Date.now() / 1000)
-  if (solar.value
-    && !solar.value.terms.some(term => term.startTime <= now && now <= term.endTime)) return
   refresh()
 }
 function visibility() { if (document.visibilityState === 'visible') refresh() }

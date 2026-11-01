@@ -9,12 +9,15 @@ QQ 农场网关要用官方小程序里的 **TSDK**（WebAssembly）来生成/�
 ## 一、版本是写死的
 
 ```js
-// core/src/utils/tsdk-runtime.js
-const OFFICIAL_VERSION = 'v3.9.0.1790160550';
-const OFFICIAL_SHA256 = '2c9e377ecc9a4fd9019f12191b589d543a60d6654580eb3e237b35f1fa5b1cb7';
+// core/src/utils/tsdk-runtime.js（按平台选构建）
+const TSDK_BUILDS = {
+    qq: { file: 'tsdk-v3.9.0.1793452320.wasm', version: 'v3.9.0.1793452320', sha256: '8ea1090b…' },
+    wx: { file: 'tsdk-wx-v3.9.0.1793451777.wasm', version: 'v3.9.0.1793451777', sha256: '0b7e8717…' },
+};
+const MINI_PROGRAM_APP_IDS = { qq: '1112386029', wx: 'wx5306c5978fdb76e4' };
 ```
 
-默认加载 `core/src/utils/tsdk-v3.9.0.1790160550.wasm`，**加载时强制校验 sha256**，
+按 `CONFIG.platform`（`qq` / `wx`）选择对应 wasm，**加载时强制校验 sha256**，
 对不上直接抛 `TSDK WASM checksum mismatch`，不会带着可疑 wasm 继续跑。
 
 仓库里同时保留了几个历史版本（`tsdk-v3.8.2.wasm`、`tsdk-v3.8.6.wasm`、
@@ -27,8 +30,10 @@ const OFFICIAL_SHA256 = '2c9e377ecc9a4fd9019f12191b589d543a60d6654580eb3e237b35f
 
 | 常量 | 值 | 说明 |
 | --- | --- | --- |
-| `OFFICIAL_VERSION` | `v3.9.0.1790160550` | 与官方小程序当前 TSDK 对齐 |
-| `DEFAULT_APP_ID` | `1112386029` | 农场小程序 AppID |
+| `TSDK_BUILDS.qq` | `v3.9.0.1793452320` | QQ 小程序当前 TSDK |
+| `TSDK_BUILDS.wx` | `v3.9.0.1793451777` | 微信小程序当前 TSDK |
+| `MINI_PROGRAM_APP_IDS.qq` | `1112386029` | 农场小程序 AppID（QQ） |
+| `MINI_PROGRAM_APP_IDS.wx` | `wx5306c5978fdb76e4` | 农场小程序 AppID（微信） |
 | `DEFAULT_GAME_ID` | `3167` | 游戏 ID |
 | `DEFAULT_APP_KEY` | `0` | 官方客户端里就是 `0` |
 
@@ -36,8 +41,9 @@ const OFFICIAL_SHA256 = '2c9e377ecc9a4fd9019f12191b589d543a60d6654580eb3e237b35f
 
 1. 读 wasm 文件 → `sha256` 校验
 2. `WebAssembly.instantiate(wasm, imports)` 建立实例（imports 里提供 `w`、`y` 等官方导出映射）
-3. 调用官方的 `__mergewasm_shared____wasm_decrypt_strings` 解密数据段，再跑 `__wasm_call_ctors`
-4. 日志打印 `ACE 初始化成功：v3.9.0.1790160550，耗时 N ms`
+3. 只预解密元数据段 `[67371008, 404]`（`__mergewasm_shared____wasm_decrypt_strings`），
+   再调 `decrypt_all_data()` 让 wasm 自己解密其余数据段，最后调导出 `x()` 触发构造
+4. 日志打印 `ACE 初始化成功：v3.9.0.1793452320，耗时 N ms`
 5. `getInfo()` 可拿到 `{ version, wasmSha256 }`，用于自检和排查
 
 ## 四、什么时候会用到

@@ -107,7 +107,7 @@ const canRemove = computed(() => props.showActions && isRemovable.value)
 
 const landTextureName = computed(() => {
   const targetLand = land.value || {}
-  const level = Math.min(5, Math.max(1, Number(targetLand.level) || 1))
+  const level = Math.min(6, Math.max(1, Number(targetLand.level) || 1))
   const isSnow = Boolean(
     targetLand.isSnow
     || targetLand.snow
@@ -131,14 +131,15 @@ const landTextureName = computed(() => {
 
 const landTextureUrl = computed(() => {
   if (Number(land.value?.plantSize) > 1)
-    return `/game-config/land_images/land_valid${Math.min(5, Math.max(1, Number(land.value?.level) || 1))}_2x2.png`
+    return `/game-config/land_images/land_valid${Math.min(6, Math.max(1, Number(land.value?.level) || 1))}_2x2.png`
   return `/game-config/land_images/${landTextureName.value}.png`
 })
 
 const shouldRotateLandTexture = computed(() => {
   const level = Number(land.value?.level) || 1
   // 与 FarmPanel 的 Canvas 保持一致，避免选中 2x2 土地后再次翻转。
-  return level === 5 && Number(land.value?.plantSize) <= 1
+  // 5/6 级土地贴图方向与 1-4 级不同，需翻转；2x2 土地由 Canvas 自行处理
+  return level >= 5 && Number(land.value?.plantSize) <= 1
 })
 
 const mutantEffects = computed(() => {
@@ -194,7 +195,7 @@ function getLandStatusClass(targetLand: any) {
   if (status === 'locked')
     return 'land-level-locked bg-slate-50/90 dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 border-dashed'
 
-  const baseClass = `land-level-${Math.min(5, Math.max(1, level || 1))} bg-stone-50/90 dark:bg-stone-950/80 border-stone-300 dark:border-stone-700`
+  const baseClass = `land-level-${Math.min(6, Math.max(1, level || 1))} bg-stone-50/90 dark:bg-stone-950/80 border-stone-300 dark:border-stone-700`
 
   if (status === 'dead')
     return 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 grayscale'

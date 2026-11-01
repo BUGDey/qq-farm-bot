@@ -37,11 +37,28 @@ for (const dir of fs.existsSync(pluginRoot) ? fs.readdirSync(pluginRoot) : []) {
 const hostManifest = readJson(path.join(gameConfig, 'plant_images', 'manifest.json'));
 const hostPhase = new Set(Object.keys(hostManifest));
 const pluginPhase = new Set();
+// manifest 之外，磁盘上真实存在阶段图目录也算覆盖（上游经常只补图不补清单）
+function collectPhaseDirs(plantImagesDir, target) {
+    if (!fs.existsSync(plantImagesDir)) return;
+    for (const entry of fs.readdirSync(plantImagesDir, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const dirPath = path.join(plantImagesDir, entry.name);
+        let files = [];
+        try {
+            files = fs.readdirSync(dirPath);
+        } catch {
+            continue;
+        }
+        if (files.some(file => /^(\d+)\.png$/i.test(file))) target.add(entry.name);
+    }
+}
+collectPhaseDirs(path.join(gameConfig, 'plant_images'), hostPhase);
 for (const dir of fs.existsSync(pluginRoot) ? fs.readdirSync(pluginRoot) : []) {
     const manifestFile = path.join(pluginRoot, dir, 'assets', 'plant_images', 'manifest.json');
     if (fs.existsSync(manifestFile)) {
         for (const key of Object.keys(readJson(manifestFile))) pluginPhase.add(key);
     }
+    collectPhaseDirs(path.join(pluginRoot, dir, 'assets', 'plant_images'), pluginPhase);
 }
 
 const golden = [];
