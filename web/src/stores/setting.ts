@@ -401,11 +401,33 @@ export const useSettingStore = defineStore('setting', () => {
     }
   }
 
+  /**
+   * 只拉「管理员是否配置了全局邮件服务」，与当前选中账号无关。
+   * 通知设置页可能在未选账号时打开，靠这个接口判断免填 SMTP 的开关是否可用。
+   */
+  async function fetchGlobalMailer() {
+    try {
+      const { data } = await api.get('/api/settings/mailer')
+      if (data && data.ok && data.data) {
+        settings.value.globalMailer = {
+          available: data.data.available === true,
+          senderName: String(data.data.senderName || ''),
+        }
+      }
+      return settings.value.globalMailer
+    }
+    catch {
+      // 接口暂不可用时保持默认（不可用），不阻塞页面渲染
+      return settings.value.globalMailer
+    }
+  }
+
   return {
     settings,
     loading,
     clearSettingsState,
     fetchSettings,
+    fetchGlobalMailer,
     saveSettings,
     saveOfflineConfig,
     saveAutoCodeRefresh,

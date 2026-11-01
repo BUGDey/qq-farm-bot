@@ -139,6 +139,7 @@ const {
   handleSaveOffline,
   handleTestOffline,
   globalMailerAvailable,
+  refreshGlobalMailer,
 } = useUserSettings(showAlert)
 
 const {
@@ -357,6 +358,8 @@ onMounted(async () => {
     syncLocalAutomationSettings()
     syncLocalOfflineSettings()
   }
+  // 全局邮件服务是否可用与账号无关：无论有没有选中账号都问一次
+  await refreshGlobalMailer()
   await scrollActiveTabIntoView()
 })
 </script>

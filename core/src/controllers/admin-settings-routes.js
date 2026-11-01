@@ -401,6 +401,21 @@ function registerAdminSettingsRoutes({
     }
   });
 
+  // 管理员是否配好了全局邮件服务：与账号无关，通知设置页在未选账号时也要能判断
+  app.get("/api/settings/mailer", (req, res) => {
+    try {
+      res.json({
+        ok: true,
+        data:
+          typeof store.getGlobalMailerPublic === "function"
+            ? store.getGlobalMailerPublic()
+            : { available: false, senderName: "" },
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
   app.get("/api/settings/default", (req, res) => {
     try {
       const data = store.getDefaultAccountConfig

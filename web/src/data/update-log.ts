@@ -11,9 +11,19 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.9'
+export const APP_VERSION = '2.11.10'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.10',
+    date: '2026-11-01',
+    items: [
+      '修复「通知设置 → 使用管理员配置的邮件服务」明明已配置好却显示未启用的问题',
+      '可用性改成独立接口判断，未选择账号时也能正确显示开关',
+      '管理后台「邮件通知」新增常用模板：维护更新、续费提醒、功能更新、服务恢复',
+      '模板一键填入主题与正文，填完可继续改',
+    ],
+  },
   {
     version: '2.11.9',
     date: '2026-11-01',

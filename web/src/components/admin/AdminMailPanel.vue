@@ -29,6 +29,85 @@ const subject = ref('')
 const content = ref('')
 const result = ref<{ sent: number, failed: number, skipped: { username: string, reason: string }[] } | null>(null)
 
+interface MailTemplate {
+  key: string
+  label: string
+  subject: string
+  content: string
+}
+
+const templates: MailTemplate[] = [
+  {
+    key: 'maintenance',
+    label: '维护更新',
+    subject: '【维护通知】QQ 农场智能助手今晚维护，维护后需要重新登录账号',
+    content: `你好：
+
+QQ 农场智能助手计划于今晚进行版本更新维护。
+
+维护时间：20:00 - 21:00
+影响范围：维护期间面板、挂机任务与掉线提醒会短暂中断。
+
+维护完成后，需要重新登录账号才能继续挂机：
+1. 打开面板，进入「设置 → 账号管理」；
+2. 找到对应账号，点击「重新登录」，按提示重新扫码或输入验证码；
+3. 登录成功后，挂机任务会自动恢复。
+
+如果维护结束后账号仍显示离线，请刷新页面后重试一次。
+
+—— QQ 农场智能助手`,
+  },
+  {
+    key: 'expire',
+    label: '续费提醒',
+    subject: '【续费提醒】你的账号即将到期',
+    content: `你好：
+
+你的 QQ 农场智能助手账号即将到期。
+
+到期后将无法继续挂机，已添加的农场账号会停止运行，但数据会保留。
+如需继续使用，请在「我的账户 → 卡密续费」中输入新的卡密完成续费。
+
+续费后无需重新登录，挂机任务会自动恢复。
+
+—— QQ 农场智能助手`,
+  },
+  {
+    key: 'update',
+    label: '功能更新',
+    subject: '【版本更新】QQ 农场智能助手已更新，建议刷新面板体验',
+    content: `你好：
+
+QQ 农场智能助手已完成版本更新，新增与修复的内容见面板登录页的「更新日志」。
+
+更新后建议：
+1. 打开面板后按 Ctrl + F5 强制刷新，避免浏览器缓存旧页面；
+2. 如果功能异常，可在「设置 → 账号管理」里对账号执行一次「重新登录」。
+
+—— QQ 农场智能助手`,
+  },
+  {
+    key: 'incident',
+    label: '服务恢复',
+    subject: '【服务恢复】QQ 农场智能助手已恢复正常',
+    content: `你好：
+
+此前一段时间面板出现的异常已经修复，服务已恢复正常。
+
+如果你的账号仍显示离线或任务没有运行，请按以下步骤处理：
+1. 刷新页面；
+2. 在「设置 → 账号管理」对该账号点击「重新登录」；
+3. 如仍有问题，可通过面板首页的反馈入口联系我们。
+
+—— QQ 农场智能助手`,
+  },
+]
+
+function applyTemplate(template: MailTemplate) {
+  subject.value = template.subject
+  content.value = template.content
+}
+
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
   return recipients.value.filter((item) => {
@@ -141,6 +220,20 @@ onMounted(loadRecipients)
         收件地址优先取用户「通知设置」里填写的收件邮箱，没有则用其账号资料里的邮箱。
         默认不发送给已过期用户，需要时可在下方打开「包含已过期用户」。
       </p>
+
+      <div class="mb-3 flex flex-wrap items-center gap-2">
+        <span class="text-xs text-gray-500 dark:text-gray-400">常用模板：</span>
+        <button
+          v-for="template in templates"
+          :key="template.key"
+          type="button"
+          class="border border-gray-200 rounded-full bg-white px-3 py-1 text-xs text-gray-600 transition dark:border-gray-700 hover:border-[var(--theme-primary)] dark:bg-gray-800 dark:text-gray-300 hover:text-[var(--theme-primary)]"
+          @click="applyTemplate(template)"
+        >
+          {{ template.label }}
+        </button>
+        <span class="text-xs text-gray-400">点击填入主题与正文，可继续修改</span>
+      </div>
 
       <div class="space-y-3">
         <BaseInput v-model="subject" label="邮件主题" type="text" placeholder="例如：系统维护通知" />

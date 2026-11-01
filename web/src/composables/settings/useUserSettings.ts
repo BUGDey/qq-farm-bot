@@ -142,6 +142,11 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
   const globalMailerAvailable = computed(() => settings.value?.globalMailer?.available === true)
   const globalMailerSender = computed(() => String(settings.value?.globalMailer?.senderName || ''))
 
+  /** 与账号无关：进入设置页就刷新一次，未选账号时也能正确显示开关是否可用 */
+  async function refreshGlobalMailer() {
+    await settingStore.fetchGlobalMailer()
+  }
+
   const channelOptions = [
     { label: 'SMTP 邮件', value: 'smtp' },
     { label: 'Webhook(自定义接口)', value: 'webhook' },
@@ -415,6 +420,7 @@ export function useUserSettings(showAlert: (message: string, type?: AlertType) =
     currentChannelDocUrl,
     globalMailerAvailable,
     globalMailerSender,
+    refreshGlobalMailer,
     openChannelDocs,
     fillRandomDeviceMac,
     fillRandomDeviceId,
