@@ -13,11 +13,14 @@ const accountStore = useAccountStore()
 const petStore = usePetStore()
 const toast = useToastStore()
 const { currentAccountId } = storeToRefs(accountStore)
-const { overview, logs, capitalMode, loading, mutating } = storeToRefs(petStore)
+const { overview, logs, capitalMode, autoFeed, autoFeedResult, loading, mutating } = storeToRefs(petStore)
 const tab = ref<PetTab>('pets')
 const feedCounts = reactive<Record<number, number>>({})
 const draft = reactive({ enabled: false, dogId: 0, leadSeconds: 10 })
+const feeding = reactive({ enabled: false, keepDays: 10 })
 const saving = ref(false)
+const savingFeed = ref(false)
+const feedRunning = ref(false)
 
 const tabs: { key: PetTab, label: string, icon: string }[] = [
   { key: 'pets', label: '宠物管理', icon: 'i-carbon-dog-walker' },
@@ -27,6 +30,9 @@ const tabs: { key: PetTab, label: string, icon: string }[] = [
 const sortedDogs = computed(() => [...overview.value.dogs].sort((a, b) => Number(b.deployed) - Number(a.deployed) || Number(b.owned) - Number(a.owned) || Number(b.activatable) - Number(a.activatable) || b.rarity - a.rarity))
 const ownedCount = computed(() => overview.value.dogs.filter(dog => dog.owned).length)
 const deployed = computed(() => overview.value.dogs.find(dog => dog.deployed))
+const ownedDogs = computed(() => overview.value.dogs.filter(dog => dog.owned))
+const selectedDogName = computed(() => ownedDogs.value.find(dog => dog.id === draft.dogId)?.name || '')
+const foodDays = computed(() => Math.floor((overview.value.foodSeconds || 0) / 86400))
 const foodPercent = computed(() => {
   const maximum = Math.max(overview.value.protectSeconds || 0, 1)
   return Math.min(100, Math.max(0, (overview.value.foodSeconds / maximum) * 100))
@@ -67,9 +73,11 @@ async function load() {
     await Promise.all([
       petStore.fetchOverview(id),
       petStore.fetchCapitalMode(id),
+      petStore.fetchAutoFeed(id),
       tab.value === 'logs' ? petStore.fetchLogs(id) : Promise.resolve(),
     ])
     Object.assign(draft, capitalMode.value)
+    Object.assign(feeding, autoFeed.value)
   }
   catch (e: any) {
     toast.error(e?.response?.data?.error || e?.message || '加载失败')
@@ -98,15 +106,53 @@ async function saveSettings() {
   }
 }
 
+async function saveFeedSettings() {
+  if (savingFeed.value)
+    return
+  savingFeed.value = true
+  try {
+    await action(
+      () => petStore.saveAutoFeed(String(currentAccountId.value), { enabled: feeding.enabled, keepDays: Number(feeding.keepDays) || 10 }),
+      '自动喂食设置已保存',
+    )
+  }
+  finally {
+    savingFeed.value = false
+  }
+}
+
+async function runAutoFeedNow() {
+  if (feedRunning.value)
+    return
+  feedRunning.value = true
+  try {
+    const result: any = await petStore.runAutoFeed(String(currentAccountId.value))
+    if (result?.fed)
+      toast.success('已自动补充狗粮')
+    else if (result?.skipped === 'no_plan')
+      toast.info(autoFeedResult.value || '当前无需补充')
+    else if (result?.skipped === 'disabled')
+      toast.error('请先开启自动喂食')
+    else
+      toast.success(autoFeedResult.value || '已检查')
+  }
+  catch (e: any) {
+    toast.error(e?.response?.data?.error || e?.message || '执行失败')
+  }
+  finally {
+    feedRunning.value = false
+  }
+}
+
 watch([currentAccountId, tab], load)
 onMounted(load)
 </script>
 
 <template>
   <section class="pet-page flex flex-col gap-3 lg:h-full lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-    <header class="flex shrink-0 flex-wrap items-center justify-between gap-3">
+    <header class="ui-card flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg px-3 py-2.5 sm:px-4">
       <div class="min-w-0 flex items-center gap-3">
-        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[color-mix(in_srgb,var(--theme-primary)_12%,transparent)] text-[var(--theme-primary)]">
+        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-lg from-[var(--theme-primary)] to-[color-mix(in_srgb,var(--theme-primary)_55%,#0ea5e9)] bg-gradient-to-br text-white shadow-sm">
           <span class="i-fa-solid-paw text-xl" />
         </div>
         <div class="min-w-0">
@@ -123,18 +169,19 @@ onMounted(load)
       </BaseButton>
     </header>
 
-    <nav class="flex shrink-0 gap-1 border-b border-gray-200 dark:border-gray-700" aria-label="宠物功能">
+    <nav class="ui-card flex shrink-0 gap-1 rounded-lg p-1" aria-label="宠物功能">
       <button
         v-for="item in tabs"
         :key="item.key"
         type="button"
-        class="relative flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4"
-        :class="tab === item.key ? 'text-[var(--theme-primary)]' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'"
+        class="min-w-0 flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:px-4"
+        :class="tab === item.key
+          ? 'bg-[var(--theme-primary)] text-white shadow-sm'
+          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/40 dark:hover:text-gray-200'"
         :aria-current="tab === item.key ? 'page' : undefined"
         @click="tab = item.key"
       >
         <span :class="item.icon" />{{ item.label }}
-        <span v-if="tab === item.key" class="absolute bottom-0 left-2 right-2 h-0.5 rounded-full bg-[var(--theme-primary)]" />
       </button>
     </nav>
 
@@ -239,7 +286,7 @@ onMounted(load)
                   : action(() => petStore.deploy(String(currentAccountId), dog.id), `${dog.name}已派出`)"
               >
                 <span :class="dog.deployed ? 'i-carbon-checkmark-filled' : dog.owned ? 'i-carbon-play-filled' : dog.activatable ? 'i-carbon-unlocked' : 'i-carbon-locked'" />
-                {{ dog.deployed ? '正在守护' : dog.owned ? '派出守护' : dog.activatable ? '激活宠物' : '尚未获得' }}
+                {{ dog.deployed ? '当前选择' : dog.owned ? '选择宠物' : dog.activatable ? '激活宠物' : '尚未获得' }}
               </button>
             </article>
           </div>
@@ -259,6 +306,48 @@ onMounted(load)
             <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
               <div class="h-full rounded-full bg-[var(--theme-primary)] transition-all" :style="{ width: `${foodPercent}%` }" />
             </div>
+          </div>
+
+          <!-- 自动喂食 -->
+          <div class="shrink-0 border-b border-gray-200 p-3 dark:border-gray-700 sm:p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="flex items-center gap-1.5 text-sm text-gray-900 font-semibold dark:text-gray-100">
+                  <span class="i-carbon-restaurant text-[var(--theme-primary)]" />自动喂食
+                </p>
+                <p class="mt-0.5 text-[11px] text-gray-500 leading-4 dark:text-gray-400">
+                  当前剩余 {{ foodDays }} 天：低于 {{ feeding.keepDays }} 天用 1 天粮补齐；没有 1 天粮时剩 7 天喂 3 天、剩 5 天喂 5 天
+                </p>
+              </div>
+              <BaseSwitch v-model="feeding.enabled" aria-label="开启宠物自动喂食" :disabled="savingFeed" />
+            </div>
+            <div class="mt-2.5 flex items-center gap-2">
+              <label class="flex shrink-0 items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+                保持
+                <input
+                  v-model.number="feeding.keepDays"
+                  type="number"
+                  min="1"
+                  max="30"
+                  class="h-8 w-14 border border-gray-200 rounded-md bg-[var(--input-bg)] px-1 text-center text-sm text-gray-900 outline-none dark:border-gray-600 focus:border-[var(--theme-primary)] dark:text-gray-100"
+                  aria-label="保持守护天数"
+                >
+                天
+              </label>
+              <div class="min-w-0 flex-1" />
+              <BaseButton variant="secondary" size="sm" :loading="feedRunning" :disabled="!currentAccountId || loading || feedRunning" @click="runAutoFeedNow">
+                立即检查
+              </BaseButton>
+              <BaseButton size="sm" :loading="savingFeed" :disabled="savingFeed" @click="saveFeedSettings">
+                保存
+              </BaseButton>
+            </div>
+            <p v-if="autoFeedResult" class="mt-2 truncate text-[11px] text-gray-400" :title="autoFeedResult">
+              {{ autoFeedResult }}
+            </p>
+            <p v-else-if="autoFeed.enabled" class="mt-2 text-[11px] text-gray-400">
+              后台每 15 分钟检查一次，可在运行日志查看补充记录
+            </p>
           </div>
 
           <div class="flex shrink-0 items-center justify-between px-3 pb-1 pt-3 sm:px-4">
@@ -295,8 +384,8 @@ onMounted(load)
                   </p>
                 </div>
               </div>
-              <div class="mt-2 flex items-center gap-2">
-                <div class="h-8 flex flex-1 items-center overflow-hidden border border-gray-200 rounded-md dark:border-gray-600">
+              <div class="mt-2 flex flex-col gap-2">
+                <div class="h-8 flex items-center overflow-hidden border border-gray-200 rounded-md dark:border-gray-600">
                   <button type="button" class="grid h-full w-8 shrink-0 place-items-center text-gray-500 hover:bg-gray-100 dark:text-gray-300 disabled:opacity-35 dark:hover:bg-gray-700" :disabled="!food.count || mutating || getFeedCount(food.id) <= 1" :aria-label="`减少${food.name}数量`" @click="setFeedCount(food.id, getFeedCount(food.id) - 1, food.count)">
                     <span class="i-carbon-subtract" />
                   </button>
@@ -315,7 +404,7 @@ onMounted(load)
                     <span class="i-carbon-add" />
                   </button>
                 </div>
-                <BaseButton size="sm" class="h-8 shrink-0 px-3!" :disabled="!food.count || mutating || invalidFeedCount(food.id, food.count)" @click="action(() => petStore.feed(String(currentAccountId), food.id, getFeedCount(food.id)), '喂食成功')">
+                <BaseButton size="sm" class="h-8 w-full" :disabled="!food.count || mutating || invalidFeedCount(food.id, food.count)" @click="action(() => petStore.feed(String(currentAccountId), food.id, getFeedCount(food.id)), '喂食成功')">
                   喂食
                 </BaseButton>
               </div>
@@ -394,15 +483,35 @@ onMounted(load)
             <BaseSwitch v-model="draft.enabled" aria-label="启用宠物自动化" :disabled="saving" />
           </label>
 
-          <div class="grid mt-5 gap-4 sm:grid-cols-2">
-            <label class="min-w-0 text-sm text-gray-700 font-medium dark:text-gray-200">
-              守护宠物
-              <select v-model.number="draft.dogId" class="mt-2 h-10 w-full border border-gray-200 rounded-lg bg-[var(--input-bg)] px-3 text-sm text-gray-900 outline-none dark:border-gray-600 focus:border-[var(--theme-primary)] dark:text-gray-100 focus:ring-2 focus:ring-[color-mix(in_srgb,var(--theme-primary)_18%,transparent)]">
-                <option :value="0">请选择宠物</option>
-                <option v-for="dog in overview.dogs.filter(dog => dog.owned)" :key="dog.id" :value="dog.id">{{ dog.name }}</option>
-              </select>
-            </label>
-            <label class="min-w-0 text-sm text-gray-700 font-medium dark:text-gray-200">
+          <div class="mt-5 space-y-4">
+            <div class="min-w-0">
+              <p class="text-sm text-gray-700 font-medium dark:text-gray-200">
+                守护宠物
+                <span v-if="selectedDogName" class="ml-1 text-xs text-gray-400">已选：{{ selectedDogName }}</span>
+              </p>
+              <div v-if="ownedDogs.length" class="grid grid-cols-2 mt-2 gap-2 sm:grid-cols-3">
+                <button
+                  v-for="dog in ownedDogs"
+                  :key="dog.id"
+                  type="button"
+                  class="min-w-0 flex items-center gap-2 border rounded-lg px-2 py-1.5 text-left transition"
+                  :class="draft.dogId === dog.id
+                    ? 'border-[var(--theme-primary)] bg-[color-mix(in_srgb,var(--theme-primary)_8%,transparent)] text-[var(--theme-primary)]'
+                    : 'border-gray-200 text-gray-700 hover:border-[var(--theme-primary)] dark:border-gray-600 dark:text-gray-200'"
+                  :aria-pressed="draft.dogId === dog.id"
+                  @click="draft.dogId = dog.id"
+                >
+                  <img v-if="dog.image" :src="dog.image" :alt="dog.name" loading="lazy" class="h-8 w-8 shrink-0 object-contain">
+                  <span v-else class="i-fa-solid-paw shrink-0 text-base" />
+                  <span class="min-w-0 flex-1 truncate text-xs font-medium">{{ dog.name }}</span>
+                  <span v-if="draft.dogId === dog.id" class="i-carbon-checkmark-filled shrink-0 text-xs" />
+                </button>
+              </div>
+              <p v-else class="mt-2 text-xs text-gray-400">
+                还没有已拥有的宠物，先在「宠物」页签激活
+              </p>
+            </div>
+            <label class="block min-w-0 text-sm text-gray-700 font-medium dark:text-gray-200">
               提前派出时间
               <div class="relative mt-2">
                 <input v-model.number="draft.leadSeconds" type="number" min="5" max="300" class="h-10 w-full border border-gray-200 rounded-lg bg-[var(--input-bg)] px-3 pr-10 text-sm text-gray-900 outline-none dark:border-gray-600 focus:border-[var(--theme-primary)] dark:text-gray-100 focus:ring-2 focus:ring-[color-mix(in_srgb,var(--theme-primary)_18%,transparent)]">

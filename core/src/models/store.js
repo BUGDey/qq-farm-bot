@@ -452,6 +452,22 @@ const DEFAULT_QUIET_HOURS = {
 const DEFAULT_PLANT_BLACKLIST = [20002, 26739, 20059, 20065, 20064, 20060, 20061];
 const DEFAULT_CAPITAL_MODE = { enabled: false, dogId: 0, leadSeconds: 10 };
 
+/** 宠物自动喂食：低于 keepDays 天时自动补狗粮 */
+const DEFAULT_PET_AUTO_FEED = { enabled: false, keepDays: 10 };
+
+function normalizePetAutoFeed(value, fallback = DEFAULT_PET_AUTO_FEED) {
+    const input = value && typeof value === 'object' ? value : {};
+    const base = fallback && typeof fallback === 'object' ? fallback : DEFAULT_PET_AUTO_FEED;
+    const rawKeep = input.keepDays !== undefined && input.keepDays !== null
+        ? Number(input.keepDays)
+        : Number(base.keepDays);
+    const keep = Number.isFinite(rawKeep) && rawKeep > 0 ? Math.round(rawKeep) : 10;
+    return {
+        enabled: input.enabled !== undefined ? input.enabled === true : base.enabled === true,
+        keepDays: Math.max(1, Math.min(30, keep))
+    };
+}
+
 function normalizeCapitalMode(value, fallback = DEFAULT_CAPITAL_MODE) {
     const input = value && typeof value === 'object' ? value : {};
     const base = fallback && typeof fallback === 'object' ? fallback : DEFAULT_CAPITAL_MODE;
@@ -489,7 +505,8 @@ const DEFAULT_ACCOUNT_CONFIG = {
     autoAcceptFriendMinLevel: 0,
     goldenBugKeepCount: 0,
     goldenBugRoundLimit: 24,
-    capitalMode: DEFAULT_CAPITAL_MODE
+    capitalMode: DEFAULT_CAPITAL_MODE,
+    petAutoFeed: DEFAULT_PET_AUTO_FEED
 };
 
 const ALLOWED_AUTOMATION_KEYS = new Set(Object.keys(DEFAULT_ACCOUNT_CONFIG.automation));
@@ -814,7 +831,8 @@ function cloneAccountConfig(config = DEFAULT_ACCOUNT_CONFIG) {
         bagSeedPriority: normalizeBagSeedPriority(config.bagSeedPriority),
         bagSeedKnownIds: normalizeBagSeedPriority(config.bagSeedKnownIds),
         bagSeedFallbackStrategy: normalizeBagSeedFallbackStrategy(config.bagSeedFallbackStrategy),
-        capitalMode: normalizeCapitalMode(config.capitalMode)
+        capitalMode: normalizeCapitalMode(config.capitalMode),
+        petAutoFeed: normalizePetAutoFeed(config.petAutoFeed)
     };
 }
 
@@ -1560,6 +1578,9 @@ function applyConfigSnapshot(patch = {}, opts = {}) {
     if (patch.capitalMode && typeof patch.capitalMode === 'object') {
         cfg.capitalMode = normalizeCapitalMode(patch.capitalMode, cfg.capitalMode);
     }
+    if (patch.petAutoFeed && typeof patch.petAutoFeed === 'object') {
+        cfg.petAutoFeed = normalizePetAutoFeed(patch.petAutoFeed, cfg.petAutoFeed);
+    }
     if (patch.ui && typeof patch.ui === 'object') {
         const theme = String(patch.ui.theme || '').toLowerCase();
         if (theme === 'dark' || theme === 'light') {
@@ -1605,6 +1626,14 @@ function getCapitalMode(accountId) {
 
 function setCapitalMode(accountId, config) {
     return applyConfigSnapshot({ capitalMode: config || {} }, { accountId }).capitalMode;
+}
+
+function getPetAutoFeed(accountId) {
+    return normalizePetAutoFeed(getAccountConfigSnapshot(accountId).petAutoFeed);
+}
+
+function setPetAutoFeed(accountId, config) {
+    return applyConfigSnapshot({ petAutoFeed: config || {} }, { accountId }).petAutoFeed;
 }
 
 function isAutomationOn(key, accountId) {
@@ -2280,6 +2309,8 @@ module.exports = {
     setAutoCodeRefresh,
     getCapitalMode,
     setCapitalMode,
+    getPetAutoFeed,
+    setPetAutoFeed,
     isAutomationOn,
     getPlantingStrategy,
     getPrioritize2x2Crops,
@@ -2370,6 +2401,7 @@ module.exports._test = {
     applyPluginAutomationRegistry,
     normalizePluginAutomationValue,
     normalizeCapitalMode,
+    normalizePetAutoFeed,
     disableHiddenActivityAutomation,
     HIDDEN_ACTIVITY_AUTOMATION_KEYS,
     RAIN_POEM_AUTOMATION_KEYS,

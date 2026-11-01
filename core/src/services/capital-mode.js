@@ -29,19 +29,61 @@ function clearOwnership() {
 
 function releaseForManualCommand() { clearOwnership(); }
 
+/**
+ * 派出前确认守护时长够用：不足时按「宠物自动喂食」的配置补一次狗粮
+ * @returns {Promise<boolean>} 是否可以派出
+ */
+async function ensureProtectionForDeploy(overview) {
+  const MIN_SECONDS = 60;
+  if ((Number(overview && overview.foodSeconds) || 0) >= MIN_SECONDS) return true;
+  const autoFeed = require('../models/store').getPetAutoFeed();
+  if (!autoFeed.enabled) return false;
+  try {
+    await require('./pet-auto-feed').runPetAutoFeedOnce({ reason: 'capital-mode', force: true });
+  } catch (error) {
+    log('宠物', `资本模式补喂狗粮失败: ${error.message}`, { module: 'pet', event: '资本模式喂食', result: 'error' });
+    return false;
+  }
+  try {
+    const latest = await getPetOverview();
+    return (Number(latest && latest.foodSeconds) || 0) >= MIN_SECONDS;
+  } catch {
+    return false;
+  }
+}
+
 async function prepareForFarmOperation({ lands, analysis, opType }) {
   if (opType !== 'all' && opType !== 'harvest') return false;
   const config = getCapitalMode();
-  if (!config.enabled || !config.dogId || state.phase !== 'idle') return false;
+  if (!config.enabled) return false;
+  if (!config.dogId) {
+    log('宠物', '资本模式未生效：还没有选择守护宠物', { module: 'pet', event: '资本模式跳过', result: 'warn' });
+    return false;
+  }
+  if (state.phase !== 'idle') return false;
   const matureIn = findNearestMatureSeconds(lands, analysis);
-  if (matureIn === null || matureIn > config.leadSeconds || Date.now() - state.lastAttemptAt < 5000) return false;
+  if (matureIn === null) return false;
+  if (matureIn > config.leadSeconds) return false;
+  if (Date.now() - state.lastAttemptAt < 5000) return false;
   state.lastAttemptAt = Date.now();
   state.phase = 'deploying';
   try {
     const overview = await getPetOverview();
-    if (overview.deployedId) { state.phase = 'idle'; return false; }
+    if (overview.deployedId) {
+      state.phase = 'idle';
+      log('宠物', '资本模式跳过：已有宠物在守护中', { module: 'pet', event: '资本模式跳过', result: 'warn', deployedId: overview.deployedId });
+      return false;
+    }
     const dog = overview.dogs.find(item => item.id === config.dogId && item.owned);
     if (!dog) { state.phase = 'idle'; return false; }
+    // 没有守护时长时先补狗粮，否则游戏会拒绝派出
+    if (!await ensureProtectionForDeploy(overview)) {
+      state.phase = 'idle';
+      log('宠物', '资本模式跳过：守护时长不足，请先喂狗粮（可在宠物页开启「宠物自动喂食」）', {
+        module: 'pet', event: '资本模式跳过', result: 'warn', foodSeconds: Number(overview.foodSeconds) || 0
+      });
+      return false;
+    }
     await deployDog(config.dogId);
     state.autoDogId = config.dogId;
     state.phase = 'deployed';

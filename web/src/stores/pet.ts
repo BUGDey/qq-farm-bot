@@ -5,11 +5,14 @@ import api from '@/api'
 export interface PetDog { id: number, name: string, image: string, desc: string, level: number, rarity: number, owned: boolean, activatable: boolean, deployed: boolean }
 export interface PetFood { id: number, name: string, image: string, count: number, days: number, duration: number }
 export interface CapitalMode { enabled: boolean, dogId: number, leadSeconds: number }
+export interface PetAutoFeed { enabled: boolean, keepDays: number }
 
 export const usePetStore = defineStore('pet', () => {
   const overview = ref({ dogs: [] as PetDog[], foods: [] as PetFood[], deployedId: 0, foodSeconds: 0, protectSeconds: 2592000 })
   const logs = ref<any[]>([])
   const capitalMode = ref<CapitalMode>({ enabled: false, dogId: 0, leadSeconds: 10 })
+  const autoFeed = ref<PetAutoFeed>({ enabled: false, keepDays: 10 })
+  const autoFeedResult = ref('')
   const loading = ref(false)
   const mutating = ref(false)
 
@@ -55,5 +58,26 @@ export const usePetStore = defineStore('pet', () => {
       throw new Error(data?.error || '保存失败')
     capitalMode.value = data.data.capitalMode
   }
-  return { overview, logs, capitalMode, loading, mutating, fetchOverview, fetchLogs, fetchCapitalMode, activate, deploy, withdraw, feed, saveCapitalMode }
+  async function fetchAutoFeed(accountId: string) {
+    const { data } = await api.get('/api/dog/auto-feed', { headers: headers(accountId) })
+    if (data?.ok)
+      autoFeed.value = data.data
+  }
+  async function saveAutoFeed(accountId: string, config: PetAutoFeed) {
+    const { data } = await api.post('/api/dog/auto-feed', config, { headers: headers(accountId) })
+    if (!data?.ok)
+      throw new Error(data?.error || '保存失败')
+    autoFeed.value = data.data.autoFeed
+  }
+  async function runAutoFeed(accountId: string) {
+    const { data } = await api.post('/api/dog/auto-feed/run', {}, { headers: headers(accountId), timeout: 60000 })
+    if (!data?.ok)
+      throw new Error(data?.error || '执行失败')
+    autoFeedResult.value = data.data?.ok
+      ? (data.data?.fed ? '已自动补充狗粮' : (data.data?.skipped === 'no_plan' ? '当前无需补充' : '已检查'))
+      : '检查完成'
+    await fetchOverview(accountId)
+    return data.data
+  }
+  return { overview, logs, capitalMode, autoFeed, autoFeedResult, loading, mutating, fetchOverview, fetchLogs, fetchCapitalMode, fetchAutoFeed, activate, deploy, withdraw, feed, saveCapitalMode, saveAutoFeed, runAutoFeed }
 })

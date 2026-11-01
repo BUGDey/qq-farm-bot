@@ -29,6 +29,19 @@ function registerAdminPetRoutes({ app, provider, store, getAccountIdFromRequest,
       res.json({ ok: true, data: { capitalMode } });
     } catch (error) { sendProviderError(res, error); }
   });
+  app.get('/api/dog/auto-feed', (req, res) => {
+    const id = accountIdFor(req, res); if (!id) return;
+    res.json({ ok: true, data: store.getPetAutoFeed(id) });
+  });
+  app.post('/api/dog/auto-feed', (req, res) => {
+    const id = accountIdFor(req, res); if (!id) return;
+    try {
+      const autoFeed = store.setPetAutoFeed(id, req.body || {});
+      if (provider.broadcastConfig) provider.broadcastConfig(id);
+      res.json({ ok: true, data: { autoFeed } });
+    } catch (error) { sendProviderError(res, error); }
+  });
+  route('post', '/api/dog/auto-feed/run', id => provider.runPetAutoFeed(id));
 }
 
 module.exports = { registerAdminPetRoutes };

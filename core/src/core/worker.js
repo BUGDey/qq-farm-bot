@@ -329,6 +329,12 @@ async function runStartupSequence() {
     } catch (err) {
         log('系统', `启动序列-放虫放草失败: ${err.message}`, { module: 'system', event: '启动序列', result: 'error' });
     }
+    if (!loginReady) return;
+    try {
+        await withAutomationLock('pet-auto-feed', () => require('../services/pet-auto-feed').runPetAutoFeedOnce({ reason: 'startup' }));
+    } catch (err) {
+        log('系统', `启动序列-自动喂食失败: ${err.message}`, { module: 'system', event: '启动序列', result: 'error' });
+    }
 }
 
 function stopDailyRoutineTimer() {
@@ -1086,6 +1092,22 @@ function startMysteryShopAutoBuyTimer() {
     }, { preventOverlap: true });
 }
 
+const PET_AUTO_FEED_INTERVAL_MS = 15 * 60 * 1000;
+
+function stopPetAutoFeedTimer() {
+    workerScheduler.clear('pet_auto_feed_interval');
+}
+
+/** 每 15 分钟检查一次守护剩余时长，低于保持天数就自动补狗粮 */
+function startPetAutoFeedTimer() {
+    stopPetAutoFeedTimer();
+    workerScheduler.setIntervalTask('pet_auto_feed_interval', PET_AUTO_FEED_INTERVAL_MS, () => {
+        if (!loginReady) return;
+        withAutomationLock('pet-auto-feed', () => require('../services/pet-auto-feed').runPetAutoFeedOnce({ reason: 'timer' }))
+            .catch(err => log('宠物', `自动喂食检查失败: ${err.message}`, { module: 'pet', event: '自动喂食', result: 'error' }));
+    }, { preventOverlap: true });
+}
+
 // ==================== 间隔计算 ====================
 
 function normalizeIntervalRangeSec(minVal, maxVal, defaultVal) {
@@ -1745,6 +1767,7 @@ async function startBot(config) {
         startDailyRoutineTimer();
         startStarActivityClaimTimer();
         startMysteryShopAutoBuyTimer();
+    startPetAutoFeedTimer();
 
         // 登录启动序列：串行执行，避免登录瞬间多个任务同时发包把网关卡住
         runStartupSequence().catch(() => null);
@@ -1968,6 +1991,12 @@ async function handleApiCallInternal(msg) {
                 break;
             case 'getProtectLogs':
                 result = await require('../services/pets').getProtectLogs();
+                break;
+            case 'runPetAutoFeed':
+                result = await withAutomationLock('pet-auto-feed', () => require('../services/pet-auto-feed').runPetAutoFeedOnce({ reason: 'manual', force: true }));
+                break;
+            case 'getPetAutoFeedState':
+                result = require('../services/pet-auto-feed').getPetAutoFeedState();
                 break;
             case 'useItem': {
                 const { useItem } = require('../services/warehouse');

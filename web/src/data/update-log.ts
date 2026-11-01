@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.3'
+export const APP_VERSION = '2.11.4'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.4',
+    date: '2026-11-01',
+    items: [
+      '宠物页新增「自动喂食」：低于保持天数自动补狗粮（1 天粮优先，其次剩 7 天喂 3 天、剩 5 天喂 5 天）',
+      '宠物页整体换新皮肤，页签改为胶囊式，喂食卡片改为纵向布局不再挤成一团',
+      '资本模式可选择宠物（头像列表），派出前自动确认/补充守护时长，并记录跳过原因',
+    ],
+  },
   {
     version: '2.11.3',
     date: '2026-11-01',
