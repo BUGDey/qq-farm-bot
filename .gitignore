@@ -43,3 +43,7 @@ temp/
 # Python caches
 __pycache__/
 *.pyc
+
+# logstate (winston-daily-rotate-file audit state)
+core/data/logstate/
+/data/logstate/

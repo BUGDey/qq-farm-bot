@@ -60,6 +60,24 @@ function startLogCleanup(logDir) {
   logCleanupTimer.unref?.();
 }
 
+/**
+ * 把老版本写在 logs 目录里的轮转状态文件搬到新目录。
+ * 同盘直接 rename，跨盘（FARM_LOG_DIR 指向别的盘）退化 copy + unlink。
+ */
+function migrateLegacyAuditFile(logDir, targetPath, legacyName) {
+  try {
+    if (fs.existsSync(targetPath)) return;
+    const legacyPath = path.join(logDir, legacyName);
+    if (!fs.existsSync(legacyPath)) return;
+    try {
+      fs.renameSync(legacyPath, targetPath);
+    } catch {
+      fs.copyFileSync(legacyPath, targetPath);
+      fs.unlinkSync(legacyPath);
+    }
+  } catch {}
+}
+
 // 敏感字段正则：包含 code/token/password 等关键字的键名
 const SENSITIVE_KEY_RE = /code|token|password|passwd|auth|ticket|cookie|session/i;
 
@@ -171,6 +189,17 @@ function getRootLogger() {
   }
   startLogCleanup(logDir);
 
+  // 轮转状态文件（audit）统一放到 logstate 目录，避免和日志混在一起
+  const logStateDir = path.join(ensureDataDir(), 'logstate');
+  if (!fs.existsSync(logStateDir)) {
+    fs.mkdirSync(logStateDir, { recursive: true });
+  }
+  const combinedAuditFile = path.join(logStateDir, 'combined-audit.json');
+  const errorAuditFile = path.join(logStateDir, 'error-audit.json');
+  // 老版本把状态文件写在 logs 目录里的隐藏文件，这里顺手迁移一次
+  migrateLegacyAuditFile(logDir, combinedAuditFile, '.combined-log-audit.json');
+  migrateLegacyAuditFile(logDir, errorAuditFile, '.error-log-audit.json');
+
   const level = String(process.env.LOG_LEVEL || 'info').toLowerCase();
   const { combine, timestamp, errors, json, colorize, printf } = winston.format;
 
@@ -204,7 +233,7 @@ function getRootLogger() {
         filename: path.join(logDir, 'combined-%DATE%.log'),
         datePattern: 'YYYY-MM-DD-HH',
         maxFiles: '3d',
-        auditFile: path.join(logDir, '.combined-log-audit.json'),
+        auditFile: combinedAuditFile,
         format: combine(timestamp(), errors({ stack: true }), json())
       }),
       // 错误日志文件
@@ -212,7 +241,7 @@ function getRootLogger() {
         filename: path.join(logDir, 'error-%DATE%.log'),
         datePattern: 'YYYY-MM-DD-HH',
         maxFiles: '3d',
-        auditFile: path.join(logDir, '.error-log-audit.json'),
+        auditFile: errorAuditFile,
         level: 'error',
         format: combine(timestamp(), errors({ stack: true }), json())
       })

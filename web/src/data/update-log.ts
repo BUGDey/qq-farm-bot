@@ -11,9 +11,17 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.2'
+export const APP_VERSION = '2.11.3'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.3',
+    date: '2026-11-01',
+    items: [
+      '日志轮转状态文件（.combined-log-audit.json / .error-log-audit.json）移到 data/logstate/ 目录，logs 目录里只剩下日志本身',
+      '老部署首次启动会自动把旧的隐藏状态文件迁移过去，日志不会因此断档或另起新文件',
+    ],
+  },
   {
     version: '2.11.2',
     date: '2026-11-01',

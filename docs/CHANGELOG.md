@@ -35,13 +35,20 @@ flowchart TB
 
     T --> U[2026-10-29 · v2.9.4<br/>修复构建时依赖源不可用]
 
-    U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥] --> W[2026-10-31 · v2.11.0<br/>抓包协议分析与专题文档] --> X[2026-11-01 · v2.11.1<br/>版本徽标与凭证重新计时] --> Y[2026-11-01 · v2.11.2<br/>修复运行时长不显示]
+    U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥] --> W[2026-10-31 · v2.11.0<br/>抓包协议分析与专题文档] --> X[2026-11-01 · v2.11.1<br/>版本徽标与凭证重新计时] --> Y[2026-11-01 · v2.11.2<br/>修复运行时长不显示] --> Z[2026-11-01 · v2.11.3<br/>日志状态文件独立目录]
 
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z seed;
 ```
 
 ## 详细记录
+
+### 2026-11-01 · v2.11.3 · 日志状态文件独立目录
+
+- `core/src/services/logger.js` 的两个 `DailyRotateFile` 不再把 `auditFile` 写在日志目录，改为 `<数据目录>/logstate/combined-audit.json` 与 `error-audit.json`；`data/logs/` 里不再出现 `.combined-log-audit.json` / `.error-log-audit.json` 这两个隐藏文件。
+- 新增 `migrateLegacyAuditFile()`：启动时若发现老位置的隐藏状态文件、且新位置还没有，就把它迁移过去（同盘 rename，跨盘退化为 copy + unlink），保证轮转不因为换路径而断档。
+- `.gitignore` 增补 `core/data/logstate/`、`/data/logstate/`（`core/data/` 本来就整体忽略，这里显式列出方便排查）。
+- 注意：状态文件只在 `data/` 下，属于本部署的运行态数据；换部署目录时不会跟着走，旧部署目录里的那份可以随旧部署一起删掉。
 
 ### 2026-11-01 · v2.11.2 · 修复运行时长不显示
 
