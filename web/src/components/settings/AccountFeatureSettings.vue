@@ -45,6 +45,7 @@ const milkTeaSettings = computed(() => [
   { key: 'mall_coupon_gift_buy', label: '自动购买点券礼包', detail: '买完奶茶点券礼包剩余限额，余额不足时跳过' },
   { key: 'milk_tea_cashier', label: '自动领取收益', detail: '领取店铺累计营业收益' },
   { key: 'milk_tea_wages', label: '自动领取工资', detail: '领取已结算的打工工资' },
+  { key: 'milk_tea_share', label: '自动完成分享', detail: '商城分享礼包需要当天先分享一次，开启后自动补做' },
   { key: 'milk_tea_share_daily', label: '自动领取每日快乐值', detail: '领取每日快乐值奖励' },
   { key: 'milk_tea_share_rewards', label: '自动领取快乐值奖励', detail: '领取已达成的快乐值档位奖励' },
   { key: 'milk_tea_fund_rewards', label: '自动领取成长基金奖励', detail: '仅领取已解锁且达到条件的奖励' },
@@ -81,7 +82,7 @@ const selectedLandNames = computed(() => props.fertilizerLandTypeOptions.filter(
 const selectedLandTypeCount = computed(() => Array.isArray(automation.value.automation.fertilizer_land_types) ? automation.value.automation.fertilizer_land_types.length : 0)
 const activityKeys = computed(() => [
   'star_solar_claim',
-  ...(showMilkTeaActivity.value ? ['mall_coupon_gift_buy', 'milk_tea_cashier', 'milk_tea_wages', 'milk_tea_share_daily', 'milk_tea_share_rewards', 'milk_tea_fund_rewards'] : []),
+  ...(showMilkTeaActivity.value ? ['mall_coupon_gift_buy', 'milk_tea_share', 'milk_tea_cashier', 'milk_tea_wages', 'milk_tea_share_daily', 'milk_tea_share_rewards', 'milk_tea_fund_rewards'] : []),
   ...(showMilkTeaBusiness.value ? ['milk_tea_upgrade', 'milk_tea_craft', 'milk_tea_boost', 'milk_tea_hire', 'milk_tea_work_interact', 'milk_tea_seed_buy'] : []),
   ...(showRainPoemActivity.value
     ? ['rain_poem_bottle_buy', 'rain_poem_weather_collect', 'rain_poem_summon_use', 'rain_poem_prank_use', 'rain_poem_research_unlock']

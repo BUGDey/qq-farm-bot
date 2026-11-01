@@ -207,8 +207,8 @@ function onSearchBlur() {
         </div>
       </header>
 
-      <!-- Main Content Area -->
-      <div class="custom-scrollbar min-h-0 flex flex-1 flex-col overflow-y-auto p-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:p-6 md:p-5 sm:p-3 lg:pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pt-2 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
+      <!-- Main Content Area（顶部/底部按圆角裁切，滚动时标题栏与内容边界同底部导航一样是弧形的） -->
+      <div class="custom-scrollbar main-scroll-area min-h-0 flex flex-1 flex-col overflow-y-auto p-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:p-6 md:p-5 sm:p-3 lg:pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pt-2 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
         <MysteryMerchantBanner />
         <RouterView v-slot="{ Component, route }">
           <Transition name="slide-fade" mode="out-in">
@@ -367,6 +367,11 @@ function onSearchBlur() {
 .custom-scrollbar {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+}
+
+/* 内容滚动区按圆角裁切：滚动时内容边界与底部导航一致，不再出现直角切口 */
+.main-scroll-area {
+  border-radius: 18px;
 }
 
 /* 滚动容器的直接子元素（各页面根节点）不允许被压缩：

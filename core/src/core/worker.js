@@ -975,7 +975,7 @@ async function runStarActivityAutoClaimsInternal() {
                 if (!['business', 'settling'].includes(currentPhase)) break;
                 try {
                     const state = await service.getMilkTea();
-                    if (!Number(state.summary.shop_open_at) && !['shareDaily', 'shareRewards', 'fundRewards'].includes(action)) continue;
+                    if (!Number(state.summary.shop_open_at) && !['share', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) continue;
                     let params = {};
                     if (action === 'buy') {
                         const goods = state.goods.find(x => x.category_tag === 'seed' && x.unlocked && x.remaining > 0 && !x.paid && x.affordable);
@@ -1006,7 +1006,8 @@ async function runStarActivityAutoClaimsInternal() {
                     if (action === 'boost' && !state.balances.some(item => String(item.id) === String(state.shop.sales_item_id) && Number(item.count) > 0)) continue;
                     if (action === 'wages' && !state.summary.has_unclaimed_wage) continue;
                     if (action === 'upgrade' && !state.summary.can_upgrade) continue;
-                    if (currentPhase === 'settling' && !['cashier', 'wages', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) continue;
+                    if (currentPhase === 'settling' && !['cashier', 'wages', 'share', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) continue;
+                    if (action === 'share' && state.share?.daily?.first_share_awarded) continue;
                     if (action === 'shareDaily' && state.share?.daily?.daily_reward_claimed) continue;
                     if (action === 'shareRewards' && !state.share?.milestones?.some(x => Number(x.state) === 2)) continue;
                     if (action === 'fundRewards' && (!state.fund?.unlocked || !state.fund.tiers.some(x => Number(x.state) === 2))) continue;

@@ -1,7 +1,7 @@
 {
   "id": "milk-tea",
   "name": "奶茶热销中",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "apiVersion": 1,
   "description": "经营奶茶小店、兑换商店与兼职工作",
   "activityIds": [2026110100],
@@ -13,6 +13,7 @@
     { "key": "mall_coupon_gift_buy", "label": "自动购买点券礼包", "detail": "买完奶茶点券礼包剩余限额，余额不足时跳过", "window": "activity", "type": "boolean", "default": false },
     { "key": "milk_tea_cashier", "label": "自动领取收益", "detail": "领取店铺累计营业收益", "window": "activity", "type": "boolean", "default": false },
     { "key": "milk_tea_wages", "label": "自动领取工资", "detail": "领取已结算的打工工资", "window": "activity", "type": "boolean", "default": false },
+    { "key": "milk_tea_share", "label": "自动完成分享", "detail": "商城分享礼包需要当天先分享一次，开启后自动补做", "window": "activity", "type": "boolean", "default": true },
     { "key": "milk_tea_share_daily", "label": "自动领取每日快乐值", "detail": "领取每日快乐值奖励", "window": "activity", "type": "boolean", "default": false },
     { "key": "milk_tea_share_rewards", "label": "自动领取快乐值奖励", "detail": "领取已达成的快乐值档位奖励", "window": "activity", "type": "boolean", "default": false },
     { "key": "milk_tea_fund_rewards", "label": "自动领取成长基金奖励", "detail": "仅领取已解锁且达到条件的奖励", "window": "activity", "type": "boolean", "default": false },

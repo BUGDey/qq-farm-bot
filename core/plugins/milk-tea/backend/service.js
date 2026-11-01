@@ -29,14 +29,14 @@ function normalizeWireMaps(value) {
 }
 const WINDOW = { startTime: 1792029600, settleTime: 1794671999, endTime: 1794844799 };
 const ACTIONS = { create: [53, 'create_shop'], rename: [54, 'rename_shop'], shop: [55, 'get_shop'], hireList: [56, 'get_hire_list'], hire: [57, 'hire'], workshop: [58, 'get_workshop'], cashier: [59, 'claim_cashier'], boost: [60, 'boost'], upgrade: [61, 'upgrade'], craft: [62, 'craft'], work: [63, 'get_work_page'], wages: [64, 'claim_wages'], interact: [65, 'interact'], rank: [66, 'get_rank'], sales: [67, 'get_sales_log'], hireDisabled: [68, 'set_hire_disable'] };
-const AUTO_ACTIONS = { milk_tea_cashier: 'cashier', milk_tea_wages: 'wages', milk_tea_upgrade: 'upgrade', milk_tea_craft: 'craft', milk_tea_boost: 'boost', milk_tea_hire: 'hire', milk_tea_seed_buy: 'buy', milk_tea_share_daily: 'shareDaily', milk_tea_share_rewards: 'shareRewards', milk_tea_fund_rewards: 'fundRewards', milk_tea_work_interact: 'interact' };
+const AUTO_ACTIONS = { milk_tea_cashier: 'cashier', milk_tea_wages: 'wages', milk_tea_upgrade: 'upgrade', milk_tea_craft: 'craft', milk_tea_boost: 'boost', milk_tea_hire: 'hire', milk_tea_seed_buy: 'buy', milk_tea_share: 'share', milk_tea_share_daily: 'shareDaily', milk_tea_share_rewards: 'shareRewards', milk_tea_fund_rewards: 'fundRewards', milk_tea_work_interact: 'interact' };
 function phase(now, window = WINDOW) { return now < window.startTime ? 'upcoming' : now > window.endTime ? 'ended' : now >= window.settleTime ? 'settling' : 'business'; }
 // Official S4ShopUI: available, sold out, locked; then configured order.
 function compareShopGoods(a, b) {
   const group = goods => !goods.unlocked ? 3 : Number(goods.remaining) === 0 ? 2 : 1;
   return group(a) - group(b) || Number(a.order || 0) - Number(b.order || 0);
 }
-const ACTION_LABELS = { create: '开业', rename: '修改店名', hire: '雇佣员工', cashier: '领取收益', boost: '使用宣传喇叭', upgrade: '升级店铺', craft: '制作奶茶', wages: '领取工资', interact: '打工互动', hireDisabled: '设置被雇佣状态', buy: '购买商品', shareDaily: '领取每日快乐值', shareRewards: '领取快乐值奖励', fundRewards: '领取成长基金奖励' };
+const ACTION_LABELS = { create: '开业', rename: '修改店名', hire: '雇佣员工', cashier: '领取收益', boost: '使用宣传喇叭', upgrade: '升级店铺', craft: '制作奶茶', wages: '领取工资', interact: '打工互动', hireDisabled: '设置被雇佣状态', buy: '购买商品', share: '完成分享', shareDaily: '领取每日快乐值', shareRewards: '领取快乐值奖励', fundRewards: '领取成长基金奖励' };
 function normalizeHireOptions(input = {}) {
   return {
     durationId: [1, 2, 3].includes(Number(input.durationId)) ? Number(input.durationId) : 1,
@@ -139,12 +139,12 @@ function createMilkTeaService({ types, sendMsgAsync, getBag, getBagItems, getSer
     return pendingRead;
   }
   async function mutate(action, input = {}) {
-    if (!ACTIONS[action] && !['buy', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) fail('活动操作无效');
+    if (!ACTIONS[action] && !['buy', 'share', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) fail('活动操作无效');
     const state = await getMilkTea(true); const inventory = await bag(); const now = getServerTimeSec();
     state.phase = phase(now, state);
     if (!['business', 'settling'].includes(state.phase)) fail('活动未开始或已结束');
-    if (state.phase !== 'business' && !['cashier', 'wages', 'buy', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) fail('结算期不支持此操作');
-    if (!['create', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action) && !Number(state.summary.shop_open_at)) fail('请先开业');
+    if (state.phase !== 'business' && !['cashier', 'wages', 'buy', 'share', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) fail('结算期不支持此操作');
+    if (!['create', 'share', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action) && !Number(state.summary.shop_open_at)) fail('请先开业');
     let params = {};
     let detail = {};
     if (action === 'create' || action === 'rename') {
@@ -183,8 +183,11 @@ function createMilkTeaService({ types, sendMsgAsync, getBag, getBagItems, getSer
     }
     if (action === 'rank' || action === 'sales' || action === 'hireList' || action === 'shop' || action === 'work' || action === 'workshop') fail('只读动作请使用查询接口');
     if (action === 'hireDisabled') params = { hire_disabled: input.disabled === true };
-    if (['shareDaily', 'shareRewards', 'fundRewards'].includes(action)) {
-      const cmd = action === 'shareDaily' ? 74 : action === 'shareRewards' ? 71 : 76;
+    if (['share', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) {
+      const cmd = action === 'share' ? 70 : action === 'shareDaily' ? 74 : action === 'shareRewards' ? 71 : 76;
+      // 商城「奶茶分享礼包」要求当天先完成一次分享（官方返回 code=103012），
+      // 这里用活动分享面板的 cmd 70 补上这一步；已分享过则直接跳过。
+      if (action === 'share' && state.share?.daily?.first_share_awarded) fail('今日已分享');
       if (action === 'shareDaily' && (!state.share?.daily || state.share.daily.daily_reward_claimed)) fail('今日已领取');
       if (action === 'shareRewards' && !state.share?.milestones?.some(x => Number(x.state) === 2)) fail('暂无可领取档位');
       if (action === 'fundRewards') {

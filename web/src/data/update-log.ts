@@ -11,9 +11,19 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.4'
+export const APP_VERSION = '2.11.5'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.5',
+    date: '2026-11-01',
+    items: [
+      '商城「奶茶分享礼包」等分享专属商品会自动先完成一次分享再购买，不再报 code=103012',
+      '奶茶活动新增「自动完成分享」开关（默认开启），自动补做当天分享',
+      '页面内容区改为圆角裁切，滚动到底部时边界与底部导航一致，不再出现直角切口',
+      '测试 553 项全绿，构建与 lint 通过',
+    ],
+  },
   {
     version: '2.11.4',
     date: '2026-11-01',

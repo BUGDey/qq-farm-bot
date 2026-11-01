@@ -19,4 +19,13 @@ function reserveFruit(itemId, context) {
     }
 }
 
-module.exports = { setWorkerPluginHost, reserveFruit };
+/**
+ * 调用活动插件注册的 api 方法（例如商城购买前补做奶茶分享）。
+ * 返回 { found, result }；宿主未就绪或方法不存在时 found=false。
+ */
+async function callApiMethod(method, args = []) {
+    if (!hostRef || typeof hostRef.callApiMethod !== 'function') return { found: false, result: null };
+    return hostRef.callApiMethod(method, Array.isArray(args) ? args : [args]);
+}
+
+module.exports = { setWorkerPluginHost, reserveFruit, callApiMethod };

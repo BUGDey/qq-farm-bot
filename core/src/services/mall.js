@@ -61,7 +61,7 @@ async function getMallListBySlotType(slotType = 1) {
   return types.GetMallListBySlotTypeResponse.decode(body);
 }
 
-async function purchaseMallGoods(goodsId, count = 1) {
+async function sendPurchase(goodsId, count = 1) {
   const request = types.PurchaseRequest.encode(
     types.PurchaseRequest.create({
       goods_id: Number(goodsId) || 0,
@@ -70,6 +70,60 @@ async function purchaseMallGoods(goodsId, count = 1) {
   ).finish();
   const { body } = await sendMsgAsync('gamepb.mallpb.MallService', 'Purchase', request);
   return types.PurchaseResponse.decode(body);
+}
+
+// 商城「分享专属」礼包（奶茶分享礼包等）要求当天先完成一次分享，
+// 否则官方直接返回 code=103012「你还没有完成分享！」。
+// 分享动作由奶茶活动插件提供（operateMilkTea('share')），这里做一次补做 + 重试。
+const SHARE_REQUIRED_CODE = '103012';
+const SHARE_RETRY_COOLDOWN_MS = 30 * 1000;
+
+let shareAttemptRunning = false;
+let shareAttemptedAt = 0;
+
+function isShareRequiredError(error) {
+  const message = String((error && error.message) || '');
+  return message.includes(SHARE_REQUIRED_CODE) || message.includes('还没有完成分享');
+}
+
+async function ensureShareBeforePurchase() {
+  const now = Date.now();
+  if (shareAttemptRunning) return false;
+  if (now - shareAttemptedAt < SHARE_RETRY_COOLDOWN_MS) return false;
+  shareAttemptRunning = true;
+  shareAttemptedAt = now;
+  try {
+    const { callApiMethod } = require('../plugins/worker-host-bridge');
+    const dispatched = await callApiMethod('operateMilkTea', ['share', {}]);
+    if (!dispatched || !dispatched.found) {
+      log('商城', '分享礼包需要先分享，但当前没有可用的奶茶活动插件', {
+        module: 'mall', event: '商城购买前补分享', result: 'warn',
+      });
+      return false;
+    }
+    log('商城', '分享礼包需要先分享，已自动补做一次', { module: 'mall', event: '商城购买前补分享', result: 'ok' });
+    return true;
+  } catch (error) {
+    // 插件内部把「今日已分享」当成错误抛出，这种情况说明前置条件已满足
+    if (String(error && error.message).includes('今日已分享')) return true;
+    log('商城', `补做分享失败：${error && error.message ? error.message : error}`, {
+      module: 'mall', event: '商城购买前补分享', result: 'error',
+    });
+    return false;
+  } finally {
+    shareAttemptRunning = false;
+  }
+}
+
+async function purchaseMallGoods(goodsId, count = 1) {
+  try {
+    return await sendPurchase(goodsId, count);
+  } catch (error) {
+    if (!isShareRequiredError(error)) throw error;
+    const shared = await ensureShareBeforePurchase();
+    if (!shared) throw error;
+    return await sendPurchase(goodsId, count);
+  }
 }
 
 /**

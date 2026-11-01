@@ -286,6 +286,7 @@ const DEFAULT_AUTOMATION = {
     // 拾物小铺兑换（exchange，需用户指定商品）、锦囊付费刷新（花点券）、
     // markStories（纯 UI 状态无奖励）、skipBattle（是设置项不是任务）。
     pet_diary_adopt: false,
+    milk_tea_share: false,
     milk_tea_share_daily: false,
     milk_tea_share_rewards: false,
     milk_tea_fund_rewards: false,
@@ -371,7 +372,7 @@ const SHARE_REWARD_AUTOMATION_KEYS = ['share_reward_share', 'share_reward_daily'
 // （core 是 CommonJS、web 是 TS，无法共享模块）。改一处必须改另一处，
 // 否则前端会显示后端已强制关闭的开关。
 const TIMED_ACTIVITY_AUTOMATION_GROUPS = [
-    { startTime: 1792029600, endTime: 1794844799, keys: ['mall_coupon_gift_buy', 'milk_tea_cashier', 'milk_tea_wages', 'milk_tea_share_daily', 'milk_tea_share_rewards', 'milk_tea_fund_rewards'] },
+    { startTime: 1792029600, endTime: 1794844799, keys: ['mall_coupon_gift_buy', 'milk_tea_share', 'milk_tea_cashier', 'milk_tea_wages', 'milk_tea_share_daily', 'milk_tea_share_rewards', 'milk_tea_fund_rewards'] },
     { startTime: 1792029600, endTime: 1794671998, keys: ['milk_tea_upgrade', 'milk_tea_craft', 'milk_tea_boost', 'milk_tea_hire', 'milk_tea_seed_buy', 'milk_tea_work_interact'] },
     { startTime: 1790179200, endTime: 1791388799, keys: WISH_SIGN_AUTOMATION_KEYS },
     { startTime: 1790179200, endTime: 1791820799, keys: SHARE_REWARD_AUTOMATION_KEYS },

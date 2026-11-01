@@ -34,12 +34,12 @@ test('business and settlement boundaries fail closed', () => {
   assert.equal(phase(WINDOW.endTime), 'settling');
   assert.equal(phase(WINDOW.endTime + 1), 'ended');
 });
-function setup({ now = WINDOW.startTime + 100, diamond = false, unlocked = true, salesLog, panels = false, fundUnlocked = false, fundState = 1, inventory = [{ id: 1001, count: 1000000 }], account = {}, hireList, hireSuccess = true, workShift } = {}) {
+function setup({ now = WINDOW.startTime + 100, diamond = false, unlocked = true, salesLog, panels = false, fundUnlocked = false, fundState = 1, inventory = [{ id: 1001, count: 1000000 }], account = {}, hireList, hireSuccess = true, workShift, sharedToday = false } = {}) {
   const calls = [];
   const logs = [];
   const group = { group: { head: { id: '2026110100' }, children: [{ head: { id: '2026110101', start_time: WINDOW.startTime, end_time: WINDOW.endTime, settle_start_time: WINDOW.settleTime }, milk_tea: { summary: { shop_open_at: WINDOW.startTime, level: 1 } } }, { head: { id: '2026110102' }, shop: { goods: [{ id: 301, name: '森野甜莓种子', item: [{ id: 20525, count: 1 }], cost: [{ id: diamond ? 1004 : 1001, count: 10000 }], purchase_limit: 108, purchased_count: 0, category_tag: 'seed', cond_hints: [{ satisfied: unlocked, target: 3 }] }] } }] } };
   if (panels) group.group.children.push(
-    { head: { id: '2026110104' }, share_reward: { summary: { current_score: 10, milestones: [{ tier_id: 1, threshold: 10, state: 2, rewards: [{ id: '80014', count: '1' }] }] } } },
+    { head: { id: '2026110104' }, share_reward: { summary: { current_score: 10, daily: { first_share_awarded: sharedToday, daily_reward_claimed: false }, milestones: [{ tier_id: 1, threshold: 10, state: 2, rewards: [{ id: '80014', count: '1' }] }] } } },
     { head: { id: '2026110103' }, growth_fund: { unlocked: fundUnlocked, unlock_cost: [{ id: '1004', count: '360' }], tiers: [{ tier_id: 1, state: fundState, conditions: [{ type: 'milk_tea_store_level', current_value: 1, target_value: 1, reached: true }], reward: [{ id: '29005', count: '2' }] }] } }
   );
   const workPage = workShift === undefined ? fixtures[206] : { ...fixtures[206], milk_tea_get_work_page: { ...fixtures[206].milk_tea_get_work_page, my_shift: workShift, interact_done: workShift?.interact_done === true } };
@@ -358,4 +358,49 @@ test('work interact automation key is disabled with the business-phase group', (
   disableHiddenActivityAutomation(config, WINDOW.settleTime);
   assert.equal(config.milk_tea_work_interact, false);
   assert.equal(config.milk_tea_cashier, true);
+});
+
+test('share action sends the activity share command 70 and skips once already shared', async () => {
+  const ok = setup({ panels: true });
+  await ok.service.operateMilkTea('share', {});
+  const sent = ok.calls.find(x => Number(x.cmd) === 70);
+  assert.ok(sent, '应发送 cmd=70 的分享请求');
+  assert.equal(sent.id, '2026110104');
+
+  const shared = setup({ panels: true, sharedToday: true });
+  await assert.rejects(shared.service.operateMilkTea('share', {}), /今日已分享/);
+  assert.ok(!shared.calls.some(x => Number(x.cmd) === 70));
+});
+
+test('mall purchase completes share then retries once on code 103012', async () => {
+  const networkPath = require.resolve('../src/utils/network');
+  const bridgePath = require.resolve('../src/plugins/worker-host-bridge');
+  const mallPath = require.resolve('../src/services/mall');
+  // 商城依赖 protobuf 类型，测试里需要先把定义加载出来
+  await require('../src/utils/proto').loadProto();
+  const network = require(networkPath);
+  const bridge = require(bridgePath);
+  const originalSend = network.sendMsgAsync;
+  const originalCall = bridge.callApiMethod;
+  let purchases = 0;
+  let shares = 0;
+  try {
+    // mall.js 在模块加载时解构 sendMsgAsync，因此必须先替换再重新 require
+    network.sendMsgAsync = async () => {
+      purchases += 1;
+      if (purchases === 1) throw new Error('gamepb.mallpb.MallService.Purchase 错误: code=103012 你还没有完成分享！');
+      // 空响应体即可：只验证「分享后重试了一次」
+      return { body: Buffer.alloc(0) };
+    };
+    bridge.callApiMethod = async (method) => { shares += 1; assert.equal(method, 'operateMilkTea'); return { found: true, result: { ok: true } }; };
+    delete require.cache[mallPath];
+    const mall = require(mallPath);
+    await mall.purchaseMallGoods(1064, 1);
+    assert.equal(purchases, 2, '分享成功后应重试一次购买');
+    assert.equal(shares, 1, '应补做一次分享');
+  } finally {
+    network.sendMsgAsync = originalSend;
+    bridge.callApiMethod = originalCall;
+    delete require.cache[mallPath];
+  }
 });
