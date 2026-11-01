@@ -11,9 +11,19 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.8'
+export const APP_VERSION = '2.11.9'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.9',
+    date: '2026-11-01',
+    items: [
+      '修复管理后台「全局邮件服务」保存或读取时报 next is not a function 的问题',
+      '邮件相关接口改成标准管理员中间件校验：普通用户访问返回 403，超级管理员正常读写',
+      '新增回归测试，保证邮件路由始终挂载权限中间件',
+      '其余功能不受影响，升级后无需重新配置 SMTP',
+    ],
+  },
   {
     version: '2.11.8',
     date: '2026-11-01',

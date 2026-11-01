@@ -44,10 +44,11 @@ function registerAdminMailerRoutes({
   requireAdminRole,
   sendProviderError,
 }) {
-  function guard(req, res) {
-    if (typeof requireAdminRole === 'function' && !requireAdminRole(req, res)) return false;
-    return true;
-  }
+  // requireAdminRole 是标准的 express 中间件（靠 next() 放行），
+  // 直接 (req, res) 调用会抛 "next is not a function"，所以按中间件方式挂载。
+  const adminOnly = typeof requireAdminRole === 'function'
+    ? requireAdminRole
+    : (req, res, next) => next();
 
   function replyError(res, error, fallback = '操作失败') {
     if (typeof sendProviderError === 'function' && error && error.code === 'PROVIDER_UNAVAILABLE') {
@@ -58,9 +59,8 @@ function registerAdminMailerRoutes({
   }
 
   // 读取全局邮件配置
-  app.get('/api/admin/mailer', (req, res) => {
+  app.get('/api/admin/mailer', adminOnly, (req, res) => {
     try {
-      if (!guard(req, res)) return;
       const config = store.getGlobalMailer();
       res.json({ ok: true, data: buildMailerView(config) });
     } catch (error) {
@@ -69,9 +69,8 @@ function registerAdminMailerRoutes({
   });
 
   // 保存全局邮件配置（smtpPass 留空表示不修改）
-  app.post('/api/admin/mailer', (req, res) => {
+  app.post('/api/admin/mailer', adminOnly, (req, res) => {
     try {
-      if (!guard(req, res)) return;
       const body = req.body && typeof req.body === 'object' ? req.body : {};
       const patch = {
         enabled: body.enabled === true,
@@ -91,9 +90,8 @@ function registerAdminMailerRoutes({
   });
 
   // 用全局邮件服务发一封测试邮件
-  app.post('/api/admin/mailer/test', async (req, res) => {
+  app.post('/api/admin/mailer/test', adminOnly, async (req, res) => {
     try {
-      if (!guard(req, res)) return;
       const body = req.body && typeof req.body === 'object' ? req.body : {};
       const recipientEmail = normalizeEmail(body.recipientEmail);
       if (!recipientEmail) {
@@ -123,9 +121,8 @@ function registerAdminMailerRoutes({
   });
 
   // 可选收件人列表：带每个用户的收件邮箱与过期状态
-  app.get('/api/admin/mail-recipients', (req, res) => {
+  app.get('/api/admin/mail-recipients', adminOnly, (req, res) => {
     try {
-      if (!guard(req, res)) return;
       const users = typeof userStore.listUsersForAdmin === 'function'
         ? userStore.listUsersForAdmin({})
         : userStore.getAllUsers();
@@ -151,9 +148,8 @@ function registerAdminMailerRoutes({
   });
 
   // 批量发送通知
-  app.post('/api/admin/mail/send', async (req, res) => {
+  app.post('/api/admin/mail/send', adminOnly, async (req, res) => {
     try {
-      if (!guard(req, res)) return;
       const body = req.body && typeof req.body === 'object' ? req.body : {};
       const subject = String(body.subject || '').trim();
       const content = String(body.content || '').trim();

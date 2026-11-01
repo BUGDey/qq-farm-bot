@@ -21,14 +21,23 @@ const { registerAdminMailerRoutes } = require('../src/controllers/admin-mailer-r
 
 function createApp() {
   const routes = [];
+  const push = (method) => (path, ...handlers) => {
+    routes.push({ method, path, handlers, handler: handlers[handlers.length - 1] });
+  };
   return {
-    get(path, handler) { routes.push({ method: 'get', path, handler }); },
-    post(path, handler) { routes.push({ method: 'post', path, handler }); },
+    get: push('get'),
+    post: push('post'),
     find(method, path) {
       const route = routes.find(r => r.method === method && r.path === path);
       assert.ok(route, `route ${method} ${path} not registered`);
       return route.handler;
     },
+    findAll(method, path) {
+      const route = routes.find(r => r.method === method && r.path === path);
+      assert.ok(route, `route ${method} ${path} not registered`);
+      return route.handlers;
+    },
+    all() { return routes; },
   };
 }
 
@@ -77,7 +86,8 @@ function setup({ includeExpired } = {}) {
     app,
     store,
     userStore,
-    requireAdminRole: () => true,
+    // 真实的 requireAdminRole 是 express 中间件，靠 next() 放行
+    requireAdminRole: (req, res, next) => next(),
     sendProviderError: (res, error) => res.status(500).json({ ok: false, error: error.message }),
   });
   return { app, includeExpired };
@@ -141,4 +151,47 @@ test('recipient list exposes email source and expiry', () => {
   assert.equal(byName.alice.emailSource, 'reminder');
   assert.equal(byName.bob.isExpired, true);
   assert.equal(byName.carol.email, '');
+});
+
+// 回归：曾经把 requireAdminRole(req, res) 当普通函数调用，
+// 它内部会执行 next() → 抛 "next is not a function"，管理后台报 500。
+test('mailer routes mount requireAdminRole as express middleware', async () => {
+  const middleware = (req, res, next) => {
+    if (!req.currentUser || req.currentUser.role !== 'super_admin') {
+      res.status(403).json({ ok: false, error: '需要超级管理员权限' });
+      return;
+    }
+    next();
+  };
+  const app = createApp();
+  registerAdminMailerRoutes({
+    app,
+    store: { getGlobalMailer: () => ({ enabled: false, ready: false }) },
+    userStore: { getAllUsers: () => [] },
+    requireAdminRole: middleware,
+    sendProviderError: (res, error) => res.status(500).json({ ok: false, error: error.message }),
+  });
+
+  for (const route of app.all()) {
+    assert.equal(route.handlers.length, 2, `${route.method} ${route.path} 应挂载中间件`);
+    assert.equal(typeof route.handlers[0], 'function');
+  }
+
+  // 超级管理员：中间件放行，处理函数正常执行，不再抛 next is not a function
+  const handlers = app.findAll('get', '/api/admin/mailer');
+  const okRes = createRes();
+  let passed = false;
+  handlers[0]({ currentUser: { role: 'super_admin' } }, okRes, () => { passed = true; });
+  assert.equal(passed, true);
+  handlers[1]({ currentUser: { role: 'super_admin' } }, okRes);
+  assert.equal(okRes.statusCode, 200);
+  assert.equal(okRes.body.ok, true);
+
+  // 普通用户：中间件直接 403，处理函数不会执行
+  const deniedRes = createRes();
+  const denied = app.findAll('get', '/api/admin/mailer')[0];
+  denied({ currentUser: { role: 'user' } }, deniedRes, () => {
+    throw new Error('普通用户不应该通过 requireAdminRole');
+  });
+  assert.equal(deniedRes.statusCode, 403);
 });
