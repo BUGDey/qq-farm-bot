@@ -27,7 +27,7 @@ function pad(value: number) {
 
 const uptimeText = computed(() => {
   if (!startedAt.value)
-    return '运行中'
+    return ''
   const totalSec = Math.floor(uptimeMs.value / 1000)
   const days = Math.floor(totalSec / 86400)
   const hours = Math.floor((totalSec % 86400) / 3600)
@@ -46,8 +46,11 @@ const startedAtTitle = computed(() => {
 
 async function loadStatus() {
   try {
-    const response = await api.get('/health', { skipErrorToast: true } as any)
-    const payload = response?.data?.data || response?.data || {}
+    // 必须带 /api 前缀：baseURL 是 '/'，写成 '/health' 会被 SPA 回退接走
+    const response = await api.get('/api/health', { skipErrorToast: true } as any)
+    const payload = (response?.data?.data ?? response?.data ?? {}) as Record<string, any>
+    if (!payload || typeof payload !== 'object')
+      return
     const version = String(payload.version || '').trim()
     if (version)
       serverVersion.value = version
@@ -98,7 +101,12 @@ onUnmounted(() => {
     <span class="h-3 w-px bg-gray-300/70 dark:bg-gray-600/70" />
     <span class="inline-flex items-center gap-1" :title="startedAtTitle || '面板运行时长'">
       <span class="i-carbon-timer block text-[12px]" />
-      运行 {{ uptimeText }}
+      <template v-if="uptimeText">
+        运行 {{ uptimeText }}
+      </template>
+      <template v-else>
+        运行中
+      </template>
     </span>
   </div>
 </template>

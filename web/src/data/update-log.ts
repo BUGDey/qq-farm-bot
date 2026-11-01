@@ -11,9 +11,17 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.1'
+export const APP_VERSION = '2.11.2'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.2',
+    date: '2026-11-01',
+    items: [
+      '修复设置页版本徽标只显示「运行中」、看不到运行时长的问题（健康检查请求少了 /api 前缀，被前端路由回退接走了）',
+      '运行时长取不到时改为只显示「运行中」，不再出现「运行 运行中」这种重复文字',
+    ],
+  },
   {
     version: '2.11.1',
     date: '2026-11-01',

@@ -35,13 +35,19 @@ flowchart TB
 
     T --> U[2026-10-29 · v2.9.4<br/>修复构建时依赖源不可用]
 
-    U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥] --> W[2026-10-31 · v2.11.0<br/>抓包协议分析与专题文档] --> X[2026-11-01 · v2.11.1<br/>版本徽标与凭证重新计时]
+    U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥] --> W[2026-10-31 · v2.11.0<br/>抓包协议分析与专题文档] --> X[2026-11-01 · v2.11.1<br/>版本徽标与凭证重新计时] --> Y[2026-11-01 · v2.11.2<br/>修复运行时长不显示]
 
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y seed;
 ```
 
 ## 详细记录
+
+### 2026-11-01 · v2.11.2 · 修复运行时长不显示
+
+- 根因：`web/src/components/settings/ServerStatusBadge.vue` 调用的是 `api.get('/health')`，而 axios 的 `baseURL` 是 `/`，请求实际打到 `/health`，被 SPA 回退返回 `index.html`（200 + HTML），拿到的是字符串而非 JSON，`startedAt` 恒为 0，于是只显示「运行中」。
+- 修复：改为 `api.get('/api/health')`，并对返回值加类型保护（非对象直接忽略）；取不到启动时间时只渲染「运行中」，不再出现「运行 运行中」。
+- 版本号仍来自后端 `/api/health` 的 `version`（取不到回退构建时的 `APP_VERSION`），所以升到 v2.11.2 后徽标会显示正在运行的 core 版本。
 
 ### 2026-11-01 · v2.11.1 · 版本徽标与凭证重新计时
 
