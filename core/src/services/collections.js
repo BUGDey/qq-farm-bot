@@ -6,6 +6,7 @@
  */
 
 const fs = require('node:fs');
+const path = require('node:path');
 const { getItemById, getItemImageById } = require('../config/gameConfig');
 const { getResourcePath } = require('../config/runtime-paths');
 
@@ -246,6 +247,42 @@ function mutationEffectText(row) {
   return '';
 }
 
+/** 变异图标目录：宿主配置优先，其次各活动插件里的素材 */
+const MUTANT_IMAGE_DIRS = (() => {
+  const dirs = [path.join(getResourcePath('gameConfig'), 'seed_images_named', 'mutant')];
+  const pluginRoot = path.resolve(__dirname, '..', '..', 'plugins');
+  try {
+    for (const entry of fs.readdirSync(pluginRoot, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        dirs.push(path.join(pluginRoot, entry.name, 'assets', 'seed_images_named', 'mutant'));
+      }
+    }
+  } catch {
+    /* 没有插件目录时忽略 */
+  }
+  return dirs;
+})();
+
+/**
+ * 变异图标地址。
+ * 官方配置里 `icon` 有时是文件名（frozen），有时是整条 sprite 路径
+ * （gui/texture/mutant/icon/naicha/spriteFrame.png），统一取出目录名再找文件。
+ */
+function mutantImage(row) {
+  const raw = String(row.icon || '');
+  const parts = raw.split('/').filter(Boolean);
+  const slug = parts.length > 1 ? parts[parts.length - 2] : raw;
+  const candidates = [slug && `${slug}.png`, `${row.id}.png`].filter(Boolean);
+  for (const name of candidates) {
+    for (const dir of MUTANT_IMAGE_DIRS) {
+      if (fs.existsSync(path.join(dir, name))) {
+        return `/game-config/seed_images_named/mutant/${name}`;
+      }
+    }
+  }
+  return '';
+}
+
 /** 变异宝典（常规 / 装扮 / 藏品系列），纯本地数据 */
 function getMutationCatalog() {
   const { series: seriesConfig, items: itemConfig, mutants, probabilities } = configs();
@@ -257,7 +294,8 @@ function getMutationCatalog() {
       id: row.id,
       name: row.effect_name || row.name,
       tag: row.tag || '无',
-      image: `/game-config/seed_images_named/mutant/${row.id}.png`,
+      // 配置里 icon 是图标文件名（如 frozen/love/dark），没有才退回按 id
+      image: mutantImage(row),
       effect: mutationEffectText(row),
       description: row.tips || row.description || '',
       probabilities: probabilities

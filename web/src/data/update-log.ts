@@ -11,9 +11,17 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.13.1'
+export const APP_VERSION = '2.13.2'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.13.2',
+    date: '2026-11-02',
+    items: [
+      '修复变异宝典图标不显示（改用配置里的图标名并兼容 sprite 路径）',
+      '日常任务新增「自动喂食」开关，与宠物页设置互通',
+    ],
+  },
   {
     version: '2.13.1',
     date: '2026-11-01',

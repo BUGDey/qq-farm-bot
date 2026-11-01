@@ -9,6 +9,7 @@ import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import BaseSwitch from '@/components/ui/BaseSwitch.vue'
 import { CHARITY_FLOWER_ACTIVITY_WINDOW, isWithinActivityWindowMs, MILK_TEA_ACTIVITY_WINDOW, MILK_TEA_BUSINESS_WINDOW, PET_DIARY_ACTIVITY_WINDOW, RAIN_POEM_ACTIVITY_WINDOW, SHARE_REWARD_ACTIVITY_WINDOW, WISH_SIGN_ACTIVITY_WINDOW } from '@/constants/activity-windows'
+import { usePetStore } from '@/stores/pet'
 
 type ModuleKey = 'planting' | 'fertilizer' | 'friends' | 'steal' | 'merchant' | 'activity'
 
@@ -37,6 +38,64 @@ const editSnapshot = ref<{ strategy: any, automation: any } | null>(null)
 const qixiFriends = ref<Array<{ gid: number, name: string }>>([])
 const SHOW_STAR_ACTIVITY = false
 const SHOW_QIXI_ACTIVITY = false
+
+// 自动喂食：与「宠物」页共用同一份账号配置（/api/dog/auto-feed）
+const petStore = usePetStore()
+const autoFeedEnabled = ref(false)
+const autoFeedKeepDays = ref(10)
+const autoFeedSaving = ref(false)
+
+async function loadPetAutoFeed() {
+  const accountId = props.currentAccountId
+  if (!accountId) {
+    autoFeedEnabled.value = false
+    autoFeedKeepDays.value = 10
+    return
+  }
+  await petStore.fetchAutoFeed(String(accountId))
+  autoFeedEnabled.value = petStore.autoFeed.enabled
+  autoFeedKeepDays.value = petStore.autoFeed.keepDays
+}
+
+async function savePetAutoFeed(patch: { enabled?: boolean, keepDays?: number }) {
+  const accountId = props.currentAccountId
+  if (!accountId)
+    return
+  const next = {
+    enabled: patch.enabled ?? autoFeedEnabled.value,
+    keepDays: patch.keepDays ?? autoFeedKeepDays.value,
+  }
+  autoFeedSaving.value = true
+  try {
+    await petStore.saveAutoFeed(String(accountId), next)
+    autoFeedEnabled.value = petStore.autoFeed.enabled
+    autoFeedKeepDays.value = petStore.autoFeed.keepDays
+  }
+  finally {
+    autoFeedSaving.value = false
+  }
+}
+
+watch(() => props.currentAccountId, loadPetAutoFeed, { immediate: true })
+
+const autoFeedEnabledModel = computed({
+  get: () => autoFeedEnabled.value,
+  set: (value: boolean) => {
+    autoFeedEnabled.value = value
+    void savePetAutoFeed({ enabled: value })
+  },
+})
+
+const autoFeedKeepDaysModel = computed({
+  get: () => autoFeedKeepDays.value,
+  set: (value: string | number) => {
+    const days = Number(value)
+    if (!Number.isFinite(days) || days < 1 || days > 30)
+      return
+    autoFeedKeepDays.value = days
+    void savePetAutoFeed({ keepDays: days })
+  },
+})
 const nowMs = ref(Date.now())
 let nowTimer: ReturnType<typeof window.setInterval> | null = null
 const showMilkTeaActivity = computed(() => isWithinActivityWindowMs(MILK_TEA_ACTIVITY_WINDOW, nowMs.value))
@@ -585,6 +644,36 @@ watch(() => props.currentAccountId, loadQixiFriends)
                   </div>
                   <div class="grid gap-3 sm:grid-cols-2">
                     <BaseSwitch v-model="automation.automation.task" label="自动完成日常任务" />
+                  </div>
+                </section>
+
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                        自动喂食
+                      </div>
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        狗粮剩余天数低于保持天数时自动补粮。与「宠物」页共用同一份设置，改这里也会同步过去。
+                      </p>
+                    </div>
+                    <BaseSwitch
+                      v-model="autoFeedEnabledModel"
+                      :disabled="autoFeedSaving || !currentAccountId"
+                      label="启用自动喂食"
+                    />
+                  </div>
+                  <div v-if="autoFeedEnabled" class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">保持天数</span>
+                    <BaseInput
+                      v-model="autoFeedKeepDaysModel"
+                      type="number"
+                      class="w-24"
+                      :disabled="autoFeedSaving"
+                      min="1"
+                      max="30"
+                    />
+                    <span class="text-xs text-gray-400">1 - 30 天，默认 10 天</span>
                   </div>
                 </section>
 
