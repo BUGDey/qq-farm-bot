@@ -51,11 +51,16 @@ async function loadProto() {
         getResourcePath('proto', 'acepb.proto'),
         getResourcePath('proto', 'careerpb.proto'),
         getResourcePath('proto', 'paypb.proto'),
+        getResourcePath('proto', 'collectionpb.proto'),
     ], { keepCase: true });
 
     for (const name of ['MilkTeaOperateRequest', 'MilkTeaOperateReply', 'MilkTeaGetGroupReply']) {
         types[name] = root.lookupType(`gamepb.activitypb.${name}`);
     }
+
+    // 藏品（蓝晶）
+    types.GetCollectionsRequest = root.lookupType('gamepb.collectionpb.GetCollectionsRequest');
+    types.GetCollectionsReply = root.lookupType('gamepb.collectionpb.GetCollectionsReply');
 
     // 网关
     types.GateMessage = root.lookupType('gatepb.Message');

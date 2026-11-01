@@ -2,7 +2,9 @@
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import CollectionsPanel from '@/components/illustrated/CollectionsPanel.vue'
 import IllustratedItemCard from '@/components/illustrated/IllustratedItemCard.vue'
+import MutationCatalogPanel from '@/components/illustrated/MutationCatalogPanel.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAccountStore } from '@/stores/account'
 import { useIllustratedStore } from '@/stores/illustrated'
@@ -35,16 +37,31 @@ const filteredItems = computed(() => {
 
 const lockedCount = computed(() => Math.max(0, summary.value.total - summary.value.unlocked))
 
-const typeTabs = [
-  { value: 1, label: '作物图鉴' },
-  { value: 2, label: '变异图鉴' },
+type ViewMode = 'crop' | 'mutant' | 'collections' | 'mutations'
+
+const viewMode = ref<ViewMode>('crop')
+
+const viewTabs: Array<{ value: ViewMode, label: string }> = [
+  { value: 'crop', label: '作物图鉴' },
+  { value: 'mutant', label: '超变图鉴' },
+  { value: 'collections', label: '蓝晶藏品' },
+  { value: 'mutations', label: '变异宝典' },
 ]
+
+const isIllustratedMode = computed(() => viewMode.value === 'crop' || viewMode.value === 'mutant')
 
 const filterTabs: Array<{ value: 'all' | 'unlocked' | 'locked', label: string }> = [
   { value: 'all', label: '全部' },
   { value: 'unlocked', label: '已解锁' },
   { value: 'locked', label: '未解锁' },
 ]
+
+watch(viewMode, (mode) => {
+  if (mode === 'crop')
+    illustratedType.value = 1
+  else if (mode === 'mutant')
+    illustratedType.value = 2
+})
 
 function segmentedButtonClasses(active: boolean) {
   return active
@@ -178,7 +195,7 @@ onMounted(() => {
               图鉴
             </h1>
           </div>
-          <div class="flex flex-wrap items-center gap-2 text-sm">
+          <div v-if="isIllustratedMode" class="flex flex-wrap items-center gap-2 text-sm">
             <span class="h-8 flex items-center rounded-lg bg-emerald-50 px-3 text-xs text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
               {{ summary.unlocked }}/{{ summary.total }} 已解锁
             </span>
@@ -197,68 +214,75 @@ onMounted(() => {
         <div class="flex shrink-0 flex-wrap items-center gap-2">
           <div class="h-9 inline-flex overflow-hidden border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
             <button
-              v-for="item in typeTabs"
+              v-for="item in viewTabs"
               :key="item.value"
               class="min-w-20 rounded-md px-3 text-sm font-medium transition"
-              :class="segmentedButtonClasses(illustratedType === item.value)"
-              :style="illustratedType === item.value ? { backgroundColor: 'var(--theme-primary)' } : {}"
-              @click="illustratedType = item.value"
+              :class="segmentedButtonClasses(viewMode === item.value)"
+              :style="viewMode === item.value ? { backgroundColor: 'var(--theme-primary)' } : {}"
+              @click="viewMode = item.value"
             >
               {{ item.label }}
             </button>
           </div>
-          <div class="h-9 inline-flex overflow-hidden border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
-            <button
-              v-for="item in filterTabs"
-              :key="item.value"
-              class="min-w-16 rounded-md px-3 text-sm font-medium transition"
-              :class="segmentedButtonClasses(filter === item.value)"
-              :style="filter === item.value ? { backgroundColor: 'var(--theme-primary)' } : {}"
-              @click="filter = item.value"
-            >
-              {{ item.label }}
-            </button>
+          <template v-if="isIllustratedMode">
+            <div class="h-9 inline-flex overflow-hidden border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
+              <button
+                v-for="item in filterTabs"
+                :key="item.value"
+                class="min-w-16 rounded-md px-3 text-sm font-medium transition"
+                :class="segmentedButtonClasses(filter === item.value)"
+                :style="filter === item.value ? { backgroundColor: 'var(--theme-primary)' } : {}"
+                @click="filter = item.value"
+              >
+                {{ item.label }}
+              </button>
+            </div>
+            <BaseButton class="w-28" variant="primary" :loading="buying" :disabled="summary.canBuy <= 0" @click="confirmBuyAll">
+              一键购买
+            </BaseButton>
+            <BaseButton class="w-24" variant="primary" :loading="loading" @click="refreshList(true)">
+              刷新
+            </BaseButton>
+          </template>
+        </div>
+      </div>
+
+      <template v-if="isIllustratedMode">
+        <div v-if="error" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+          {{ error }}
+        </div>
+
+        <div v-if="!currentAccountId" class="rounded-lg bg-gray-50 p-8 text-center text-sm text-gray-500 dark:bg-gray-900/40 dark:text-gray-400">
+          请先选择账号，再查看图鉴。
+        </div>
+
+        <div v-else-if="loading && filteredItems.length === 0" class="rounded-lg bg-gray-50 p-8 text-center text-sm text-gray-500 dark:bg-gray-900/40 dark:text-gray-400">
+          正在加载图鉴数据...
+        </div>
+
+        <div v-else class="space-y-4">
+          <div v-if="filteredItems.length === 0" class="border border-gray-200 rounded-lg border-dashed bg-white px-6 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
+            暂无图鉴项目
           </div>
-          <BaseButton class="w-28" variant="primary" :loading="buying" :disabled="summary.canBuy <= 0" @click="confirmBuyAll">
-            一键购买
-          </BaseButton>
-          <BaseButton class="w-24" variant="primary" :loading="loading" @click="refreshList(true)">
-            刷新
-          </BaseButton>
+
+          <div class="grid grid-cols-[repeat(auto-fill,minmax(156px,1fr))] gap-3">
+            <IllustratedItemCard
+              v-for="item in filteredItems"
+              :key="item.seedId"
+              :item="item"
+              :buying="buying"
+              :status-label="getItemStatusLabel(item)"
+              :progress-hint="getProgressHint(item)"
+              :unlock-hint="getUnlockHint(item)"
+              @buy="confirmBuySeed"
+            />
+          </div>
         </div>
-      </div>
-
-      <div v-if="error" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-        {{ error }}
-      </div>
-
-      <div v-if="!currentAccountId" class="rounded-lg bg-gray-50 p-8 text-center text-sm text-gray-500 dark:bg-gray-900/40 dark:text-gray-400">
-        请先选择账号，再查看图鉴。
-      </div>
-
-      <div v-else-if="loading && filteredItems.length === 0" class="rounded-lg bg-gray-50 p-8 text-center text-sm text-gray-500 dark:bg-gray-900/40 dark:text-gray-400">
-        正在加载图鉴数据...
-      </div>
-
-      <div v-else class="space-y-4">
-        <div v-if="filteredItems.length === 0" class="border border-gray-200 rounded-lg border-dashed bg-white px-6 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
-          暂无图鉴项目
-        </div>
-
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(156px,1fr))] gap-3">
-          <IllustratedItemCard
-            v-for="item in filteredItems"
-            :key="item.seedId"
-            :item="item"
-            :buying="buying"
-            :status-label="getItemStatusLabel(item)"
-            :progress-hint="getProgressHint(item)"
-            :unlock-hint="getUnlockHint(item)"
-            @buy="confirmBuySeed"
-          />
-        </div>
-      </div>
+      </template>
     </div>
+
+    <CollectionsPanel v-if="viewMode === 'collections'" />
+    <MutationCatalogPanel v-else-if="viewMode === 'mutations'" />
 
     <ConfirmModal
       :show="showConfirm"

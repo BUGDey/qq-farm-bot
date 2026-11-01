@@ -326,6 +326,18 @@ function loadConfigs() {
                     }
                 }
             }
+
+            // 2026-11 起的官方资源放在 seed_images/ 子目录，文件名即物品 ID（藏品、新作物等）
+            const subDir = path.join(dir, 'seed_images');
+            if (fs.existsSync(subDir) && fs.statSync(subDir).isDirectory()) {
+                for (const filename of fs.readdirSync(subDir)) {
+                    const subMatch = String(filename || '').match(/^(\d+)\.(?:png|jpg|jpeg|webp|gif)$/i);
+                    if (!subMatch) continue;
+                    const subId = Number(subMatch[1]) || 0;
+                    if (subId <= 0 || seedImageMap.has(subId)) continue;
+                    seedImageMap.set(subId, `${prefix}/seed_images_named/seed_images/${  encodeURIComponent(filename)}`);
+                }
+            }
         }
         indexSeedImageDir(path.join(basePath, 'seed_images_named'), '/game-config');
         for (const provider of externalGameConfigProviders) {

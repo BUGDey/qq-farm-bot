@@ -2263,6 +2263,11 @@ async function handleApiCallInternal(msg) {
                 result = await claimAllRewardsV2(args[0]);
                 break;
             }
+            case 'getCollectionsSnapshot': {
+                const { getCollectionsSnapshot } = require('../services/collections');
+                result = await getCollectionsSnapshot();
+                break;
+            }
             case 'getCareerInfo': {
                 const { getCareerInfo } = require('../services/career');
                 result = await getCareerInfo(args[0]);

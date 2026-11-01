@@ -11,9 +11,19 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.11'
+export const APP_VERSION = '2.12.0'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.12.0',
+    date: '2026-11-01',
+    items: [
+      '图鉴页升级为四个分类：作物图鉴、超变图鉴、蓝晶藏品、变异宝典',
+      '新增蓝晶藏品面板：系列进度、藏品星级、积分里程碑、陈列展台',
+      '新增变异宝典：常规/装扮/藏品三类变异与概率公示，无需账号在线即可查看',
+      '同步官方双端资源：新增藏品图标与物品定义，种子图库扩容',
+    ],
+  },
   {
     version: '2.11.11',
     date: '2026-11-01',

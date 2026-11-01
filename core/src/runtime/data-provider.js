@@ -81,6 +81,11 @@ function createDataProvider(deps) {
         return callWorkerReadOnce(key, accountId, 'getIllustratedList', type, level);
     }
 
+    function getCollectionsSnapshot(ref) {
+        const accountId = resolveAccountId(ref);
+        return callWorkerReadOnce(`collections:${String(accountId || '')}`, accountId, 'getCollectionsSnapshot');
+    }
+
     /** 向全部 worker 广播消息（活动插件宿主装载/卸载用） */
     function sendToWorkers(message) {
         for (const worker of Object.values(workers || {})) {
@@ -275,6 +280,9 @@ function createDataProvider(deps) {
         // ========== Illustrated ==========
         getIllustratedList,
         claimIllustratedRewards: (ref, type) => callWorkerApi(resolveAccountId(ref), 'claimIllustratedRewards', type),
+
+        // ========== Collections（蓝晶藏品） ==========
+        getCollectionsSnapshot,
 
         // ========== Career ==========
         getCareerInfo: (ref, gid) => callWorkerApi(resolveAccountId(ref), 'getCareerInfo', gid),

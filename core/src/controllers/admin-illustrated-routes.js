@@ -52,6 +52,37 @@ function registerAdminIllustratedRoutes({
     ...routeContext,
   });
 
+  // 蓝晶藏品：读取当前账号的藏品快照（需要账号在线）
+  app.get("/api/collections", async (req, res) => {
+    const accountId = getAuthorizedAccountId(req, res, routeContext);
+    if (!accountId) return;
+
+    try {
+      const data = await provider.getCollectionsSnapshot(accountId);
+      res.json({ ok: true, data });
+    } catch (err) {
+      adminLogger.error("获取藏品失败", {
+        error: err.message,
+        stack: err.stack,
+      });
+      sendProviderError(res, err);
+    }
+  });
+
+  // 变异宝典：纯本地配置，不需要账号在线
+  app.get("/api/illustrated/mutations", (req, res) => {
+    try {
+      const { getMutationCatalog } = require("../services/collections");
+      res.json({ ok: true, data: getMutationCatalog() });
+    } catch (err) {
+      adminLogger.error("获取变异宝典失败", {
+        error: err.message,
+        stack: err.stack,
+      });
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   app.get("/api/illustrated", async (req, res) => {
     const accountId = getAuthorizedAccountId(req, res, routeContext);
     if (!accountId) return;
