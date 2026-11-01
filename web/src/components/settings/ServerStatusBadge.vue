@@ -91,14 +91,14 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="server-status flex shrink-0 items-center gap-2 whitespace-nowrap border border-gray-200/70 rounded-full bg-white/60 px-3 py-1 text-[11px] text-gray-500 backdrop-blur-sm dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-400"
+    class="server-status flex shrink-0 flex-col items-start gap-0.5 whitespace-nowrap border border-gray-200/70 rounded-full bg-white/60 px-3 py-1 text-[11px] text-gray-500 backdrop-blur-sm sm:flex-row sm:items-center sm:gap-2 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-400"
     :title="startedAtTitle"
   >
     <span class="inline-flex items-center gap-1" title="当前版本号">
       <span class="i-carbon-tag block text-[12px]" />
       {{ versionText }}
     </span>
-    <span class="h-3 w-px bg-gray-300/70 dark:bg-gray-600/70" />
+    <span class="hidden h-3 w-px bg-gray-300/70 sm:block dark:bg-gray-600/70" />
     <span class="inline-flex items-center gap-1" :title="startedAtTitle || '面板运行时长'">
       <span class="i-carbon-timer block text-[12px]" />
       <template v-if="uptimeText">

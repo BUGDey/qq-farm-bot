@@ -372,8 +372,8 @@ onMounted(async () => {
     </div>
 
     <div class="settings-solid border border-gray-200 rounded-lg bg-white shadow dark:border-gray-700 dark:bg-gray-800">
-      <div class="flex items-center gap-2 border-b border-gray-200 pr-2 dark:border-gray-700">
-        <nav ref="settingsTabsNav" class="min-w-0 flex flex-1 gap-1 overflow-x-auto p-2">
+      <div class="flex flex-wrap items-center gap-2 border-b border-gray-200 pr-2 dark:border-gray-700">
+        <nav ref="settingsTabsNav" class="min-w-0 w-full flex flex-1 gap-1 overflow-x-auto p-2 sm:w-auto">
           <button
             v-for="tab in visibleTabs"
             :key="tab.key"
@@ -389,8 +389,9 @@ onMounted(async () => {
             {{ tab.label }}
           </button>
         </nav>
-        <!-- 右端：当前版本号 + 面板运行时长（数据来自 /api/health） -->
-        <ServerStatusBadge class="hidden sm:flex" />
+        <!-- 右端：当前版本号 + 面板运行时长（数据来自 /api/health）。
+             手机端自动换到页签下方独立一行，不再压住页签 -->
+        <ServerStatusBadge class="mb-2 ml-2 shrink-0 sm:mb-0 sm:ml-0 sm:mr-2" />
       </div>
 
       <div class="p-4">

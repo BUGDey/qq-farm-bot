@@ -222,31 +222,41 @@ const expRate = computed(() => {
   return `${Math.floor(rate)}/小时`
 })
 
-const timeToLevel = computed(() => {
+// 升级预估拆成「多久升级」和「还差多少经验」两段：
+// 手机端放同一行会把数字挤出屏幕，模板里会把后半段换行显示。
+const levelForecast = computed(() => {
   const gain = status.value?.sessionExpGained || 0
   const uptime = status.value?.uptime || 0
   const current = status.value?.levelProgress?.current || 0
   const needed = status.value?.levelProgress?.needed || 0
 
   if (!needed || !uptime || gain <= 0)
-    return ''
+    return { eta: '', need: '' }
 
   const ratePerHour = gain / (uptime / 3600)
   if (ratePerHour <= 0)
-    return ''
+    return { eta: '', need: '' }
 
   const expNeeded = Math.max(0, needed - current)
   if (expNeeded <= 0)
-    return '经验已满，下次登录即可升级'
+    return { eta: '经验已满，下次登录即可升级', need: '' }
 
   const minsToLevel = expNeeded / (ratePerHour / 60)
+  const need = `还差 ${Math.ceil(expNeeded).toLocaleString('zh-CN')} 经验`
 
   // 短时间说明分钟，超过一天说明天，避免出现「约 72.0 小时后升级」这种不好读的说法
   if (minsToLevel < 60)
-    return `约 ${Math.ceil(minsToLevel)} 分钟后升级·还差 ${Math.ceil(expNeeded).toLocaleString('zh-CN')} 经验`
+    return { eta: `约 ${Math.ceil(minsToLevel)} 分钟后升级`, need }
   if (minsToLevel < 60 * 24)
-    return `约 ${(minsToLevel / 60).toFixed(1)} 小时后升级·还差 ${Math.ceil(expNeeded).toLocaleString('zh-CN')} 经验`
-  return `约 ${(minsToLevel / 60 / 24).toFixed(1)} 天后升级·还差 ${Math.ceil(expNeeded).toLocaleString('zh-CN')} 经验`
+    return { eta: `约 ${(minsToLevel / 60).toFixed(1)} 小时后升级`, need }
+  return { eta: `约 ${(minsToLevel / 60 / 24).toFixed(1)} 天后升级`, need }
+})
+
+const timeToLevel = computed(() => {
+  const { eta, need } = levelForecast.value
+  if (!eta)
+    return ''
+  return need ? `${eta}·${need}` : eta
 })
 
 const fertilizerNormal = computed(() => dashboardItems.value.find((item: any) => Number(item.id) === 1011))
@@ -824,9 +834,10 @@ useIntervalFn(updateCountdowns, 1000)
                 <span class="exp-bolt i-fas-bolt" />
                 EXP 效率：{{ expRate }}
               </span>
-              <span v-if="timeToLevel" class="level-up-time">
-                <span class="i-carbon-arrow-up" />
-                {{ timeToLevel }}
+              <span v-if="levelForecast.eta" class="level-up-time">
+                <span class="i-carbon-arrow-up shrink-0" />
+                <span class="level-eta">{{ levelForecast.eta }}</span>
+                <span v-if="levelForecast.need" class="level-need">{{ levelForecast.need }}</span>
               </span>
             </div>
           </div>
@@ -1475,9 +1486,10 @@ useIntervalFn(updateCountdowns, 1000)
 
 .exp-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 6px 12px;
   margin-top: 8px;
   font-size: 12px;
   color: #6b7280;
@@ -1485,9 +1497,11 @@ useIntervalFn(updateCountdowns, 1000)
 
 .exp-rate {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 5px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .exp-bolt {
@@ -1496,10 +1510,15 @@ useIntervalFn(updateCountdowns, 1000)
 
 .level-up-time {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   color: #16a34a;
   font-weight: 600;
+}
+
+.level-eta,
+.level-need {
   white-space: nowrap;
 }
 
@@ -2177,6 +2196,22 @@ select.home-log-filter-item {
 
 /* 响应式设计 */
 @media (max-width: 640px) {
+  /* 手机端：EXP 效率独占一行，升级预估另起一行，避免数字被挤出屏幕 */
+  .exp-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .level-up-time {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  .level-need {
+    flex-basis: 100%;
+  }
+
   .resource-cards {
     gap: 8px;
   }

@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.5'
+export const APP_VERSION = '2.11.6'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.6',
+    date: '2026-11-01',
+    items: [
+      '手机端首页 EXP 效率不再被压成竖排，「还差 N 经验」自动换行显示，不再溢出屏幕',
+      '设置页版本/运行时长徽标移到页签下方独立一行，版本与运行时长分两行显示，不再遮挡页签',
+      '版本 2.11.6，构建与 lint 通过',
+    ],
+  },
   {
     version: '2.11.5',
     date: '2026-11-01',
