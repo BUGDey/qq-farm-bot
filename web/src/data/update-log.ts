@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.13.0'
+export const APP_VERSION = '2.13.1'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.13.1',
+    date: '2026-11-01',
+    items: [
+      '修复阶段图目录扫描引用错误导致的启动失败',
+      '素材插件同步到 1.3.0、节令小札同步到 1.1.4',
+      '植物阶段图覆盖提升到 314 种（目录扫描兜底）',
+    ],
+  },
   {
     version: '2.13.0',
     date: '2026-11-01',

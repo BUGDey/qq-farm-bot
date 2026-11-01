@@ -1,7 +1,7 @@
 {
   "id": "material-plugin",
   "name": "QQ农场基础素材包",
-  "version": "1.2.3",
+  "version": "1.3.0",
   "apiVersion": 1,
   "description": "自动打包自 core/src/gameConfig 的基础素材包，提供活动植物增量表与种子/阶段图，宿主自动合并",
   "activityIds": [],
@@ -20,6 +20,6 @@
   "card": {
     "icon": "i-carbon-image",
     "image": "",
-    "updatedMs": 1793089625550
+    "updatedMs": 1793528445877
   }
 }

@@ -657,7 +657,8 @@ function loadPlantPhaseManifest(force = false) {
         }
     }
     if (needsLoad) {
-        scanPhaseDir(path.join(basePath, 'plant_images'), '/game-config');
+        // plantPhaseManifestPath 指向 <gameConfig>/plant_images/manifest.json
+        if (plantPhaseManifestPath) scanPhaseDir(path.dirname(plantPhaseManifestPath), '/game-config');
         for (const provider of externalGameConfigProviders) {
             scanPhaseDir(path.join(provider.dir, 'assets', 'plant_images'), provider.urlPrefix || '/game-config');
         }
