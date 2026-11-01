@@ -250,13 +250,19 @@ async function buyGoods(item: any, quantity = 1) {
 async function buyMallGoods(item: any, quantity = 1) {
   if (!currentAccountId.value)
     return
-  const result = await shopStore.buyMallGoods(currentAccountId.value, item.goodsId, quantity)
-  if (result?.ok) {
-    toast.success(`已购买 ${item.name} x${quantity}`)
-    await refreshAll()
+  try {
+    const result = await shopStore.buyMallGoods(currentAccountId.value, item.goodsId, quantity)
+    if (result?.ok) {
+      toast.success(`已购买 ${item.name} x${quantity}`)
+      await refreshAll()
+    }
+    else {
+      toast.error(result?.error || '购买失败')
+    }
   }
-  else {
-    toast.error(result?.error || '购买失败')
+  catch (error: any) {
+    const message = error?.response?.data?.error || error?.message || '购买失败'
+    toast.error(message)
   }
 }
 

@@ -475,7 +475,7 @@ onMounted(load)
         </div>
 
         <div class="p-5 lg:min-h-0 lg:overflow-y-auto sm:p-6">
-          <label class="flex items-center justify-between gap-4 border border-gray-200 rounded-lg px-4 py-3 dark:border-gray-700">
+          <label class="flex items-center justify-between gap-4 border border-gray-200 rounded-lg bg-white px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <span class="min-w-0">
               <strong class="block text-sm text-gray-900 font-medium dark:text-gray-100">启用资本模式</strong>
               <small class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">根据成熟时间自动安排守护</small>
@@ -484,7 +484,7 @@ onMounted(load)
           </label>
 
           <div class="mt-5 space-y-4">
-            <div class="min-w-0">
+            <div class="min-w-0 border border-gray-200 rounded-lg bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <p class="text-sm text-gray-700 font-medium dark:text-gray-200">
                 守护宠物
                 <span v-if="selectedDogName" class="ml-1 text-xs text-gray-400">已选：{{ selectedDogName }}</span>
@@ -496,8 +496,8 @@ onMounted(load)
                   type="button"
                   class="min-w-0 flex items-center gap-2 border rounded-lg px-2 py-1.5 text-left transition"
                   :class="draft.dogId === dog.id
-                    ? 'border-[var(--theme-primary)] bg-[color-mix(in_srgb,var(--theme-primary)_8%,transparent)] text-[var(--theme-primary)]'
-                    : 'border-gray-200 text-gray-700 hover:border-[var(--theme-primary)] dark:border-gray-600 dark:text-gray-200'"
+                    ? 'border-[var(--theme-primary)] bg-[color-mix(in_srgb,var(--theme-primary)_10%,white)] text-[var(--theme-primary)]'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-[var(--theme-primary)] dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'"
                   :aria-pressed="draft.dogId === dog.id"
                   @click="draft.dogId = dog.id"
                 >

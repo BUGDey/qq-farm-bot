@@ -11,9 +11,19 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.6'
+export const APP_VERSION = '2.11.7'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.7',
+    date: '2026-11-01',
+    items: [
+      '商城分享礼包：点击「立即领取」时会先真正补发一次分享，再自动重试领取',
+      '分享仍被服务端拦下时，给出可读提示（需要在 QQ 里分享商城后才能领），不再报 500',
+      '数据分析页顶部页签与作物列表补上主题卡片背景，不再透明',
+      '资本模式的开关行与守护宠物选择区改成白底卡片，文字更清楚',
+    ],
+  },
   {
     version: '2.11.6',
     date: '2026-11-01',

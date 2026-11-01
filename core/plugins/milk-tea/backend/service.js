@@ -186,8 +186,8 @@ function createMilkTeaService({ types, sendMsgAsync, getBag, getBagItems, getSer
     if (['share', 'shareDaily', 'shareRewards', 'fundRewards'].includes(action)) {
       const cmd = action === 'share' ? 70 : action === 'shareDaily' ? 74 : action === 'shareRewards' ? 71 : 76;
       // 商城「奶茶分享礼包」要求当天先完成一次分享（官方返回 code=103012），
-      // 这里用活动分享面板的 cmd 70 补上这一步；已分享过则直接跳过。
-      if (action === 'share' && state.share?.daily?.first_share_awarded) fail('今日已分享');
+      // 这里用活动分享面板的 cmd 70 补上这一步；已分享过且没要求强制补做则直接跳过。
+      if (action === 'share' && state.share?.daily?.first_share_awarded && input?.force !== true) fail('今日已分享');
       if (action === 'shareDaily' && (!state.share?.daily || state.share.daily.daily_reward_claimed)) fail('今日已领取');
       if (action === 'shareRewards' && !state.share?.milestones?.some(x => Number(x.state) === 2)) fail('暂无可领取档位');
       if (action === 'fundRewards') {

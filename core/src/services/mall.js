@@ -89,20 +89,22 @@ function isShareRequiredError(error) {
 async function ensureShareBeforePurchase() {
   const now = Date.now();
   if (shareAttemptRunning) return false;
+  // 同一轮里只补一次；这里不按时间间隔拦截，用户点一次就该补一次
   if (now - shareAttemptedAt < SHARE_RETRY_COOLDOWN_MS) return false;
   shareAttemptRunning = true;
   shareAttemptedAt = now;
   try {
     const { callApiMethod } = require('../plugins/worker-host-bridge');
-    const dispatched = await callApiMethod('operateMilkTea', ['share', {}]);
-    if (!dispatched || !dispatched.found) {
-      log('商城', '分享礼包需要先分享，但当前没有可用的奶茶活动插件', {
-        module: 'mall', event: '商城购买前补分享', result: 'warn',
-      });
-      return false;
+    // force=true：活动里当日快乐值已领时，仍然把「分享」这一步真正发一次给服务器
+    const dispatched = await callApiMethod('operateMilkTea', ['share', { force: true }]);
+    if (dispatched && dispatched.found) {
+      log('商城', '分享礼包需要先分享，已自动补做一次', { module: 'mall', event: '商城购买前补分享', result: 'ok' });
+      return true;
     }
-    log('商城', '分享礼包需要先分享，已自动补做一次', { module: 'mall', event: '商城购买前补分享', result: 'ok' });
-    return true;
+    log('商城', '分享礼包需要先分享，但当前没有可用的奶茶活动插件', {
+      module: 'mall', event: '商城购买前补分享', result: 'warn',
+    });
+    return false;
   } catch (error) {
     // 插件内部把「今日已分享」当成错误抛出，这种情况说明前置条件已满足
     if (String(error && error.message).includes('今日已分享')) return true;
@@ -120,9 +122,17 @@ async function purchaseMallGoods(goodsId, count = 1) {
     return await sendPurchase(goodsId, count);
   } catch (error) {
     if (!isShareRequiredError(error)) throw error;
-    const shared = await ensureShareBeforePurchase();
-    if (!shared) throw error;
-    return await sendPurchase(goodsId, count);
+    await ensureShareBeforePurchase();
+    try {
+      return await sendPurchase(goodsId, count);
+    } catch (retryError) {
+      if (!isShareRequiredError(retryError)) throw retryError;
+      // 补分享后仍被拦：这是真实的「需要在 QQ 里分享」限制，给出人能看懂的提示
+      const friendly = new Error('该商品需要在 QQ 中分享商城后才能领取，面板无法代替真实分享；分享一次后再点领取即可');
+      friendly.errorType = 'share_required';
+      friendly.code = SHARE_REQUIRED_CODE;
+      throw friendly;
+    }
   }
 }
 

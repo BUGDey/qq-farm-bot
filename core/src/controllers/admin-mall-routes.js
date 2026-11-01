@@ -221,6 +221,15 @@ function registerAdminMallRoutes({
       const data = await provider.buyMallGoods(accountId, goodsId, count);
       res.json({ ok: true, data });
     } catch (error) {
+      // 「分享礼包」类商品需要先在 QQ 里分享，这里给出可读提示而不是 500
+      const message = String((error && error.message) || "");
+      if (message.includes("103012") || message.includes("还没有完成分享") || message.includes("在 QQ 中分享")) {
+        return res.status(400).json({
+          ok: false,
+          error: "该商品需要在 QQ 中分享商城后才能领取，面板无法代替真实分享；分享一次后再点领取即可",
+          errorType: "share_required",
+        });
+      }
       sendProviderError(res, error);
     }
   });

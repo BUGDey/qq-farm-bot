@@ -328,7 +328,7 @@ function formatGrowTime(seconds: any) {
 
 <template>
   <div class="space-y-4">
-    <div class="flex gap-2 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex gap-2 overflow-x-auto border border-white/60 rounded-xl bg-white/70 px-2 pt-2 shadow-lg backdrop-blur-md dark:border-gray-700 dark:bg-gray-800">
       <button
         class="border-b-2 px-4 py-2 text-sm font-medium transition-colors"
         :class="activeTab === 'crops'
@@ -386,7 +386,7 @@ function formatGrowTime(seconds: any) {
         暂无数据
       </div>
 
-      <div v-else-if="activeTab === 'crops'" class="space-y-4">
+      <div v-else-if="activeTab === 'crops'" class="border border-white/60 rounded-xl bg-white/70 p-4 shadow-lg backdrop-blur-md space-y-4 dark:border-gray-700 dark:bg-gray-800">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex items-center gap-3">
             <div class="i-carbon-sprout text-xl text-green-500" />
