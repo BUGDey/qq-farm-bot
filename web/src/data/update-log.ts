@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.11.0'
+export const APP_VERSION = '2.11.1'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.11.1',
+    date: '2026-11-01',
+    items: [
+      '账号管理页右上角新增版本号与面板运行时长，随时看到当前跑的是哪个版本、已经跑了多久',
+      '微信账号的凭证倒计时改为按最近一次扫码/凭证刷新时间计算，重新扫码即可重新计时，不再一直显示「已超过预计时长」',
+      '接口 /api/health 增加 version 与 startedAt 字段，面板与外部监控都能直接读到服务版本与启动时间',
+    ],
+  },
   {
     version: '2.11.0',
     date: '2026-10-31',

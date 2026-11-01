@@ -382,7 +382,8 @@ function createDataProvider(deps) {
         // ========== 账号管理 ==========
         getAccounts: () => {
             const data = getAccounts();
-            // 凭证有效期按账号首次加入时间估算，凭证保活/刷新不会重置倒计时。
+            // 凭证有效期按「最近一次写入凭证的时间（即最近一次扫码/凭证刷新）」估算：
+            // 重新扫码或凭证轮转后倒计时会重新开始，不再永远显示「已超过预计时长」。
             // 绝对时间戳交给前端逐秒递减，不轮询接口也不会累积漂移。
             const sysConfig = store.getSystemConfig() || {};
             const validityHours = Number(sysConfig.credentialValidityHours) || 2;
@@ -397,11 +398,13 @@ function createDataProvider(deps) {
                 delete acc.refreshtoken;
                 delete acc.accesstoken;
                 acc.credentialValidityHours = validityHours;
-                const createdAt = Number(acc.createdAt);
-                acc.credentialExpireAt = acc.hasWxCredential
-                    && Number.isFinite(createdAt)
-                    && createdAt > 0
-                    ? createdAt + validityMs
+                const credentialUpdatedAt = Number(acc.credentialUpdatedAt) || 0;
+                const createdAt = Number(acc.createdAt) || 0;
+                // 老账号没有 credentialUpdatedAt，回退到创建时间，保证行为不突然变成“无倒计时”。
+                const credentialBaseAt = credentialUpdatedAt > 0 ? credentialUpdatedAt : createdAt;
+                acc.credentialUpdatedAt = credentialBaseAt;
+                acc.credentialExpireAt = acc.hasWxCredential && credentialBaseAt > 0
+                    ? credentialBaseAt + validityMs
                     : 0;
                 if (worker && worker.status && worker.status.status && worker.status.status.name) {
                     acc.nick = worker.status.status.name;

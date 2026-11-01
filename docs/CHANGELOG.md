@@ -35,13 +35,21 @@ flowchart TB
 
     T --> U[2026-10-29 · v2.9.4<br/>修复构建时依赖源不可用]
 
-    U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥] --> W[2026-10-31 · v2.11.0<br/>抓包协议分析与专题文档]
+    U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥] --> W[2026-10-31 · v2.11.0<br/>抓包协议分析与专题文档] --> X[2026-11-01 · v2.11.1<br/>版本徽标与凭证重新计时]
 
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X seed;
 ```
 
 ## 详细记录
+
+### 2026-11-01 · v2.11.1 · 版本徽标与凭证重新计时
+
+- 设置页页签栏右端新增 `web/src/components/settings/ServerStatusBadge.vue`：显示 `vX.Y.Z` 与「运行 0h 3m 44s」，数据来自 `/api/health`；本地每秒自增、每分钟校准一次，服务重启后会自动对上新的启动时间。
+- `/api/health` 返回值扩展：新增 `version`（读 `core/package.json`）与 `startedAt`（`Date.now() - process.uptime()`），原有 `uptime` / `timestamp` 保持不变，老前端不受影响。
+- 修复微信账号「凭证倒计时永远为负」：`core/src/runtime/data-provider.js` 的 `credentialExpireAt` 改为以最近一次确认获取凭证的时间（`credentialUpdatedAt`，即最近一次扫码或凭证轮转）为基准，老账号无该字段时回退到 `createdAt`；重新扫码后倒计时会重新开始。
+- 前端凭证文案同步调整：过期但在线时显示「已超过预计时长，账号仍在线（重新扫码可重新计时）」，避免让人误以为凭证已失效。
+- 测试：`core/test/data-provider-credentials.test.js` 按新语义重写（凭证写入时间基准、重新扫码重置、老账号回退、无时间戳不外推），全量 **543 条全绿**。
 
 ### 2026-10-31 · v2.11.0 · 抓包协议分析与专题文档
 

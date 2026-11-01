@@ -193,12 +193,24 @@ function registerLogoutRoute(expressApp, invalidateAdminSessionAndDisconnect) {
   });
 }
 
+/** 服务版本号：取 core/package.json，缺失时留空由前端回退到构建时版本。 */
+const CORE_VERSION = (() => {
+  try {
+    return String(require("../../package.json").version || "");
+  } catch {
+    return "";
+  }
+})();
+
 function registerHealthRoute(expressApp) {
   expressApp.get("/api/health", (req, res) => {
+    const startedAt = Date.now() - Math.round(process.uptime() * 1000);
     res.json({
       ok: true,
       status: "ok",
       uptime: process.uptime(),
+      version: CORE_VERSION,
+      startedAt,
       timestamp: Date.now(),
     });
   });

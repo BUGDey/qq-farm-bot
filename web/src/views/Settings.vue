@@ -8,6 +8,7 @@ import AccountSettingsTab from '@/components/settings/AccountSettingsTab.vue'
 import AutoCodeRefreshCard from '@/components/settings/AutoCodeRefreshCard.vue'
 import ChangePasswordCard from '@/components/settings/ChangePasswordCard.vue'
 import OfflineReminderCard from '@/components/settings/OfflineReminderCard.vue'
+import ServerStatusBadge from '@/components/settings/ServerStatusBadge.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAccountSettings } from '@/composables/settings/useAccountSettings'
 import { useAutomationSettings } from '@/composables/settings/useAutomationSettings'
@@ -371,8 +372,8 @@ onMounted(async () => {
     </div>
 
     <div class="settings-solid border border-gray-200 rounded-lg bg-white shadow dark:border-gray-700 dark:bg-gray-800">
-      <div class="border-b border-gray-200 dark:border-gray-700">
-        <nav ref="settingsTabsNav" class="flex gap-1 overflow-x-auto p-2">
+      <div class="flex items-center gap-2 border-b border-gray-200 pr-2 dark:border-gray-700">
+        <nav ref="settingsTabsNav" class="min-w-0 flex flex-1 gap-1 overflow-x-auto p-2">
           <button
             v-for="tab in visibleTabs"
             :key="tab.key"
@@ -388,6 +389,8 @@ onMounted(async () => {
             {{ tab.label }}
           </button>
         </nav>
+        <!-- 右端：当前版本号 + 面板运行时长（数据来自 /api/health） -->
+        <ServerStatusBadge class="hidden sm:flex" />
       </div>
 
       <div class="p-4">

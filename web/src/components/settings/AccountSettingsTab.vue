@@ -83,7 +83,7 @@ function formatCredentialRemaining(acc: any) {
   const ms = credentialRemainingMs(acc)
   if (ms <= 0) {
     if (acc?.online)
-      return '已超过预计凭证时长，账号当前在线'
+      return '已超过预计时长，账号仍在线（重新扫码可重新计时）'
     return '已过期，请重新扫码或刷新凭证'
   }
   const totalSec = Math.floor(ms / 1000)
