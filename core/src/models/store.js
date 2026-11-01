@@ -1903,6 +1903,46 @@ function getAccounts() {
     return loadAccounts();
 }
 
+/** 读取账号「首次登录成功」时间戳（毫秒），0 表示尚未登录过 */
+function getAccountLoginSince(accountId) {
+    const id = String(accountId || '');
+    if (!id) return 0;
+    const data = normalizeAccountsData(loadAccounts());
+    const account = data.accounts.find(a => String(a.id) === id);
+    return Number(account && account.loginSince) || 0;
+}
+
+/**
+ * 记录账号首次登录成功时间（已记录则不覆盖），供首页「已运行」计时用。
+ * 只写第一次，之后刷新 Code 导致的重启不会重置计时。
+ */
+function markAccountLogin(accountId, timestamp) {
+    const id = String(accountId || '');
+    if (!id) return 0;
+    const data = normalizeAccountsData(loadAccounts());
+    const idx = data.accounts.findIndex(a => String(a.id) === id);
+    if (idx < 0) return 0;
+    const existing = Number(data.accounts[idx].loginSince) || 0;
+    if (existing > 0) return existing;
+    const value = Number(timestamp) > 0 ? Number(timestamp) : Date.now();
+    data.accounts[idx] = { ...data.accounts[idx], loginSince: value, updatedAt: Date.now() };
+    saveAccounts(data);
+    return value;
+}
+
+/** 清空登录计时（用户手动停止 / 退出登录时调用），下次登录重新开始计时 */
+function clearAccountLogin(accountId) {
+    const id = String(accountId || '');
+    if (!id) return false;
+    const data = normalizeAccountsData(loadAccounts());
+    const idx = data.accounts.findIndex(a => String(a.id) === id);
+    if (idx < 0) return false;
+    if (!Number(data.accounts[idx].loginSince)) return false;
+    data.accounts[idx] = { ...data.accounts[idx], loginSince: 0, updatedAt: Date.now() };
+    saveAccounts(data);
+    return true;
+}
+
 function normalizeAccountsData(data) {
     const input = data && typeof data === 'object' ? data : {};
     const accounts = Array.isArray(input.accounts) ? input.accounts : [];
@@ -1938,6 +1978,8 @@ function addOrUpdateAccount(account) {
                 ...(nextAvatar !== undefined ? { avatar: nextAvatar } : {}),
                 ...(nextOpenId !== undefined ? { openId: nextOpenId } : {}),
                 createdAt: data.accounts[idx].createdAt,
+                // 已运行时长按「首次登录成功」计时，刷新 Code 重启进程不重置
+                loginSince: Number(data.accounts[idx].loginSince) || 0,
                 ...(credentialChanged ? { credentialUpdatedAt: Date.now() } : {}),
                 updatedAt: Date.now()
             };
@@ -1967,6 +2009,8 @@ function addOrUpdateAccount(account) {
             username: account.username || '',
             // 记录首次凭证写入时间，账号管理页倒计时以 createdAt 为准
             credentialUpdatedAt: account.loginBuffer ? Date.now() : 0,
+            // 首次登录成功的时间戳（毫秒），0 表示尚未登录过
+            loginSince: 0,
             createdAt: Date.now(),
             updatedAt: Date.now()
         });
@@ -2430,6 +2474,9 @@ module.exports = {
     setGlobalMailer,
     getGlobalMailerPublic,
     getAccounts,
+    getAccountLoginSince,
+    markAccountLogin,
+    clearAccountLogin,
     addOrUpdateAccount,
     deleteAccount,
     deleteAllAccounts,

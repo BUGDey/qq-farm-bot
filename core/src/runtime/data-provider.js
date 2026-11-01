@@ -433,6 +433,10 @@ function createDataProvider(deps) {
             const account = findAccount(id || ref);
             if (!account) return false;
             if (id) stopWorker(id);
+            // 用户手动停止账号：清空登录计时锚点，下次登录重新开始计时（自动刷新 Code 不走这里）
+            if (typeof store.clearAccountLogin === 'function') {
+                store.clearAccountLogin(id || account.id);
+            }
             return true;
         },
 

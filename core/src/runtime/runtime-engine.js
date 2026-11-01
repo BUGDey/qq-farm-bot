@@ -17,6 +17,31 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 }
 
+/**
+ * 首页「已运行」以账号首次登录成功的时间为锚点。
+ * 自动刷新 Code 会重启 worker 进程，worker 自己的 uptime 会归零，
+ * 这里用持久化的 loginSince 还原成累计时长，避免刷新后时长跳回 0。
+ */
+function applySessionUptime(accountId, status) {
+    if (!status || typeof status !== 'object') return status;
+    if (typeof store.getAccountLoginSince !== 'function') return status;
+    const connection = status.connection && typeof status.connection === 'object' ? status.connection : null;
+    const connected = status.connected === true || (connection && connection.connected === true);
+    if (!connected) return status;
+
+    const workerUptimeSec = Math.max(0, Number(status.uptime) || 0);
+    let since = Number(store.getAccountLoginSince(accountId)) || 0;
+    if (!since) {
+        // 首次观测到登录成功：以 worker 本次运行的起点作为锚点
+        const anchor = Date.now() - workerUptimeSec * 1000;
+        since = Number(store.markAccountLogin(accountId, anchor)) || anchor;
+    }
+    const totalSec = Math.max(workerUptimeSec, Math.floor((Date.now() - since) / 1000));
+    if (!Number.isFinite(totalSec)) return status;
+    // uptime：累计运行时长（展示用）；sessionUptime：本次进程运行时长（算效率用，重启后从 0 开始）
+    return { ...status, uptime: Math.max(0, totalSec), sessionUptime: workerUptimeSec };
+}
+
 /** 操作类型键列表 */
 const OPERATION_KEYS = [
     'harvest', 'water', 'weed', 'bug', 'farming', 'fertilize', 'plant',
@@ -123,8 +148,9 @@ function createRuntimeEngine(options = {}) {
             return !!saved;
         },
         onStatusSync: (accountId, status, accountName) => {
-            runtimeEvents.emit('status', { accountId, status, accountName });
-            if (onStatusSync) onStatusSync(accountId, status, accountName);
+            const safeStatus = applySessionUptime(accountId, status);
+            runtimeEvents.emit('status', { accountId, status: safeStatus, accountName });
+            if (onStatusSync) onStatusSync(accountId, safeStatus, accountName);
         },
         onWorkerLog: (entry, accountId, accountName) => {
             runtimeEvents.emit('worker_log', { entry, accountId, accountName });
@@ -290,4 +316,4 @@ function createRuntimeEngine(options = {}) {
     };
 }
 
-module.exports = { createRuntimeEngine };
+module.exports = { createRuntimeEngine, _test: { applySessionUptime } };

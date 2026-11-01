@@ -215,7 +215,8 @@ const displayName = computed(() => {
 
 const expRate = computed(() => {
   const gain = status.value?.sessionExpGained || 0
-  const uptime = status.value?.uptime || 0
+  // 效率用「本次会话」时长算：刷新 Code 后会话经验会清零，用累计时长会失真
+  const uptime = status.value?.sessionUptime ?? status.value?.uptime ?? 0
   if (!uptime)
     return '0/小时'
   const rate = gain / (uptime / 3600)
@@ -226,7 +227,7 @@ const expRate = computed(() => {
 // 手机端放同一行会把数字挤出屏幕，模板里会把后半段换行显示。
 const levelForecast = computed(() => {
   const gain = status.value?.sessionExpGained || 0
-  const uptime = status.value?.uptime || 0
+  const uptime = status.value?.sessionUptime ?? status.value?.uptime ?? 0
   const current = status.value?.levelProgress?.current || 0
   const needed = status.value?.levelProgress?.needed || 0
 
