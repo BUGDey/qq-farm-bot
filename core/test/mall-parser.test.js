@@ -5,6 +5,7 @@ const {
   parseMallLimitInfo,
   parseMallPriceInfo,
   parseMallPriceValue,
+  mallLimitPeriodLabel,
 } = require('../src/services/mall');
 
 test('parses mall price from the item count instead of the currency id', () => {
@@ -30,4 +31,13 @@ test('parses daily and activity purchase limits from current mall protocol', () 
     limitCount: 3,
     boughtNum: 3,
   });
+});
+
+test('maps purchase limit types to human readable period names', () => {
+  assert.equal(mallLimitPeriodLabel(1), '每日');
+  assert.equal(mallLimitPeriodLabel(2), '每周');
+  assert.equal(mallLimitPeriodLabel(3), '每月');
+  assert.equal(mallLimitPeriodLabel(4), '永久');
+  assert.equal(mallLimitPeriodLabel(0), '');
+  assert.equal(mallLimitPeriodLabel(undefined), '');
 });

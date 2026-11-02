@@ -1,5 +1,5 @@
 const { getItemById, getItemImageById } = require("../config/gameConfig");
-const { parseMallPriceInfo, parseMallLimitInfo, parseMallItemIds, parseMallRewardItem } = require("../services/mall");
+const { parseMallPriceInfo, parseMallLimitInfo, parseMallItemIds, parseMallRewardItem, mallLimitPeriodLabel } = require("../services/mall");
 const mallImageSupplement = require('../gameConfig/MallImageSupplement.json');
 const mallImageByGoodsId = new Map(mallImageSupplement.entries.map(entry => [entry.goodsId, entry]));
   const { toNum } = require("../utils/utils");
@@ -177,6 +177,8 @@ function registerAdminMallRoutes({
           limitCount,
           boughtNum,
           limitType,
+          limitPeriod: mallLimitPeriodLabel(limitType),
+          remaining: limitCount > 0 ? Math.max(0, limitCount - boughtNum) : null,
           isSoldOut,
           isActivity: discount.is_activity === true || endTime > 0,
           sourceOrder,

@@ -11,9 +11,17 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.13.3'
+export const APP_VERSION = '2.13.4'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.13.4',
+    date: '2026-11-02',
+    items: [
+      '商城道具礼包显示限购周期（每日/每周/每月/永久）与剩余次数',
+      '补齐商城限购、商店折扣与藏品升级/领奖的协议定义',
+    ],
+  },
   {
     version: '2.13.3',
     date: '2026-11-02',

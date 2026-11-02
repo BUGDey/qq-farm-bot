@@ -23,6 +23,13 @@ message GetMallListBySlotTypeResponse {
   int64 timestamp = 2;  // 时间戳
 }
 
+// 限购信息（与官方 RestrictionType 对应）
+message PurchaseLimit {
+  int32 limit_type = 1;    // 1=每日，2=每周，3=每月，4=永久
+  int64 bought_count = 2;  // 已购买数量
+  int64 limit_count = 3;   // 限购上限
+}
+
 // 商品信息
 message MallGoods {
   int32 goods_id = 1;        // 商品ID

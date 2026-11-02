@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { formatCouponAmount } from '@/utils/number-format'
 
-defineProps<{
+const props = defineProps<{
   item: any
   canAfford: boolean
   statusLabel: string
@@ -31,6 +32,21 @@ function currencyIcon(item: any) {
   const icon = icons[Number(item.currencyId || 1002)]
   return icon ? `/game-config/resource-icons/${icon}.png` : ''
 }
+
+/** 限购周期文案：每日/每周/每月/永久 + 已购/上限 + 剩余 */
+const limitText = computed(() => {
+  const item = props.item || {}
+  if (item.isLimited !== true)
+    return ''
+  const max = Number(item.limitCount || 0)
+  if (max <= 0)
+    return ''
+  const bought = Number(item.boughtNum || 0)
+  const period = String(item.limitPeriod || '')
+  const head = period ? `${period}限购` : '限购'
+  const left = Math.max(0, max - bought)
+  return left > 0 ? `${head} ${bought}/${max} · 剩余 ${left}` : `${head} ${bought}/${max} · 已售罄`
+})
 </script>
 
 <template>
@@ -59,6 +75,9 @@ function currencyIcon(item: any) {
       </div>
       <p v-for="reward in item.rewards || []" :key="reward.itemId" class="mt-1 break-words text-xs text-gray-500">
         {{ reward.name }} ×{{ reward.count }}
+      </p>
+      <p v-if="limitText" class="mt-1 text-[11px] text-gray-500 leading-5 dark:text-gray-400">
+        {{ limitText }}
       </p>
       <p v-if="item.endTime" class="mt-1 text-xs text-gray-500">
         截止 {{ new Date(item.endTime * 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) }}

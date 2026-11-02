@@ -264,6 +264,15 @@ function parseMallLimitInfo(raw) {
 }
 
 /**
+ * 限购周期名称（官方 RestrictionType）
+ */
+const MALL_LIMIT_PERIOD_LABELS = { 1: '每日', 2: '每周', 3: '每月', 4: '永久' };
+
+function mallLimitPeriodLabel(type) {
+  return MALL_LIMIT_PERIOD_LABELS[toNum(type)] || '';
+}
+
+/**
  * 解析商城物品 ID 列表
  */
 function parseMallItemIds(raw) {
@@ -695,6 +704,8 @@ module.exports = {
   parseMallPriceValue,
   parseMallPriceInfo,
   parseMallLimitInfo,
+  mallLimitPeriodLabel,
+  MALL_LIMIT_PERIOD_LABELS,
   parseMallItemIds,
 
   getFertilizerBuyDailyState: () => ({
