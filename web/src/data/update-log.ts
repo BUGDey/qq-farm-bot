@@ -11,9 +11,17 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.1'
+export const APP_VERSION = '2.14.2'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.2',
+    date: '2026-11-02',
+    items: [
+      'Windows 选 2 全自动：自动下载并解压 NapCat Shell，只需装好 QQ NT 与 Node.js',
+      '下载走主源 + 镜像回退，失败时给出可手动兜底的提示',
+    ],
+  },
   {
     version: '2.14.1',
     date: '2026-11-02',

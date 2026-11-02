@@ -12,11 +12,11 @@
  * 命令行：--napcat / --node / --stop / --status / --help
  *
  * QQ 扫码版原理：
- *   - 电脑上需装好 QQ NT（9.9.x）与 Node.js 20+
- *   - 把 NapCat 官方 NapCat.Shell.Windows.Node.zip 解压到 data\napcat\
- *     （保证 data\napcat\napcat\napcat.mjs 存在；也可把 zip 放进 data\napcat\ 让本脚本解压）
- *   - 本启动器负责：装 qq-miniapp-openauth 插件、写白名单与插件配置、
- *     生成并下发 WebUI Token、先起 NapCat 再起面板
+ *   - 电脑上只需装好 QQ NT（9.9.x）与 Node.js 20+，其余全部自动完成
+ *   - 自动下载 NapCat 官方 NapCat.Shell.Windows.Node.zip 并解压到 data\napcat\
+ *     （也可手动把 zip 放进 data\napcat\，或用 FARM_NAPCAT_SHELL_URL 指定镜像）
+ *   - 本启动器负责：下载与解压 NapCat Shell、装 qq-miniapp-openauth 插件、
+ *     写白名单与插件配置、生成并下发 WebUI Token、先起 NapCat 再起面板
  */
 
 'use strict';
@@ -41,6 +41,9 @@ const PANEL_PORT = Number(process.env.ADMIN_PORT || 3007);
 const NAPCAT_PORT = Number(process.env.NAPCAT_WEBUI_PORT || 6099);
 const NAPCAT_VERSION = process.env.NAPCAT_SHELL_VERSION || 'v4.18.42';
 const NAPCAT_DOWNLOAD_URL = `https://github.com/NapNeko/NapCatQQ/releases/download/${NAPCAT_VERSION}/NapCat.Shell.Windows.Node.zip`;
+/** GitHub 直链在部分地区不稳，按顺序回退到镜像（可用 FARM_NAPCAT_SHELL_URL 覆盖） */
+const NAPCAT_MIRRORS = ['https://ghproxy.net/', 'https://mirror.ghproxy.com/'];
+const MIN_ZIP_BYTES = 5 * 1024 * 1024;
 
 /* ----------------------------- 小工具 ----------------------------- */
 
@@ -281,14 +284,158 @@ function buildFrontendIfNeeded() {
 
 function printNapcatMissingHint() {
   log('');
-  log('[需要 NapCat Shell] 没找到 NapCat（data\\napcat\\napcat\\napcat.mjs）');
-  log('  1. 打开 https://github.com/NapNeko/NapCatQQ/releases');
-  log(`  2. 下载 NapCat.Shell.Windows.Node.zip（当前固化为 ${NAPCAT_VERSION}）`);
-  log('  3. 解压后确保存在：data\\napcat\\napcat\\napcat.mjs');
-  log(`     或把 zip 放到 ${NAPCAT_ZIP}，再运行本启动器会自动解压`);
-  log('  4. 本机还需要：QQ NT（9.9.x）、Node.js 20+');
+  log('[需要 NapCat Shell] 自动下载失败，没能准备好 NapCat');
+  log('  可能原因：网络被拦、GitHub 不可达、杀毒软件拦截解压');
+  log('  手动兜底（任选其一）：');
+  log(`    a. 把 NapCat.Shell.Windows.Node.zip 放到 ${NAPCAT_ZIP} 后重新选 2`);
+  log('    b. 设置镜像后重试：set FARM_NAPCAT_SHELL_URL=<你那边能下的完整 zip 地址>');
+  log('    c. 打开 https://github.com/NapNeko/NapCatQQ/releases 自行下载并解压到');
+  log('       data\\napcat\\napcat\\ （保证存在 napcat.mjs）');
+  log('  另外本机仍需要：QQ NT（9.9.x）、Node.js 20+');
   log('');
-  log(`  直链：${NAPCAT_DOWNLOAD_URL}`);
+  log(`  官方直链：${NAPCAT_DOWNLOAD_URL}`);
+}
+
+/** 候选下载地址：自定义 > 官方直链 > 镜像 */
+function shellDownloadUrls() {
+  const custom = String(process.env.FARM_NAPCAT_SHELL_URL || '').trim();
+  const urls = [];
+  if (custom) urls.push(custom);
+  urls.push(NAPCAT_DOWNLOAD_URL);
+  for (const mirror of NAPCAT_MIRRORS) urls.push(mirror + NAPCAT_DOWNLOAD_URL);
+  return urls;
+}
+
+/** 判断是不是真的 zip（防止把 HTML 拦截页当压缩包） */
+function isZipArchive(zipPath, minBytes = MIN_ZIP_BYTES) {
+  let stat;
+  try {
+    stat = fs.statSync(zipPath);
+  } catch {
+    return false;
+  }
+  if (!stat.isFile() || stat.size < minBytes) return false;
+  let head;
+  try {
+    const fd = fs.openSync(zipPath, 'r');
+    head = Buffer.alloc(2);
+    fs.readSync(fd, head, 0, 2, 0);
+    fs.closeSync(fd);
+  } catch {
+    return false;
+  }
+  return head.toString('latin1') === 'PK';
+}
+
+function hasCommand(cmd) {
+  const res = spawnSync('where', [cmd], { stdio: 'ignore' });
+  return res.status === 0;
+}
+
+/** 下载文件：优先 curl.exe（Windows 10+ 自带），失败回退 PowerShell */
+function downloadFile(url, dest) {
+  ensureDir(path.dirname(dest));
+  try {
+    fs.rmSync(dest, { force: true });
+  } catch {
+    /* 忽略 */
+  }
+  if (hasCommand('curl')) {
+    const res = spawnSync(
+      'curl.exe',
+      ['-L', '--fail', '--retry', '3', '--retry-delay', '2', '--connect-timeout', '20', '-o', dest, url],
+      { stdio: 'inherit' },
+    );
+    if (res.status === 0 && fileExists(dest)) return true;
+  }
+  const script = [
+    "$ProgressPreference='SilentlyContinue'",
+    `Invoke-WebRequest -Uri '${url}' -OutFile '${dest}' -UseBasicParsing -TimeoutSec 900`,
+  ].join('; ');
+  const res = spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script], {
+    stdio: 'inherit',
+  });
+  return res.status === 0 && fileExists(dest);
+}
+
+/** 解压 zip：优先 tar（Windows 10 自带 bsdtar），失败回退 Expand-Archive */
+function extractZip(zipPath, destDir) {
+  ensureDir(destDir);
+  const tar = spawnSync('tar', ['-xf', zipPath, '-C', destDir], { stdio: 'inherit' });
+  if (tar.status === 0) return true;
+  const script = `Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${destDir}' -Force`;
+  const res = spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script], {
+    stdio: 'inherit',
+  });
+  return res.status === 0;
+}
+
+/** 下载并解压 NapCat Shell，成功返回目录，失败返回 null */
+async function ensureNapcatShell() {
+  ensureDir(NAPCAT_HOME);
+  for (const url of shellDownloadUrls()) {
+    log(`[下载] NapCat Shell: ${url}`);
+    if (!downloadFile(url, NAPCAT_ZIP)) {
+      log('[警告] 下载失败，换下一个源');
+      continue;
+    }
+    if (!isZipArchive(NAPCAT_ZIP)) {
+      log('[警告] 下载到的不是 zip（可能被网络拦截），换下一个源');
+      try {
+        fs.rmSync(NAPCAT_ZIP, { force: true });
+      } catch {
+        /* 忽略 */
+      }
+      continue;
+    }
+    const sizeMb = (fs.statSync(NAPCAT_ZIP).size / 1048576).toFixed(1);
+    log(`[解压] 已下载 ${sizeMb} MB，正在解压到 data\\napcat\\ …`);
+    if (!extractZip(NAPCAT_ZIP, NAPCAT_HOME)) {
+      log('[错误] 解压失败：请手动解压，或检查是否有杀毒软件拦截');
+      continue;
+    }
+    const dir = findShellDir();
+    if (dir) {
+      try {
+        fs.rmSync(NAPCAT_ZIP, { force: true });
+      } catch {
+        /* 忽略 */
+      }
+      return dir;
+    }
+    log('[警告] 解压完成但没找到 napcat.mjs');
+  }
+  return null;
+}
+
+/** 找本机 QQ NT 安装位置（NapCat 依赖它启动 QQ） */
+function findQqInstall() {
+  const roots = [process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean);
+  const relatives = [
+    ['Tencent', 'QQNT', 'QQ.exe'],
+    ['Tencent', 'QQNT', 'QQScLauncher.exe'],
+    ['Tencent', 'QQ', 'Bin', 'QQ.exe'],
+  ];
+  for (const root of roots) {
+    for (const rel of relatives) {
+      const candidate = path.join(root, ...rel);
+      if (fileExists(candidate)) return candidate;
+    }
+  }
+  return '';
+}
+
+/** 只提示、不阻断：缺少依赖时 NapCat 起不来，但面板仍可用 */
+function warnIfMissingPrereqs() {
+  const major = Number(String(process.versions.node).split('.')[0]);
+  if (major < 20) {
+    log(`[警告] 当前 Node.js ${process.versions.node} 低于 20，NapCat 可能启动失败`);
+    log('        下载：https://nodejs.org/zh-cn/download');
+  }
+  if (!findQqInstall()) {
+    log('[警告] 没检测到 QQ NT（9.9.x）：NapCat 需要它才能拉起 QQ 扫码');
+    log('        下载：https://im.qq.com/pcqq');
+  }
 }
 
 async function startNapcatMode() {
@@ -298,15 +445,28 @@ async function startNapcatMode() {
 
   let shellDir = findShellDir();
   if (!shellDir && fileExists(NAPCAT_ZIP)) {
-    log('[解压] 发现本地 NapCat.Shell.Windows.Node.zip，正在解压…');
-    const out = spawnSync('tar', ['-xf', NAPCAT_ZIP, '-C', NAPCAT_HOME], { stdio: 'inherit' });
-    if (out.status !== 0) log('[错误] 解压失败，请用资源管理器手动解压到 data\\napcat\\');
-    shellDir = findShellDir();
+    if (isZipArchive(NAPCAT_ZIP)) {
+      log('[解压] 发现本地 NapCat.Shell.Windows.Node.zip，正在解压…');
+      if (!extractZip(NAPCAT_ZIP, NAPCAT_HOME)) log('[错误] 解压失败，将尝试重新下载');
+      shellDir = findShellDir();
+    } else {
+      log('[警告] data\\napcat\\ 下的 zip 不完整，已忽略');
+      try {
+        fs.rmSync(NAPCAT_ZIP, { force: true });
+      } catch {
+        /* 忽略 */
+      }
+    }
+  }
+  if (!shellDir) {
+    log('[准备] 未检测到 NapCat Shell，开始自动下载（约 120MB，首次较慢）…');
+    shellDir = await ensureNapcatShell();
   }
   if (!shellDir) {
     printNapcatMissingHint();
     return false;
   }
+  warnIfMissingPrereqs();
 
   log(`[NapCat] 目录：${shellDir}`);
   const installed = installOpenauthPlugin(shellDir, token);
@@ -495,4 +655,11 @@ module.exports = {
   napcatEnvPairs,
   napcatDisablePairs,
   napcatBootEntry,
+  shellDownloadUrls,
+  isZipArchive,
+  downloadFile,
+  extractZip,
+  ensureNapcatShell,
+  findQqInstall,
+  warnIfMissingPrereqs,
 };

@@ -28,11 +28,11 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.14.1
+## 🎉 最新更新 · v2.14.2
 
-- 🪟 Windows 一键启动改为菜单式：`1` 面板 / `2` QQ 扫码 / `3` 状态 / `4` 停止
-- 🧩 QQ 扫码版走**本机 NapCat Shell**，不再需要 Docker，自动装 OpenAuth 插件与 Token
-- 🔌 Linux / macOS 的 Docker 方案保持不变
+- 🪟 Windows 选 `2` **全自动**：自动下载并解压 NapCat Shell，只需装好 QQ NT 与 Node.js 20+
+- 🌐 下载主源失败自动切镜像，网络差也能装上
+- 🧩 装好即接管：插件、白名单、Token 全部自动写入
 
 > 完整更新记录见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 
@@ -89,15 +89,10 @@
    ```
 
 4. 只跑面板：选 `1`，浏览器打开 <http://localhost:3007>，账号 `admin` + 窗口里打印的密码；
-5. 要 QQ 扫码，先准备 NapCat Shell（一次性）：
-
-   - 装 **QQ NT 9.9.x**（官方版）与 **Node.js 20+**；
-   - 从 <https://github.com/NapNeko/NapCatQQ/releases> 下载 `NapCat.Shell.Windows.Node.zip`；
-   - 解压到 `data\napcat\`，让 `data\napcat\napcat\napcat.mjs` 存在
-     （也可以把 zip 直接放进 `data\napcat\`，启动器会自动解压）；
-
-6. 重新双击 `start.bat` 选 `2`：启动器会自动装 OpenAuth 插件、写白名单与 Token，
-   先起 NapCat 再起面板，最后打印两个地址；
+5. 要 QQ 扫码，只需装好 **QQ NT 9.9.x**（官方版）与 **Node.js 20+**，
+   NapCat Shell、插件、Token、白名单全部由启动器自动下载配置；
+6. 双击 `start.bat` 选 `2`：首次会自动下载 NapCat（约 120MB）并解压，
+   然后自动装插件、写白名单与 Token，先起 NapCat 再起面板，最后打印两个地址；
 7. 打开 <http://127.0.0.1:6099/webui> 用手机 QQ 扫码登录 NapCat，
    再到面板「账号管理 → 添加账号」选「QQ 扫码」；
 8. 停止：双击 `stop.bat`，或在菜单里选 `4`（NapCat 与面板一起停）。
@@ -324,8 +319,9 @@ pnpm -C web build                               # 必须重新构建前端
 
 ### QQ/NapCat 扫码
 
-**Windows（本机 NapCat Shell，不用 Docker）**：双击 `start.bat` 选 `2`。启动器会自动完成：
+**Windows（本机 NapCat Shell，不用 Docker）**：双击 `start.bat` 选 `2`，只需装好 QQ NT 与 Node.js，其余自动完成：
 
+- 下载并解压 NapCat Shell 到 `data\napcat\`（主源失败自动切镜像）；
 - 复制 `napcat/plugins/qq-miniapp-openauth` 到 NapCat 的 `plugins/` 并在 `napcat.mjs` 白名单登记；
 - 生成 `data\napcat\auth\token`，同时写进 NapCat 插件配置与 `.env`；
 - 先起 NapCat（`NapCatWinBootMain.exe`），等 6099 就绪后再起面板。

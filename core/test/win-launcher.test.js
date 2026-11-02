@@ -98,3 +98,37 @@ test('findShellDir 只在 napcat.mjs 存在时返回目录', () => {
   fs.writeFileSync(path.join(flat, 'napcat.mjs'), '// x\n', 'utf8');
   assert.strictEqual(launcher.findShellDir(dir), flat);
 });
+
+test('shellDownloadUrls 优先自定义源并包含镜像回退', () => {
+  const saved = process.env.FARM_NAPCAT_SHELL_URL;
+  process.env.FARM_NAPCAT_SHELL_URL = 'https://example.com/napcat.zip';
+  try {
+    const urls = launcher.shellDownloadUrls();
+    assert.strictEqual(urls[0], 'https://example.com/napcat.zip');
+    assert.ok(
+      urls.some(
+        (u) =>
+          u.includes('github.com/NapNeko/NapCatQQ/releases/download/') &&
+          u.endsWith('NapCat.Shell.Windows.Node.zip'),
+      ),
+    );
+    assert.ok(urls.some((u) => u.startsWith('https://ghproxy.net/')));
+  } finally {
+    delete process.env.FARM_NAPCAT_SHELL_URL;
+    if (saved !== undefined) process.env.FARM_NAPCAT_SHELL_URL = saved;
+  }
+});
+
+test('isZipArchive 拒绝 HTML 拦截页与过小文件', () => {
+  const dir = tempDir('win-zip-');
+  const html = path.join(dir, 'blocked.zip');
+  fs.writeFileSync(html, Buffer.from('<html>403 Forbidden</html>', 'latin1'));
+  assert.strictEqual(launcher.isZipArchive(html, 0), false);
+
+  const tiny = path.join(dir, 'tiny.zip');
+  fs.writeFileSync(tiny, Buffer.from('PK\x03\x04', 'latin1'));
+  assert.strictEqual(launcher.isZipArchive(tiny), false);
+  assert.strictEqual(launcher.isZipArchive(tiny, 1), true);
+
+  assert.strictEqual(launcher.isZipArchive(path.join(dir, 'missing.zip'), 0), false);
+});
