@@ -37,13 +37,27 @@ flowchart TB
 
     U --> V[2026-10-31 · v2.10.0<br/>网络调度与自动任务互斥] --> W[2026-10-31 · v2.11.0<br/>抓包协议分析与专题文档] --> X[2026-11-01 · v2.11.1<br/>版本徽标与凭证重新计时] --> Y[2026-11-01 · v2.11.2<br/>修复运行时长不显示] --> Z[2026-11-01 · v2.11.3<br/>日志状态文件独立目录] --> AA[2026-11-01 · v2.11.4<br/>宠物自动喂食与交互优化] --> AB[2026-11-01 · v2.11.5<br/>商城分享礼包自动领取] --> AC[2026-11-01 · v2.11.6<br/>手机端排版修复]
     AC[2026-11-01 · v2.11.6<br/>手机端排版修复] --> AD[2026-11-01 · v2.11.7<br/>商城分享礼包与界面细节]
-    AD[2026-11-01 · v2.11.7<br/>商城分享礼包与界面细节] --> AE[2026-11-01 · v2.11.8<br/>全局邮件服务与批量通知] --> AF[2026-11-01 · v2.11.9<br/>修复全局邮件设置保存报错] --> AG[2026-11-01 · v2.11.10<br/>邮件服务可用性判断与通知模板] --> AH[2026-11-01 · v2.11.11<br/>已运行时长按首次登录累计] --> AI[2026-11-01 · v2.12.0<br/>独立图鉴与藏品宝典] --> AJ[2026-11-01 · v2.13.0<br/>官方 1.16 数据与蓝晶土地] --> AK[2026-11-01 · v2.13.1<br/>启动修复与插件同步] --> AL[2026-11-02 · v2.13.2<br/>变异图标与自动喂食入口] --> AM[2026-11-02 · v2.13.3<br/>页签文字居中] --> AN[2026-11-02 · v2.13.4<br/>商城限购周期]
+    AD[2026-11-01 · v2.11.7<br/>商城分享礼包与界面细节] --> AE[2026-11-01 · v2.11.8<br/>全局邮件服务与批量通知] --> AF[2026-11-01 · v2.11.9<br/>修复全局邮件设置保存报错] --> AG[2026-11-01 · v2.11.10<br/>邮件服务可用性判断与通知模板] --> AH[2026-11-01 · v2.11.11<br/>已运行时长按首次登录累计] --> AI[2026-11-01 · v2.12.0<br/>独立图鉴与藏品宝典] --> AJ[2026-11-01 · v2.13.0<br/>官方 1.16 数据与蓝晶土地] --> AK[2026-11-01 · v2.13.1<br/>启动修复与插件同步] --> AL[2026-11-02 · v2.13.2<br/>变异图标与自动喂食入口] --> AM[2026-11-02 · v2.13.3<br/>页签文字居中] --> AN[2026-11-02 · v2.13.4<br/>商城限购周期] --> AO[2026-11-02 · v2.14.1<br/>Windows 本机 NapCat Shell]
 
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN seed;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN,AO seed;
 ```
 
 ## 详细记录
+
+### 2026-11-02 · v2.14.1 · Windows 一键启动改用本机 NapCat Shell（不依赖 Docker）
+
+- `start.bat` 改为菜单式启动器：`1` 只跑面板、`2` 起 QQ 扫码版、`3` 状态、`4` 停止。
+- QQ 扫码版不再用 Docker：直接启动本机 NapCat Shell（`NapCat.Shell.Windows.Node.zip`），
+  由 `core/scripts/win-launcher.js` 自动完成插件安装与接线：
+  - 复制 `napcat/plugins/qq-miniapp-openauth` 到 NapCat 的 `plugins/`；
+  - 在 `napcat.mjs` 的插件白名单里登记（否则 NapCat 不会加载）；
+  - 生成 `data\napcat\auth\token`，同时写入插件 `config.json` 与 `.env` 的 `NAPCAT_TOKEN_FILE`；
+  - 写入 `NAPCAT_WEBUI_URL` / `NAPCAT_OPENAUTH_URL` 指向 `127.0.0.1:6099`；
+  - 先启动 NapCat（`NapCatWinBootMain.exe`），等 6099 就绪再启动面板。
+- 需要的前置条件：QQ NT 9.9.x、Node.js 20+、`data\napcat\napcat\napcat.mjs` 存在
+  （把 zip 放进 `data\napcat\` 也可由启动器自动解压）。
+- Linux / macOS 的 Docker 方案不变，`./start.sh 2` 行为未改动。
 
 ### 2026-11-02 · v2.13.4 · 商城限购周期与协议补齐
 

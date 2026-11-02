@@ -28,11 +28,11 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.13.4
+## 🎉 最新更新 · v2.14.1
 
-- 🛒 道具商城礼包显示限购周期（每日/每周/每月/永久）与剩余次数
-- 🧾 补齐商城限购、商店折扣倒计时、藏品升星等协议字段
-- 🔍 未知字段不再被丢弃，后续可直接做折扣倒计时与已拥有标记
+- 🪟 Windows 一键启动改为菜单式：`1` 面板 / `2` QQ 扫码 / `3` 状态 / `4` 停止
+- 🧩 QQ 扫码版走**本机 NapCat Shell**，不再需要 Docker，自动装 OpenAuth 插件与 Token
+- 🔌 Linux / macOS 的 Docker 方案保持不变
 
 > 完整更新记录见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 
@@ -70,15 +70,37 @@
 | `*-linux-x64-full.zip` | Linux | 已构建 | 服务器部署，`./start.sh` 一键装依赖并启动 |
 | `*-linux-x64-source.zip` | Linux | 未构建 | 想自己改前端，首次启动自动构建 |
 
-前置依赖只有 **Node.js 20+**（脚本发现没有 pnpm 会自动用 corepack 安装）；要用「QQ 登录版」（NapCat）再装 Docker 即可。
+前置依赖只有 **Node.js 20+**（脚本发现没有 pnpm 会自动用 corepack 安装）。
+
+- Windows 的「QQ 扫码版」走**本机 NapCat Shell**，不需要 Docker；
+- Linux / macOS 的「QQ 登录版」仍用 Docker，`./start.sh 2` 会自动拉起 NapCat 容器。
 
 ### Windows
 
 1. 下载 `qq-farm-bot-v<版本>-win-x64-full.zip`；
 2. 解压到任意目录（路径尽量别带空格和中文）；
-3. 双击 `start.bat`：首次运行会自动生成 `.env`、随机管理员密码，并直接打印在窗口里；
-4. 浏览器打开 <http://localhost:3007>，用账号 `admin` + 窗口里的密码登录；
-5. 停止服务：双击 `stop.bat`。
+3. 双击 `start.bat`，出现菜单：
+
+   ```
+   1) 启动面板（本机 Node 模式，不需要 QQ）
+   2) 启动 QQ 扫码版（本机 NapCat Shell）
+   3) 查看状态
+   4) 停止
+   ```
+
+4. 只跑面板：选 `1`，浏览器打开 <http://localhost:3007>，账号 `admin` + 窗口里打印的密码；
+5. 要 QQ 扫码，先准备 NapCat Shell（一次性）：
+
+   - 装 **QQ NT 9.9.x**（官方版）与 **Node.js 20+**；
+   - 从 <https://github.com/NapNeko/NapCatQQ/releases> 下载 `NapCat.Shell.Windows.Node.zip`；
+   - 解压到 `data\napcat\`，让 `data\napcat\napcat\napcat.mjs` 存在
+     （也可以把 zip 直接放进 `data\napcat\`，启动器会自动解压）；
+
+6. 重新双击 `start.bat` 选 `2`：启动器会自动装 OpenAuth 插件、写白名单与 Token，
+   先起 NapCat 再起面板，最后打印两个地址；
+7. 打开 <http://127.0.0.1:6099/webui> 用手机 QQ 扫码登录 NapCat，
+   再到面板「账号管理 → 添加账号」选「QQ 扫码」；
+8. 停止：双击 `stop.bat`，或在菜单里选 `4`（NapCat 与面板一起停）。
 
 ### Linux
 
@@ -300,9 +322,15 @@ pnpm -C web build                               # 必须重新构建前端
 
 项目支持微信扫码、QQ/NapCat 扫码、手动填码和手机抓包等账号添加方式。
 
-### QQ/NapCat 扫码（Docker，可选）
+### QQ/NapCat 扫码
 
-NapCat 默认不启动，低配置机器继续使用原来的启动命令即可：
+**Windows（本机 NapCat Shell，不用 Docker）**：双击 `start.bat` 选 `2`。启动器会自动完成：
+
+- 复制 `napcat/plugins/qq-miniapp-openauth` 到 NapCat 的 `plugins/` 并在 `napcat.mjs` 白名单登记；
+- 生成 `data\napcat\auth\token`，同时写进 NapCat 插件配置与 `.env`；
+- 先起 NapCat（`NapCatWinBootMain.exe`），等 6099 就绪后再起面板。
+
+**Linux / macOS（Docker）**：NapCat 默认不启动，低配置机器继续使用原来的启动命令即可：
 
 ```bash
 docker compose up -d --build

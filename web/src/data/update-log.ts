@@ -11,9 +11,17 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.13.4'
+export const APP_VERSION = '2.14.1'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.1',
+    date: '2026-11-02',
+    items: [
+      'Windows 一键启动改用本机 NapCat Shell，不再需要 Docker',
+      '选 2 自动装 OpenAuth 插件、写 Token 并拉起 QQ 扫码登录',
+    ],
+  },
   {
     version: '2.13.4',
     date: '2026-11-02',
