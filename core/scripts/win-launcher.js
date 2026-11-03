@@ -7,9 +7,11 @@
  *   2) 启动 QQ 扫码版（本机 NapCat Shell + 面板）
  *   3) 状态
  *   4) 停止
+ *   5) 重置管理员密码（忘记密码时用，随机生成并写入 .env）
  *   0) 退出
  *
- * 命令行：--napcat / --node / --stop / --status / --help
+ * 命令行：--napcat / --node / --stop / --status / --reset-admin / --help
+ *   --reset-admin [新密码] [用户名]  不传密码则随机生成 16 位
  *
  * QQ 扫码版原理：
  *   - 电脑上只需装好 QQ NT（9.9.x）与 Node.js 20+，其余全部自动完成
@@ -193,6 +195,87 @@ function ensureEnvFile() {
 function adminPasswordHint() {
   const text = readEnvText(path.join(ROOT, '.env'));
   return getEnvValue(text, 'FARM_ADMIN_PASSWORD') || '（见 .env 的 FARM_ADMIN_PASSWORD）';
+}
+
+/** 生成 16 位随机密码，去掉容易看错的 0/O/1/l/I，且保证四种字符各至少一个（满足后端口令策略） */
+function randomAdminPassword() {
+  const groups = [
+    'ABCDEFGHJKLMNPQRSTUVWXYZ',
+    'abcdefghijkmnopqrstuvwxyz',
+    '23456789',
+    '!@#$%^&*',
+  ];
+  const chars = [];
+  for (const group of groups) {
+    chars.push(group[crypto.randomInt(group.length)]);
+  }
+  const pool = groups.join('');
+  while (chars.length < 16) {
+    chars.push(pool[crypto.randomInt(pool.length)]);
+  }
+  for (let i = chars.length - 1; i > 0; i -= 1) {
+    const j = crypto.randomInt(i + 1);
+    const tmp = chars[i];
+    chars[i] = chars[j];
+    chars[j] = tmp;
+  }
+  return chars.join('');
+}
+
+/** 与后端口令策略保持一致的预检查，避免脚本跑一半才报错 */
+function passwordProblem(password) {
+  const value = String(password || '');
+  if (value.length < 6) return '密码长度至少 6 位';
+  const kinds = [/[A-Z]/, /[a-z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((re) => re.test(value)).length;
+  if (kinds < 2) return '密码需包含大写字母、小写字母、数字、特殊符号中的至少两种';
+  return '';
+}
+
+/**
+ * 重置管理员密码：写库 + 同步 .env
+ * 与 Linux 的 ./start.sh reset-admin 等价，密码写进 FARM_ADMIN_PASSWORD，
+ * 这样「密码看 .env」的说明在任何时候都成立。
+ */
+function resetAdmin(args = []) {
+  const envPath = ensureEnvFile();
+  const envText = readEnvText(envPath);
+  const password = String(args[0] || '').trim() || randomAdminPassword();
+  const username = String(args[1] || getEnvValue(envText, 'FARM_ADMIN_USERNAME') || 'admin').trim();
+  const script = path.join(__dirname, 'reset-admin-password.js');
+  if (!fileExists(script)) {
+    log('[错误] 找不到 core/scripts/reset-admin-password.js');
+    return false;
+  }
+  const problem = passwordProblem(password);
+  if (problem) {
+    log(`[错误] ${problem}`);
+    log('       提示：不带密码参数运行会自动生成一个合规的随机密码');
+    return false;
+  }
+
+  log('');
+  log(`[重置] 正在重置管理员密码：${username}`);
+  const res = spawnSync(process.execPath, [script, password, username], { cwd: ROOT, stdio: 'inherit' });
+  if (res.status !== 0) {
+    log('[错误] 重置失败，请检查上面的输出（数据目录：core\\data）');
+    return false;
+  }
+
+  setEnvValues(envPath, {
+    FARM_ADMIN_USERNAME: username,
+    FARM_ADMIN_PASSWORD: password,
+    FARM_BOOTSTRAP_ADMIN_PASSWORD: password,
+  });
+
+  log('');
+  log('==============================================');
+  log(` 管理员账号: ${username}`);
+  log(` 新密码:     ${password}`);
+  log(` 已同步写入 .env（FARM_ADMIN_PASSWORD）`);
+  log(' 如果面板/扫码版正在运行，请先关掉窗口再重新启动');
+  log('==============================================');
+  log('');
+  return true;
 }
 
 /* ---------------------------- 进程控制 ---------------------------- */
@@ -656,6 +739,7 @@ function printMenu() {
   log('   2) 启动 QQ 扫码版（本机 NapCat Shell）');
   log('   3) 查看状态');
   log('   4) 停止');
+  log('   5) 重置管理员密码（忘记密码时用）');
   log('   0) 退出');
   log('  ------------------------------------------');
   log('');
@@ -674,8 +758,17 @@ function ask(question) {
 
 async function main(argv) {
   const args = new Set(argv);
+  const wantsReset = args.has('--reset-admin') || args.has('reset-admin');
   if (args.has('--help') || args.has('-h')) {
-    log('用法: node core/scripts/win-launcher.js [--napcat|--node|--stop|--status|--help]');
+    log('用法: node core/scripts/win-launcher.js [--napcat|--node|--stop|--status|--reset-admin|--help]');
+    log('  --reset-admin [新密码] [用户名]   重置管理员密码（不传密码则随机生成）');
+    log('  也可以写: start.bat reset-admin');
+    return;
+  }
+  if (wantsReset) {
+    const marker = args.has('--reset-admin') ? '--reset-admin' : 'reset-admin';
+    const rest = argv.slice(argv.indexOf(marker) + 1).filter((item) => !item.startsWith('--'));
+    resetAdmin(rest);
     return;
   }
   if (args.has('--stop')) {
@@ -719,6 +812,10 @@ async function main(argv) {
       stopAll();
       continue;
     }
+    if (answer === '5') {
+      resetAdmin();
+      continue;
+    }
     if (answer === '0' || answer === '') return;
     log(' 输入无效，请重新选择');
   }
@@ -753,4 +850,7 @@ module.exports = {
   ensureNapcatShell,
   findQqInstall,
   warnIfMissingPrereqs,
+  randomAdminPassword,
+  passwordProblem,
+  resetAdmin,
 };

@@ -28,11 +28,11 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.14.4
+## 🎉 最新更新 · v2.14.5
 
-- 💎 藏品支持**激活、升星、评分奖励领取**与**珍藏室陈列/取消陈列**
-- 🎒 背包使用藏品礼包后会提示实际获得的藏品名称与数量
-- 🛡️ 写操作前核对星级与材料余额，结果不确定时提示刷新，不会重复提交
+- 🔑 Windows 启动器新增**找回密码**：菜单选 `5`，或 `start.bat reset-admin`
+- 🎲 随机生成 16 位新密码并写回 `.env` 的 `FARM_ADMIN_PASSWORD`，与 Linux 行为一致
+- 🛡️ 自定义密码会先按后端口令策略校验，不合规直接提示
 
 > 完整更新记录见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 
@@ -125,7 +125,19 @@ chmod +x start.sh && ./start.sh
 忘记密码就重置（先停服务）：
 
 ```bash
-cd core && node scripts/reset-admin-password.js 新密码
+# Windows：双击 start.bat 选 5，或直接命令行
+start.bat reset-admin
+
+# Linux
+./start.sh reset-admin
+```
+
+两者都会随机生成 16 位新密码、重置管理员账号并写回 `.env` 的 `FARM_ADMIN_PASSWORD`。
+想自己指定密码（需至少 6 位、含大小写/数字/符号中的两种）：
+
+```bash
+start.bat --reset-admin 你的新密码        # Windows
+cd core && node scripts/reset-admin-password.js 你的新密码   # 通用
 ```
 
 > 每个 Release 的说明里也固定写了这段，不用回来翻 README。

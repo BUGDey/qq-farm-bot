@@ -164,3 +164,22 @@ test('writeWebuiConfig 写入端口与 token 并保留已有字段', () => {
   assert.strictEqual(parsed.host, '127.0.0.1');
   assert.strictEqual(parsed.loginRate, 5);
 });
+
+test('randomAdminPassword 生成 16 位且满足口令强度', () => {
+  for (let i = 0; i < 20; i += 1) {
+    const pwd = launcher.randomAdminPassword();
+    assert.strictEqual(pwd.length, 16);
+    assert.match(pwd, /[a-z]/);
+    assert.match(pwd, /[A-Z]/);
+    assert.match(pwd, /[0-9]/);
+    assert.match(pwd, /[^A-Za-z0-9]/);
+    assert.doesNotMatch(pwd, /[0O1lI]/);
+  }
+});
+
+test('passwordProblem 与后端口令策略一致', () => {
+  assert.strictEqual(launcher.passwordProblem('Abcdef12'), '');
+  assert.strictEqual(launcher.passwordProblem('Abcdef1!'), '');
+  assert.match(launcher.passwordProblem('abc'), /至少 6 位/);
+  assert.match(launcher.passwordProblem('abcdef'), /至少两种/);
+});

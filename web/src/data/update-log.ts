@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.4'
+export const APP_VERSION = '2.14.5'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.5',
+    date: '2026-11-03',
+    items: [
+      'Windows 启动器新增「重置管理员密码」：菜单选 5，或 start.bat reset-admin',
+      '重置后随机生成 16 位密码并写回 .env 的 FARM_ADMIN_PASSWORD，与 Linux 行为一致',
+      '传入自定义密码时会先按后端口令策略校验，不合规直接提示而不是报错中断',
+    ],
+  },
   {
     version: '2.14.4',
     date: '2026-11-03',
