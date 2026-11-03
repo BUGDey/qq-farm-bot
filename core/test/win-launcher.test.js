@@ -132,3 +132,35 @@ test('isZipArchive 拒绝 HTML 拦截页与过小文件', () => {
 
   assert.strictEqual(launcher.isZipArchive(path.join(dir, 'missing.zip'), 0), false);
 });
+
+test('findShellRoot 需要 node.exe 与 index.js 同在上级目录', () => {
+  const dir = tempDir('win-root-');
+  const nested = path.join(dir, 'napcat');
+  fs.mkdirSync(nested, { recursive: true });
+  fs.writeFileSync(path.join(nested, 'napcat.mjs'), '// x\n', 'utf8');
+  assert.strictEqual(launcher.findShellRoot(dir), '');
+
+  fs.writeFileSync(path.join(dir, 'node.exe'), '');
+  assert.strictEqual(launcher.findShellRoot(dir), '');
+
+  fs.writeFileSync(path.join(dir, 'index.js'), '// boot\n', 'utf8');
+  assert.strictEqual(launcher.findShellRoot(dir), dir);
+});
+
+test('writeWebuiConfig 写入端口与 token 并保留已有字段', () => {
+  const dir = tempDir('win-webui-');
+  const configDir = path.join(dir, 'config');
+  fs.mkdirSync(configDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(configDir, 'webui.json'),
+    JSON.stringify({ host: '127.0.0.1', loginRate: 5 }),
+    'utf8',
+  );
+
+  const file = launcher.writeWebuiConfig(dir, 'abc123', 6200);
+  const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.strictEqual(parsed.token, 'abc123');
+  assert.strictEqual(parsed.port, 6200);
+  assert.strictEqual(parsed.host, '127.0.0.1');
+  assert.strictEqual(parsed.loginRate, 5);
+});

@@ -198,9 +198,19 @@ function adminPasswordHint() {
 /* ---------------------------- 进程控制 ---------------------------- */
 
 function pnpmCommand() {
-  const probe = spawnSync('where', ['pnpm'], { encoding: 'utf8', shell: true });
-  if (probe.status === 0 && String(probe.stdout || '').trim()) return { cmd: 'pnpm', args: [] };
-  return { cmd: 'corepack', args: ['pnpm'] };
+  const comspec = process.env.ComSpec || 'cmd.exe';
+  const probe = spawnSync('where', ['pnpm'], { encoding: 'utf8' });
+  let first = String(probe.stdout || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)[0];
+  if (probe.status === 0 && first) {
+    // `where pnpm` 常返回无扩展名的 shim，补上 .cmd 才能被 spawn
+    if (!path.extname(first) && fileExists(`${first}.cmd`)) first = `${first}.cmd`;
+    if (/\.(cmd|bat)$/i.test(first)) return { cmd: comspec, args: ['/c', first] };
+    return { cmd: first, args: [] };
+  }
+  return { cmd: comspec, args: ['/c', 'corepack pnpm'] };
 }
 
 function waitPort(port, timeoutMs = 120000, intervalMs = 1000) {
@@ -261,6 +271,49 @@ function stopAll() {
 
 /* ---------------------------- 启动流程 ---------------------------- */
 
+/** NapCat Shell 自带 QQNT 运行时（node.exe + index.js + napcat/napcat.mjs），不需要本机 QQ */
+function findShellRoot(home = NAPCAT_HOME) {
+  const shellDir = findShellDir(home);
+  if (!shellDir) return '';
+  const parent = path.dirname(shellDir);
+  const hasRuntime =
+    fileExists(path.join(parent, 'node.exe')) && fileExists(path.join(parent, 'index.js'));
+  return hasRuntime ? parent : '';
+}
+
+/** 写 NapCat 的 webui.json（端口 + token），面板靠这个 token 调 NapCat API */
+function writeWebuiConfig(shellDir, token, port = NAPCAT_PORT) {
+  const configDir = path.join(shellDir, 'config');
+  ensureDir(configDir);
+  const file = path.join(configDir, 'webui.json');
+  let current = {};
+  try {
+    const parsed = JSON.parse(readText(file));
+    if (parsed && typeof parsed === 'object') current = parsed;
+  } catch {
+    current = {};
+  }
+  const next = {
+    ...current,
+    host: current.host || '0.0.0.0',
+    port: Number(current.port) || port,
+    token,
+    loginRate: Number(current.loginRate) || 3,
+  };
+  fs.writeFileSync(file, JSON.stringify(next, null, 2), 'utf8');
+  return file;
+}
+
+function readLogTail(file, lines = 12) {
+  try {
+    const text = fs.readFileSync(file, 'utf8');
+    const all = text.split(/\r?\n/).filter((line) => line.trim());
+    return all.slice(-lines);
+  } catch {
+    return [];
+  }
+}
+
 function napcatBootEntry(shellDir) {
   const candidates = [
     path.join(shellDir, 'NapCatWinBootMain.exe'),
@@ -291,7 +344,8 @@ function printNapcatMissingHint() {
   log('    b. 设置镜像后重试：set FARM_NAPCAT_SHELL_URL=<你那边能下的完整 zip 地址>');
   log('    c. 打开 https://github.com/NapNeko/NapCatQQ/releases 自行下载并解压到');
   log('       data\\napcat\\napcat\\ （保证存在 napcat.mjs）');
-  log('  另外本机仍需要：QQ NT（9.9.x）、Node.js 20+');
+  log('  另外本机仍需要：Node.js 20+');
+  log('  （NapCat 自带 QQNT 运行时，不需要另外安装 QQ）');
   log('');
   log(`  官方直链：${NAPCAT_DOWNLOAD_URL}`);
 }
@@ -432,9 +486,12 @@ function warnIfMissingPrereqs() {
     log(`[警告] 当前 Node.js ${process.versions.node} 低于 20，NapCat 可能启动失败`);
     log('        下载：https://nodejs.org/zh-cn/download');
   }
-  if (!findQqInstall()) {
-    log('[警告] 没检测到 QQ NT（9.9.x）：NapCat 需要它才能拉起 QQ 扫码');
-    log('        下载：https://im.qq.com/pcqq');
+  if (!findShellRoot()) {
+    log('[提示] 未检测到 NapCat 自带运行时，将回退到本机 QQ 模式');
+    if (!findQqInstall()) {
+      log('[警告] 本机也没有安装 QQ NT（9.9.x），扫码会失败');
+      log('        下载：https://im.qq.com/pcqq');
+    }
   }
 }
 
@@ -482,17 +539,47 @@ async function startNapcatMode() {
 
   buildFrontendIfNeeded();
 
-  const boot = napcatBootEntry(shellDir);
-  const env = { ...process.env, WEBUI_TOKEN: token, NAPCAT_PORT: String(NAPCAT_PORT) };
+  const runtimeRoot = findShellRoot();
+  const webuiFile = writeWebuiConfig(shellDir, token);
+  log(`[配置] WebUI：${webuiFile}（端口 ${NAPCAT_PORT}）`);
+
+  const runtimeLog = path.join(NAPCAT_HOME, 'napcat-runtime.log');
+  const runtimeErrLog = path.join(NAPCAT_HOME, 'napcat-runtime.err.log');
   let napcatProc;
-  if (boot) {
-    log(`[NapCat] 启动 QQ（${path.basename(boot)}）… 首次需要在 NapCat WebUI 扫码`);
-    napcatProc = spawn(boot, [], { cwd: path.dirname(boot), stdio: 'inherit', env });
+  if (runtimeRoot) {
+    log('[NapCat] 使用自带 QQNT 运行时（node.exe index.js），不需要本机 QQ');
+    const out = fs.openSync(runtimeLog, 'w');
+    const err = fs.openSync(runtimeErrLog, 'w');
+    napcatProc = spawn('cmd.exe', ['/c', 'chcp 65001>nul && node.exe index.js'], {
+      cwd: runtimeRoot,
+      stdio: ['ignore', out, err],
+      windowsHide: true,
+    });
   } else {
-    log('[NapCat] 未找到 NapCatWinBootMain.exe，改用 node napcat.mjs 启动');
-    napcatProc = spawn(process.execPath, ['napcat.mjs'], { cwd: shellDir, stdio: 'inherit', env });
+    const boot = napcatBootEntry(shellDir);
+    const qq = findQqInstall();
+    const env = { ...process.env, WEBUI_TOKEN: token, NAPCAT_PORT: String(NAPCAT_PORT) };
+    if (boot && qq) {
+      log(`[NapCat] 回退到本机 QQ 模式：${qq}`);
+      napcatProc = spawn(boot, [qq, path.join(path.dirname(boot), 'NapCatWinBootHook.dll')], {
+        cwd: path.dirname(boot),
+        stdio: 'inherit',
+        env,
+      });
+    } else {
+      log('[NapCat] 未找到自带运行时，改用本机 Node 直接跑 napcat.mjs');
+      napcatProc = spawn(process.execPath, ['napcat.mjs'], { cwd: shellDir, stdio: 'inherit', env });
+    }
   }
-  napcatProc.on('exit', (code) => log(`[NapCat] 进程退出，code=${code}`));
+  napcatProc.on('exit', (code) => {
+    log(`[NapCat] 进程退出，code=${code}`);
+    const tail = readLogTail(runtimeLog, 8);
+    if (tail.length) {
+      log('[NapCat] 最近日志：');
+      for (const line of tail) log(`  ${line}`);
+    }
+    if (code !== 0) log(`[NapCat] 完整日志：${runtimeLog}`);
+  });
 
   if (!(await waitPort(NAPCAT_PORT, 180000))) {
     log(`[警告] 等待 ${NAPCAT_PORT} 端口超时：请确认 QQ 已安装并完成扫码登录`);
@@ -510,10 +597,12 @@ async function startNapcatMode() {
   log('==============================================');
   log(` 面板:      http://localhost:${PANEL_PORT}`);
   log(` NapCat:    http://127.0.0.1:${NAPCAT_PORT}/webui`);
+  log(` NapCat Token（WebUI 登录用）: ${token}`);
   log(` 管理员:    admin / ${adminPasswordHint()}`);
-  log(` Token:     ${TOKEN_FILE}`);
-  log(' 扫码:      在 NapCat WebUI 点「二维码登录」手机 QQ 扫码；');
-  log('            登录后到面板「账号管理 → 添加账号」选「QQ 扫码」');
+  log(' 扫码:      1) 打开上面的 NapCat WebUI，粘贴上面那串 Token 登录');
+  log('            2) 页面里会显示二维码，用手机 QQ 扫码完成授权');
+  log(`            二维码图片：${path.join(shellDir, 'cache', 'qrcode.png')}`);
+  log('            3) 扫码成功后，到面板「账号管理 → 添加账号」选「QQ 扫码」');
   log(` 面板状态:  ${panelReady ? '已就绪' : '启动中，稍后刷新页面'}`);
   log(' 停止:      关闭本窗口，或双击 stop.bat');
   log('==============================================');
@@ -648,6 +737,8 @@ module.exports = {
   TOKEN_FILE,
   PLUGIN_NAME,
   findShellDir,
+  findShellRoot,
+  writeWebuiConfig,
   createToken,
   ensureToken,
   patchPluginWhitelist,

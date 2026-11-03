@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.2'
+export const APP_VERSION = '2.14.3'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.3',
+    date: '2026-11-03',
+    items: [
+      'Windows 选 2 改用 NapCat 自带的 QQNT 运行时，不再依赖本机安装的 QQ',
+      '修复启动面板时 pnpm 路径解析失败导致面板起不来的问题',
+      '启动完成会打印 NapCat WebUI 的 Token，扫码步骤更明确',
+    ],
+  },
   {
     version: '2.14.2',
     date: '2026-11-02',
