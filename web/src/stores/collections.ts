@@ -31,6 +31,8 @@ export interface CollectionItemDto {
   displayed: boolean
   wished: boolean
   requirements: string[]
+  unlocked: boolean
+  canUpgrade: boolean
   nextStarCosts: CollectionReward[]
 }
 
@@ -130,6 +132,7 @@ export const useCollectionsStore = defineStore('collections', () => {
   const catalogLoading = ref(false)
   const error = ref('')
   const catalogError = ref('')
+  const pending = ref('')
 
   let requestSeq = 0
 
@@ -191,6 +194,30 @@ export const useCollectionsStore = defineStore('collections', () => {
     }
   }
 
+  async function operate(action: 'upgrade' | 'claim' | 'display', input: Record<string, any> = {}, accountId = currentAccountId()) {
+    if (!accountId)
+      throw new Error('请先选择账号')
+    if (pending.value)
+      throw new Error('上一个操作还在进行中')
+
+    pending.value = action
+    try {
+      const { data } = await api.post(`/api/collections/${action}`, input, {
+        headers: { 'x-account-id': accountId },
+      })
+      if (!data?.ok)
+        throw new Error(data?.error || '操作失败')
+      if (data.data?.snapshot) {
+        requestSeq += 1
+        snapshot.value = { ...EMPTY_SNAPSHOT, ...data.data.snapshot }
+      }
+      return data.data
+    }
+    finally {
+      pending.value = ''
+    }
+  }
+
   function reset() {
     requestSeq += 1
     snapshot.value = { ...EMPTY_SNAPSHOT }
@@ -205,8 +232,10 @@ export const useCollectionsStore = defineStore('collections', () => {
     catalogLoading,
     error,
     catalogError,
+    pending,
     fetchSnapshot,
     fetchMutationCatalog,
+    operate,
     reset,
   }
 })

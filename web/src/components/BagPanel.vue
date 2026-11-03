@@ -231,7 +231,11 @@ async function handleConfirm() {
         Number(sourceItem?.uid || 0),
       )
       if (res.ok) {
-        toastStore.success(res.data?.message || `已使用 ${item.name || `物品${item.id}`}`)
+        const gained = (res.data?.rewards || [])
+          .filter((row: any) => Number(row.count) > 0)
+          .map((row: any) => `${row.name} ×${row.count}`)
+          .join('、')
+        toastStore.success(gained ? `获得：${gained}` : (res.data?.message || `已使用 ${item.name || `物品${item.id}`}`))
         await loadBag()
       }
       else {

@@ -86,6 +86,12 @@ function createDataProvider(deps) {
         return callWorkerReadOnce(`collections:${String(accountId || '')}`, accountId, 'getCollectionsSnapshot');
     }
 
+    /** 藏品写操作：upgrade（激活/升星）/ claim（领评分奖励）/ display（展示或取消） */
+    function operateCollections(ref, action, input) {
+        const accountId = resolveAccountId(ref);
+        return callWorkerApi(accountId, 'operateCollections', action, input || {});
+    }
+
     /** 向全部 worker 广播消息（活动插件宿主装载/卸载用） */
     function sendToWorkers(message) {
         for (const worker of Object.values(workers || {})) {
@@ -283,6 +289,7 @@ function createDataProvider(deps) {
 
         // ========== Collections（蓝晶藏品） ==========
         getCollectionsSnapshot,
+        operateCollections,
 
         // ========== Career ==========
         getCareerInfo: (ref, gid) => callWorkerApi(resolveAccountId(ref), 'getCareerInfo', gid),

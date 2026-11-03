@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.3'
+export const APP_VERSION = '2.14.4'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.4',
+    date: '2026-11-03',
+    items: [
+      '藏品支持激活、升星、评分奖励领取与珍藏室陈列/取消陈列',
+      '背包使用藏品礼包后会提示实际获得的藏品名称与数量',
+      '藏品写操作前会核对星级与材料余额，结果无法确认时提示刷新而不是重复提交',
+    ],
+  },
   {
     version: '2.14.3',
     date: '2026-11-03',

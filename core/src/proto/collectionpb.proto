@@ -70,3 +70,12 @@ message ClaimCollectionRewardReply {
     int32 claimed_reward_score = 3;
     repeated int32 claimed_scores = 4 [packed = true];
 }
+
+
+// Slot 1 是唯一的藏品陈列位；item_id=0 表示取消展示。
+message SwitchSceneDisplayRequest {
+    DisplaySlot display_slot = 1;
+}
+message SwitchSceneDisplayReply {
+    DisplaySlot display_slot = 1;
+}

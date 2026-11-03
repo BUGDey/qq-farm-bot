@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const {
   normalizeCollections,
   getMutationCatalog,
+  operateCollections,
   CATEGORY,
 } = require('../src/services/collections');
 
@@ -24,7 +25,8 @@ function buildReply() {
       },
     ],
     display_slots: [
-      { display: { category: CATEGORY, item_id: '700001', pedestal_id: '610100' } },
+      { slot_type: 1, display: { category: CATEGORY, item_id: '700001', pedestal_id: '610100' } },
+      { slot_type: 2, display: { category: CATEGORY, item_id: '700002', pedestal_id: '610100' } },
     ],
   };
 }
@@ -85,4 +87,39 @@ test('getMutationCatalog 返回常规、装扮与藏品三组数据', () => {
   assert.equal(typeof series.name, 'string');
   assert.ok(series.items.length > 0);
   assert.ok(series.mutationRules.every((rule) => typeof rule.probability === 'number'));
+});
+
+test('陈列只认 slot_type 1，其他槽位不覆盖', () => {
+  const snapshot = normalizeCollections(buildReply());
+
+  assert.deepEqual(snapshot.display, { itemId: '700001', pedestalId: '610100' });
+  const other = snapshot.series.flatMap((series) => series.items).find((item) => item.id === 700002);
+  assert.equal(other.displayed, false, 'slot_type 2 不应被当成藏品陈列位');
+});
+
+test('藏品解锁状态与可升星判断来自配置与副本数', () => {
+  const snapshot = normalizeCollections(buildReply());
+  const items = snapshot.series.flatMap((series) => series.items);
+
+  for (const item of items) {
+    assert.equal(typeof item.unlocked, 'boolean');
+    assert.equal(typeof item.canUpgrade, 'boolean');
+    assert.ok(Array.isArray(item.requirements));
+    assert.equal(typeof item.nextStarCosts, 'object');
+  }
+
+  const owned = items.find((item) => item.id === 700001);
+  const selfCost = (owned.nextStarCosts || []).find((cost) => cost.itemId === 700001);
+  const expected = owned.unlocked
+    && owned.starLevel < 5
+    && Boolean(selfCost)
+    && BigInt(owned.ownCount) >= BigInt(selfCost.count);
+  assert.equal(owned.canUpgrade, Boolean(expected));
+});
+
+test('operateCollections 拒绝未知动作并带错误码', async () => {
+  await assert.rejects(
+    () => operateCollections('unknown-action', {}),
+    (err) => err.code === 'INVALID_ARGUMENT' && /未知的藏品操作/.test(err.message),
+  );
 });

@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import type { CollectionItemDto, CollectionMilestoneDto } from '@/stores/collections'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAccountStore } from '@/stores/account'
 import { useCollectionsStore } from '@/stores/collections'
+import { useToastStore } from '@/stores/toast'
 
 const accountStore = useAccountStore()
 const collectionsStore = useCollectionsStore()
 const { currentAccountId } = storeToRefs(accountStore)
-const { snapshot, loading, error } = storeToRefs(collectionsStore)
+const { snapshot, loading, error, pending } = storeToRefs(collectionsStore)
 
 const seriesList = computed(() => snapshot.value.series || [])
 const pedestals = computed(() => (snapshot.value.pedestals || []).filter(row => row.owned))
@@ -43,6 +45,72 @@ function rarityClass(rarity: number) {
 
 function starText(item: { starLevel: number, maxStarLevel: number }) {
   return `${item.starLevel}/${item.maxStarLevel}`
+}
+
+const toast = useToastStore()
+const selectedItem = ref<CollectionItemDto | null>(null)
+const busy = computed(() => pending.value !== '')
+
+function openItem(item: CollectionItemDto) {
+  selectedItem.value = item
+}
+
+function closeItem() {
+  selectedItem.value = null
+}
+
+function failureMessage(err: any) {
+  return String(err?.response?.data?.error || err?.message || '操作失败')
+}
+
+async function upgradeSelected() {
+  const item = selectedItem.value
+  if (!item)
+    return
+  const activating = !item.activated
+  try {
+    await collectionsStore.operate('upgrade', {
+      collectionId: item.id,
+      expectedStarLevel: item.starLevel,
+      expectedCosts: item.nextStarCosts.map(cost => ({ itemId: cost.itemId, count: cost.count })),
+    })
+    toast.success(activating ? `已激活：${item.name}` : `已升星：${item.name}`)
+    closeItem()
+  }
+  catch (err: any) {
+    toast.error(failureMessage(err))
+  }
+}
+
+async function toggleDisplay(item: CollectionItemDto) {
+  try {
+    await collectionsStore.operate('display', {
+      collectionId: item.id,
+      displayed: !item.displayed,
+      expectedDisplayItemId: snapshot.value.display?.itemId || '0',
+    })
+    toast.success(item.displayed ? '已取消陈列' : `已在珍藏室陈列：${item.name}`)
+    closeItem()
+  }
+  catch (err: any) {
+    toast.error(failureMessage(err))
+  }
+}
+
+async function claimMilestones(milestone?: CollectionMilestoneDto) {
+  try {
+    const result = await collectionsStore.operate('claim', {})
+    const gained = (result?.rewards || []).map((row: any) => `${row.name} ×${row.count}`).join('、')
+    if (result?.skipped)
+      toast.info('没有可领取的积分奖励')
+    else
+      toast.success(gained ? `已领取：${gained}` : '已领取积分奖励')
+    if (milestone)
+      void milestone
+  }
+  catch (err: any) {
+    toast.error(failureMessage(err))
+  }
 }
 
 async function reload() {
@@ -143,9 +211,10 @@ watch(currentAccountId, () => reload())
           <div
             v-for="item in series.items"
             :key="item.id"
-            class="relative flex flex-col items-center gap-1 border border-gray-100 rounded-lg bg-gray-50 p-2 text-center dark:border-gray-700 dark:bg-gray-900/40"
+            class="relative flex flex-col cursor-pointer items-center gap-1 border border-gray-100 rounded-lg bg-gray-50 p-2 text-center transition dark:border-gray-700 hover:border-sky-300 dark:bg-gray-900/40"
             :class="item.activated ? 'border-emerald-200 dark:border-emerald-800' : ''"
             :title="item.description"
+            @click="openItem(item)"
           >
             <span
               v-if="item.isNew"
@@ -180,9 +249,20 @@ watch(currentAccountId, () => reload())
       </div>
 
       <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
-        <h3 class="text-sm font-bold">
-          藏品积分奖励
-        </h3>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm font-bold">
+            藏品积分奖励
+          </h3>
+          <BaseButton
+            size="sm"
+            variant="secondary"
+            :loading="busy"
+            :disabled="!snapshot.milestones.some(row => row.reached && !row.claimed)"
+            @click="claimMilestones()"
+          >
+            一键领取
+          </BaseButton>
+        </div>
         <div class="mt-3 space-y-2">
           <div
             v-for="milestone in snapshot.milestones"
@@ -202,9 +282,19 @@ watch(currentAccountId, () => reload())
                 {{ reward.name }} ×{{ reward.count }}
               </span>
             </div>
-            <span :class="milestone.claimed ? 'text-emerald-600 dark:text-emerald-400' : milestone.reached ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'">
-              {{ milestone.claimed ? '已领取' : milestone.reached ? '可领取' : '未达成' }}
-            </span>
+            <div class="flex items-center gap-2">
+              <span :class="milestone.claimed ? 'text-emerald-600 dark:text-emerald-400' : milestone.reached ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'">
+                {{ milestone.claimed ? '已领取' : milestone.reached ? '可领取' : '未达成' }}
+              </span>
+              <BaseButton
+                v-if="milestone.reached && !milestone.claimed"
+                size="sm"
+                :loading="busy"
+                @click="claimMilestones(milestone)"
+              >
+                领取
+              </BaseButton>
+            </div>
           </div>
         </div>
       </div>
@@ -225,5 +315,88 @@ watch(currentAccountId, () => reload())
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="selectedItem"
+        class="fixed inset-0 z-[1200] flex items-center justify-center bg-black/40 p-4"
+        @click.self="closeItem"
+      >
+        <div class="max-w-md w-full rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800">
+          <div class="flex items-start gap-3">
+            <img
+              v-if="selectedItem.image"
+              :src="selectedItem.image"
+              :alt="selectedItem.name"
+              class="h-16 w-16 shrink-0 object-contain"
+              :class="selectedItem.activated ? '' : 'opacity-40 grayscale'"
+            >
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <h3 class="truncate text-base font-bold">
+                  {{ selectedItem.name }}
+                </h3>
+                <span class="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700">
+                  {{ selectedItem.starLevel }}/{{ selectedItem.maxStarLevel }} 星
+                </span>
+                <span v-if="selectedItem.activated" class="rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-700">已激活</span>
+                <span v-else class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">未激活</span>
+              </div>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{ selectedItem.description || '暂无描述' }}
+              </p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                当前副本 {{ selectedItem.ownCount }} 件
+              </p>
+            </div>
+          </div>
+
+          <div v-if="!selectedItem.unlocked && selectedItem.requirements.length" class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <p class="font-medium">
+              尚未解锁
+            </p>
+            <p v-for="line in selectedItem.requirements" :key="line">
+              · {{ line }}
+            </p>
+          </div>
+
+          <div v-if="selectedItem.nextStarCosts.length" class="mt-3">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ selectedItem.activated ? '升星消耗' : '激活消耗' }}
+            </p>
+            <div class="mt-1 flex flex-wrap gap-2">
+              <span
+                v-for="cost in selectedItem.nextStarCosts"
+                :key="cost.itemId"
+                class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+              >
+                {{ cost.name }} ×{{ cost.count }}
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
+            <BaseButton variant="secondary" @click="closeItem">
+              关闭
+            </BaseButton>
+            <BaseButton
+              v-if="selectedItem.activated"
+              variant="secondary"
+              :loading="busy"
+              @click="toggleDisplay(selectedItem)"
+            >
+              {{ selectedItem.displayed ? '取消陈列' : '陈列到珍藏室' }}
+            </BaseButton>
+            <BaseButton
+              :loading="busy"
+              :disabled="!selectedItem.canUpgrade"
+              @click="upgradeSelected"
+            >
+              {{ selectedItem.activated ? '升星' : '激活' }}
+            </BaseButton>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

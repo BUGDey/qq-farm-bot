@@ -61,6 +61,16 @@ async function loadProto() {
     // 藏品（蓝晶）
     types.GetCollectionsRequest = root.lookupType('gamepb.collectionpb.GetCollectionsRequest');
     types.GetCollectionsReply = root.lookupType('gamepb.collectionpb.GetCollectionsReply');
+    for (const name of [
+      'UpgradeCollectionRequest',
+      'UpgradeCollectionReply',
+      'ClaimCollectionRewardRequest',
+      'ClaimCollectionRewardReply',
+      'SwitchSceneDisplayRequest',
+      'SwitchSceneDisplayReply',
+    ]) {
+      types[name] = root.lookupType(`gamepb.collectionpb.${name}`);
+    }
 
     // 网关
     types.GateMessage = root.lookupType('gatepb.Message');

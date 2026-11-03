@@ -1874,6 +1874,9 @@ const MANUAL_WRITE_METHODS = new Set([
     'claimIllustratedRewards', 'operateMilkTea', 'operatePetDiary'
 ]);
 
+// 藏品写操作（激活/升星/领奖/展示）由 services/collections 内部串行化，不纳入自动化互斥：
+// 它们不影响农场调度，且单次操作含多次背包/状态核对，放进 30s 手动锁容易误判占用。
+
 async function handleApiCall(msg) {
     if (!msg || !MANUAL_WRITE_METHODS.has(String(msg.method || ''))) {
         return handleApiCallInternal(msg);
@@ -2266,6 +2269,11 @@ async function handleApiCallInternal(msg) {
             case 'getCollectionsSnapshot': {
                 const { getCollectionsSnapshot } = require('../services/collections');
                 result = await getCollectionsSnapshot();
+                break;
+            }
+            case 'operateCollections': {
+                const { operateCollections } = require('../services/collections');
+                result = await operateCollections(args[0], args[1] || {});
                 break;
             }
             case 'getCareerInfo': {

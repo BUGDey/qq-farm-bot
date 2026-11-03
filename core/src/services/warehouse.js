@@ -79,7 +79,9 @@ function getDateKey() {
 
 // ---- RPC 调用 ----
 
-async function getBag() {
+async function getBag(options = {}) {
+  // options.fresh：藏品写操作核对材料余额时传 true；当前每次都真实请求，参数仅统一调用约定
+  void options;
   const request = types.BagRequest.encode(types.BagRequest.create({})).finish();
   const { body } = await sendMsgAsync('gamepb.itempb.ItemService', 'Bag', request);
   return types.BagReply.decode(body);
@@ -107,7 +109,20 @@ async function sellItems(items) {
  */
 async function useItem(itemId, count = 1, uid = 0) {
   if (toNum(itemId) === FIREWORK_ITEM_ID) return useFirework(count, uid);
-  return useBagItem(itemId, count, uid);
+  return describeUseReply(await useBagItem(itemId, count, uid));
+}
+
+/** 给使用回包补上物品名称，便于前端直接展示「获得：X ×N」 */
+function describeUseReply(reply) {
+  const items = Array.isArray(reply && reply.items) ? reply.items : [];
+  return {
+    ...reply,
+    rewards: items.map((item) => ({
+      id: toNum(item.id),
+      count: String(item.count),
+      name: getItemById(toNum(item.id))?.name || `物品${item.id}`,
+    })),
+  };
 }
 
 const useFirework = createFireworkUse({
@@ -166,7 +181,7 @@ async function batchUseItems(entries) {
   ).finish();
 
   const { body } = await sendMsgAsync('gamepb.itempb.ItemService', 'BatchUse', request);
-  return types.BatchUseReply.decode(body);
+  return describeUseReply(types.BatchUseReply.decode(body));
 }
 
 // ---- 数据解析 ----

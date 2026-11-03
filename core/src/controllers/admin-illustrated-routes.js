@@ -69,6 +69,34 @@ function registerAdminIllustratedRoutes({
     }
   });
 
+  // 蓝晶藏品写操作：upgrade（激活/升星）/ claim（领评分奖励）/ display（展示或取消）
+  app.post("/api/collections/:action", async (req, res) => {
+    const accountId = getAuthorizedAccountId(req, res, routeContext);
+    if (!accountId) return;
+
+    const action = String(req.params.action || "");
+
+    try {
+      const data = await provider.operateCollections(accountId, action, req.body || {});
+      res.json({ ok: true, data });
+    } catch (err) {
+      const code = String(err?.code || "");
+      adminLogger.error("藏品操作失败", {
+        action,
+        code,
+        error: err.message,
+        stack: err.stack,
+      });
+
+      if (code && code !== "PROVIDER_UNAVAILABLE") {
+        res.status(400).json({ ok: false, error: err.message, errorType: code });
+        return;
+      }
+
+      sendProviderError(res, err);
+    }
+  });
+
   // 变异宝典：纯本地配置，不需要账号在线
   app.get("/api/illustrated/mutations", (req, res) => {
     try {
