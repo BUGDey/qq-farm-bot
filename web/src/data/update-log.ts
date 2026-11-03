@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.8'
+export const APP_VERSION = '2.14.9'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.9',
+    date: '2026-11-03',
+    items: [
+      '农场土地支持点击查看详情：各等级加成、升级条件与材料缺口一目了然',
+      '修正土地解锁/升级条件的协议字段，条件解读不再错位',
+      '补充 1~6 级土地配置与图标，蓝晶土地（第 6 级）加成可在详情中查看',
+    ],
+  },
   {
     version: '2.14.8',
     date: '2026-11-03',

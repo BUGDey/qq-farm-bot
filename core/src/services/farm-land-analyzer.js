@@ -2,6 +2,7 @@ const { PlantPhase, PHASE_NAMES } = require('../config/config');
 const { getPlantName, getPlantExp, getPlantById, getPlantGrowTime, getPlantGrowPhases, getSeedImageBySeedId, getMutantDisplayPlantId, getMutantPlantImageByPhase, getMutantEffectsByIds } = require('../config/gameConfig');
 const { toNum, toTimeSec, getServerTimeSec, logWarn } = require('../utils/utils');
 const { getAllLands } = require('./farm-api');
+const { buildLandUpgradeDetail } = require('./farm-land-upgrade');
 
 const GOLDEN_BUG_ITEM_ID = 301101;
 const GOLDEN_BUG_SOCIAL_TYPE = 2;
@@ -597,6 +598,13 @@ async function getLandsDetail() {
         occupiedByMaster, masterLandId, occupiedLandIds,
         plantSize, mutantEffects, qixiDew
       });
+    }
+
+    // 土地详情：地图信息依赖整张地图（「当前等级及以上地块数量」这种门槛），
+    // 所以放在所有地块都收集完之后再统一算，避免顺序依赖。
+    for (const detail of details) {
+      const rawLand = landMap.get(detail.id);
+      if (rawLand) detail.landInfo = buildLandUpgradeDetail(rawLand, landMap);
     }
 
     return { lands: details, summary: summarizeLandDetails(details) };

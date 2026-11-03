@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import FarmScene from '@/components/FarmScene.vue'
+import LandDetailModal from '@/components/LandDetailModal.vue'
 import { useAccountStore } from '@/stores/account'
 import { useFarmStore } from '@/stores/farm'
 import { useStatusStore } from '@/stores/status'
@@ -17,6 +18,7 @@ const { status, loading: statusLoading, realtimeConnected, currentStatusReady } 
 
 const operating = ref(false)
 const farmLoaded = ref(false)
+const detailLand = ref<any | null>(null)
 const confirmVisible = ref(false)
 const farmViewport = ref<HTMLElement | null>(null)
 const farmStageWidth = ref<number | null>(null)
@@ -105,6 +107,11 @@ function handleRemoveAllPlants() {
 
 function getLandActionName(land: any) {
   return `#${land?.id ?? '-'} ${land?.plantName || '该作物'}`
+}
+
+// 土地卡片点击后打开详情弹层（纯只读展示，不触发任何写操作）
+function openLandDetail(land: any) {
+  detailLand.value = land || null
 }
 
 function handleLandFertilize(land: any) {
@@ -361,11 +368,20 @@ onUnmounted(() => {
               :style="farmStageStyle"
               @fertilize="handleLandFertilize"
               @remove="handleLandRemove"
+              @select="openLandDetail"
             />
           </div>
         </div>
       </div>
     </div>
+
+    <LandDetailModal
+      v-if="detailLand"
+      :land="detailLand"
+      :player="status?.status"
+      :connected="!!status?.connection?.connected"
+      @close="detailLand = null"
+    />
 
     <ConfirmModal
       :show="confirmVisible"

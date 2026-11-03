@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'fertilize', land: any): void
   (e: 'remove', land: any): void
+  (e: 'select', land: any): void
 }>()
 
 const farmSceneImageCache = new Map<string, HTMLImageElement>()
@@ -147,6 +148,7 @@ function landStyle(land: any) {
 function selectLand(land: any) {
   const id = Number(land?.id) || null
   selectedLandId.value = selectedLandId.value === id ? null : id
+  emit('select', land)
 }
 
 function handleDocumentPointerDown(event: PointerEvent) {
