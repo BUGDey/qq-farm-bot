@@ -61,4 +61,30 @@ function setEnvValues(file, pairs) {
   return pairs;
 }
 
-module.exports = { readEnvText, getEnvValue, applyEnvValues, setEnvValues };
+/**
+ * 把整份 .env 解析成对象，供启动器注入到子进程环境里。
+ *
+ * 为什么要注入：core 进程本身不读 .env（只有 start.sh 会 export），
+ * 所以 Windows 下必须由启动器把 NAPCAT_LOGIN_ENABLED 等值传进去，
+ * 否则面板拿不到这些开关，账号弹窗里的「QQ 扫码」页签就不会出现。
+ */
+function readEnvPairs(file) {
+  const pairs = {};
+  for (const raw of readEnvText(file).split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const matched = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!matched) continue;
+    let value = matched[2].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"') && value.length >= 2)
+      || (value.startsWith("'") && value.endsWith("'") && value.length >= 2)
+    ) {
+      value = value.slice(1, -1);
+    }
+    pairs[matched[1]] = value;
+  }
+  return pairs;
+}
+
+module.exports = { readEnvText, getEnvValue, applyEnvValues, setEnvValues, readEnvPairs };

@@ -28,11 +28,11 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.14.5
+## 🎉 最新更新 · v2.14.6
 
-- 🔑 Windows 启动器新增**找回密码**：菜单选 `5`，或 `start.bat reset-admin`
-- 🎲 随机生成 16 位新密码并写回 `.env` 的 `FARM_ADMIN_PASSWORD`，与 Linux 行为一致
-- 🛡️ 自定义密码会先按后端口令策略校验，不合规直接提示
+- 🐛 修复 Windows 下「添加账号」弹窗**没有「QQ 扫码」页签**的问题
+- 🔌 启动器现在把 `.env` 注入面板进程，NapCat 开关才能真正生效
+- 🧭 未检测到 NapCat 时页签内给出启动指引与「重新检测」按钮
 
 > 完整更新记录见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 

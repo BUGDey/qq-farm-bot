@@ -165,6 +165,28 @@ test('writeWebuiConfig 写入端口与 token 并保留已有字段', () => {
   assert.strictEqual(parsed.loginRate, 5);
 });
 
+test('panelEnv 把 .env 的值并入面板子进程环境', () => {
+  const dir = tempDir('win-panelenv-');
+  const envPath = path.join(dir, '.env');
+  fs.writeFileSync(
+    envPath,
+    'NAPCAT_LOGIN_ENABLED=true\nNAPCAT_OPENAUTH_URL="http://127.0.0.1:6099/plugin/x"\n',
+    'utf8',
+  );
+
+  const env = launcher.panelEnv(envPath);
+  assert.strictEqual(env.NAPCAT_LOGIN_ENABLED, 'true');
+  assert.strictEqual(env.NAPCAT_OPENAUTH_URL, 'http://127.0.0.1:6099/plugin/x');
+
+  process.env.QQFARM_PANEL_ENV_TEST = 'carried';
+  try {
+    assert.strictEqual(launcher.panelEnv(envPath).QQFARM_PANEL_ENV_TEST, 'carried');
+  }
+  finally {
+    delete process.env.QQFARM_PANEL_ENV_TEST;
+  }
+});
+
 test('randomAdminPassword 生成 16 位且满足口令强度', () => {
   for (let i = 0; i < 20; i += 1) {
     const pwd = launcher.randomAdminPassword();

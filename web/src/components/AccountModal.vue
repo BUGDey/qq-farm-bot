@@ -229,12 +229,27 @@ const { pause: stopQqCheck, resume: startQqCheck } = useIntervalFn(async () => {
   finally { qqLoading.value = false }
 }, 1500, { immediate: false })
 
+const qqCapabilityLoading = ref(false)
 async function loadQqCapability() {
+  qqCapabilityLoading.value = true
   try {
     const { data } = await api.get('/api/napcat-login/capability')
     qqEnabled.value = data?.ok && data.data?.enabled === true
   }
   catch { qqEnabled.value = false }
+  finally { qqCapabilityLoading.value = false }
+}
+
+/** 面板单独重启后 NapCat 可能已经起来了，允许用户手动重新检测一次 */
+async function retryQqCapability() {
+  await loadQqCapability()
+  if (qqEnabled.value) {
+    qqError.value = ''
+    if (!qqTaskId.value)
+      void startQqLogin()
+    return
+  }
+  qqError.value = '仍未能连接到 NapCat：请用 start.bat 选 2 启动扫码版，再回来点「重新检测」'
 }
 
 async function cancelQqTask() {
@@ -599,7 +614,7 @@ watch(activeTab, (tab) => {
   }
   if (tab === 'wx')
     loadWxQRCode()
-  if (tab === 'qq' && !qqTaskId.value)
+  if (tab === 'qq' && qqEnabled.value && !qqTaskId.value)
     void startQqLogin()
   if (tab !== 'qq')
     void cancelQqTask()
@@ -637,7 +652,6 @@ useModalFocus(() => props.show, modalSurface, close)
 
           <div class="mb-4 flex border-b" :style="{ borderColor: 'color-mix(in srgb, var(--theme-text) 10%, transparent)' }">
             <button
-              v-if="qqEnabled"
               class="flex-1 py-2 text-center text-sm font-medium transition-colors"
               :class="activeTab === 'qq' ? 'border-b-2' : 'opacity-60'"
               :style="{ color: activeTab === 'qq' ? 'var(--theme-primary)' : 'var(--theme-text)', borderColor: 'var(--theme-primary)' }"
@@ -694,35 +708,55 @@ useModalFocus(() => props.show, modalSurface, close)
           </div>
 
           <div v-if="activeTab === 'qq'" class="space-y-4">
-            <BaseInput v-model="qqAccountName" label="账号备注（可选）" placeholder="留空则使用默认账号名" />
-            <div class="flex flex-col items-center justify-center py-4 space-y-4">
-              <div
-                v-if="qqQrImage"
-                class="border rounded-lg bg-white p-2 transition-opacity"
-                :class="qqLoading ? 'cursor-wait opacity-60' : 'cursor-pointer hover:opacity-80'"
-                title="点击刷新二维码"
-                role="button"
-                tabindex="0"
-                @click="!qqLoading && startQqLogin()"
-                @keydown.enter.prevent="!qqLoading && startQqLogin()"
-                @keydown.space.prevent="!qqLoading && startQqLogin()"
-              >
-                <img :src="qqQrImage" class="h-48 w-48">
-              </div>
-              <div v-else class="h-48 w-48 flex items-center justify-center rounded-lg" :style="{ background: 'color-mix(in srgb, var(--theme-bg) 90%, var(--theme-text))' }">
-                <div v-if="qqLoading" i-svg-spinners-90-ring-with-bg class="text-3xl" :style="{ color: 'var(--theme-primary)' }" />
-                <span v-else class="text-sm" :style="{ color: 'var(--theme-text)' }">正在获取二维码…</span>
-              </div>
-              <p class="text-center text-sm" :style="{ color: 'var(--theme-text)' }">
-                {{ qqStatus }}
+            <div
+              v-if="!qqEnabled"
+              class="rounded-lg p-4 text-sm space-y-3"
+              :style="{ background: 'color-mix(in srgb, var(--theme-bg) 88%, var(--theme-text))', color: 'var(--theme-text)' }"
+            >
+              <p class="font-medium">
+                未检测到本机 NapCat 扫码服务
               </p>
-              <p v-if="qqError" class="text-center text-sm text-red-600">
-                {{ qqError }}
+              <p class="opacity-80">
+                QQ 扫码需要在启动器里选「2) 启动 QQ 扫码版」，它会顺手拉起 NapCat 并写好 Token。
               </p>
+              <p class="opacity-80">
+                如果你已经启动过、只是面板单独重启了，点下面的按钮重新检测。
+              </p>
+              <BaseButton variant="secondary" size="sm" :loading="qqCapabilityLoading" @click="retryQqCapability">
+                重新检测
+              </BaseButton>
             </div>
-            <div class="text-center text-xs opacity-60" :style="{ color: 'var(--theme-text)' }">
-              扫码成功后会自动获取 Code，并退出临时 NapCat QQ 会话
-            </div>
+            <template v-else>
+              <BaseInput v-model="qqAccountName" label="账号备注（可选）" placeholder="留空则使用默认账号名" />
+              <div class="flex flex-col items-center justify-center py-4 space-y-4">
+                <div
+                  v-if="qqQrImage"
+                  class="border rounded-lg bg-white p-2 transition-opacity"
+                  :class="qqLoading ? 'cursor-wait opacity-60' : 'cursor-pointer hover:opacity-80'"
+                  title="点击刷新二维码"
+                  role="button"
+                  tabindex="0"
+                  @click="!qqLoading && startQqLogin()"
+                  @keydown.enter.prevent="!qqLoading && startQqLogin()"
+                  @keydown.space.prevent="!qqLoading && startQqLogin()"
+                >
+                  <img :src="qqQrImage" class="h-48 w-48">
+                </div>
+                <div v-else class="h-48 w-48 flex items-center justify-center rounded-lg" :style="{ background: 'color-mix(in srgb, var(--theme-bg) 90%, var(--theme-text))' }">
+                  <div v-if="qqLoading" i-svg-spinners-90-ring-with-bg class="text-3xl" :style="{ color: 'var(--theme-primary)' }" />
+                  <span v-else class="text-sm" :style="{ color: 'var(--theme-text)' }">正在获取二维码…</span>
+                </div>
+                <p class="text-center text-sm" :style="{ color: 'var(--theme-text)' }">
+                  {{ qqStatus }}
+                </p>
+                <p v-if="qqError" class="text-center text-sm text-red-600">
+                  {{ qqError }}
+                </p>
+              </div>
+              <div class="text-center text-xs opacity-60" :style="{ color: 'var(--theme-text)' }">
+                扫码成功后会自动获取 Code，并退出临时 NapCat QQ 会话
+              </div>
+            </template>
           </div>
 
           <div v-if="activeTab === 'wx'" class="space-y-4">

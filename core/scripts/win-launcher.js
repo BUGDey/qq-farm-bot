@@ -28,7 +28,7 @@ const path = require('path');
 const net = require('net');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
-const { setEnvValues, getEnvValue, readEnvText } = require('./env-file');
+const { setEnvValues, getEnvValue, readEnvText, readEnvPairs } = require('./env-file');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const NAPCAT_HOME = path.join(ROOT, 'data', 'napcat');
@@ -195,6 +195,17 @@ function ensureEnvFile() {
 function adminPasswordHint() {
   const text = readEnvText(path.join(ROOT, '.env'));
   return getEnvValue(text, 'FARM_ADMIN_PASSWORD') || '（见 .env 的 FARM_ADMIN_PASSWORD）';
+}
+
+/**
+ * 面板子进程的环境变量：进程环境 + .env 里写的值（.env 优先）。
+ *
+ * core 自己不读 .env，只有 start.sh 会把变量 export 出来；
+ * 所以 Windows 下若只写文件不注入，`NAPCAT_LOGIN_ENABLED` 永远传不到面板，
+ * 账号弹窗里的「QQ 扫码」页签就会一直缺失。
+ */
+function panelEnv(envPath) {
+  return { ...process.env, ...readEnvPairs(envPath || path.join(ROOT, '.env')) };
 }
 
 /** 生成 16 位随机密码，去掉容易看错的 0/O/1/l/I，且保证四种字符各至少一个（满足后端口令策略） */
@@ -672,7 +683,11 @@ async function startNapcatMode() {
 
   const pnpm = pnpmCommand();
   log('[面板] 启动中…');
-  const panel = spawn(pnpm.cmd, [...pnpm.args, '-C', 'core', 'dev'], { cwd: ROOT, stdio: 'inherit' });
+  const panel = spawn(pnpm.cmd, [...pnpm.args, '-C', 'core', 'dev'], {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: panelEnv(envPath),
+  });
   savePids({ napcat: napcatProc.pid, panel: panel.pid });
 
   const panelReady = await waitPort(PANEL_PORT, 240000);
@@ -711,7 +726,11 @@ async function startNodeMode() {
   log('==============================================');
   log('');
   const pnpm = pnpmCommand();
-  const child = spawn(pnpm.cmd, [...pnpm.args, '-C', 'core', 'dev'], { cwd: ROOT, stdio: 'inherit' });
+  const child = spawn(pnpm.cmd, [...pnpm.args, '-C', 'core', 'dev'], {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: panelEnv(envPath),
+  });
   return await new Promise((resolve) => child.on('exit', (code) => resolve(code === 0)));
 }
 
@@ -842,6 +861,7 @@ module.exports = {
   installOpenauthPlugin,
   napcatEnvPairs,
   napcatDisablePairs,
+  panelEnv,
   napcatBootEntry,
   shellDownloadUrls,
   isZipArchive,

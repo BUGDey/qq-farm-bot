@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { applyEnvValues, getEnvValue } = require('../scripts/env-file');
+const { applyEnvValues, getEnvValue, readEnvPairs } = require('../scripts/env-file');
 
 test('.env 写入：替换已有键并保留注释与顺序', () => {
   const before = ['# 顶部注释', 'FARM_ADMIN_USERNAME=admin', 'FARM_ADMIN_PASSWORD=old', '', 'NAPCAT_LOGIN_ENABLED=false', ''].join('\n');
@@ -32,4 +32,36 @@ test('.env 写入：重复执行结果稳定（幂等）', () => {
   const once = applyEnvValues(before, { B: '2', C: '3' });
   const twice = applyEnvValues(once, { B: '2', C: '3' });
   assert.strictEqual(once, twice);
+});
+
+test('.env 解析：提取键值、去引号、忽略注释与空行', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'envpairs-'));
+  const file = path.join(dir, 'sample.env');
+  fs.writeFileSync(file, [
+    '# 顶部注释',
+    '',
+    'FARM_ADMIN_USERNAME=admin',
+    'NAPCAT_LOGIN_ENABLED=true',
+    'QUOTED="a b c"',
+    'SINGLE=\'x y\'',
+    'EMPTY=',
+    'WITH_EQUALS=a=b=c',
+  ].join('\n'), 'utf8');
+
+  const pairs = readEnvPairs(file);
+  assert.strictEqual(pairs.FARM_ADMIN_USERNAME, 'admin');
+  assert.strictEqual(pairs.NAPCAT_LOGIN_ENABLED, 'true');
+  assert.strictEqual(pairs.QUOTED, 'a b c');
+  assert.strictEqual(pairs.SINGLE, 'x y');
+  assert.strictEqual(pairs.EMPTY, '');
+  assert.strictEqual(pairs.WITH_EQUALS, 'a=b=c');
+  assert.ok(!('# 顶部注释' in pairs));
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('.env 解析：文件不存在时返回空对象', () => {
+  assert.deepStrictEqual(readEnvPairs('Z:\\definitely\\missing\\.env'), {});
 });

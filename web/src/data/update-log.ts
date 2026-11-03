@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.5'
+export const APP_VERSION = '2.14.6'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.6',
+    date: '2026-11-03',
+    items: [
+      '修复 Windows 下「添加账号」弹窗缺少「QQ 扫码」页签的问题',
+      '启动器现在会把 .env 注入面板进程，面板能正确读到 NapCat 开关',
+      '未检测到 NapCat 时页签内给出启动指引，并提供「重新检测」按钮',
+    ],
+  },
   {
     version: '2.14.5',
     date: '2026-11-03',
