@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const napcatLogin = require('../src/services/napcat-login');
 
-const KEYS = ['NAPCAT_LOGIN_ENABLED', 'NAPCAT_TOKEN', 'NAPCAT_TOKEN_FILE', 'NAPCAT_WEBUI_URL', 'NAPCAT_OPENAUTH_URL'];
+const KEYS = ['NAPCAT_LOGIN_ENABLED', 'NAPCAT_TOKEN', 'NAPCAT_TOKEN_FILE', 'NAPCAT_WEBUI_URL', 'NAPCAT_OPENAUTH_URL', 'NAPCAT_PLUGIN_TOKEN', 'NAPCAT_PLUGIN_TOKEN_FILE'];
 
 function withEnv(values, run) {
   const saved = {};
@@ -49,6 +49,33 @@ test('开了扫码版但读不到 Token 时给出 Token 原因', () => {
     assert.equal(info.hasToken, false);
     assert.ok(info.reasons.some(reason => reason.includes('Token')), info.reasons.join('|'));
   });
+});
+
+test('插件 Token 优先取插件自己的配置，读不到才退回 WebUI Token', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'napcat-plugin-'));
+  const tokenFile = path.join(dir, 'token');
+  const pluginConfig = path.join(dir, 'config.json');
+  fs.writeFileSync(tokenFile, 'webui-token', 'utf8');
+  fs.writeFileSync(pluginConfig, JSON.stringify({ token: 'plugin-token' }), 'utf8');
+  try {
+    withEnv({ NAPCAT_LOGIN_ENABLED: 'true', NAPCAT_TOKEN_FILE: tokenFile, NAPCAT_PLUGIN_TOKEN_FILE: pluginConfig }, () => {
+      assert.equal(napcatLogin.pluginToken(), 'plugin-token');
+    });
+    withEnv({ NAPCAT_LOGIN_ENABLED: 'true', NAPCAT_TOKEN_FILE: tokenFile, NAPCAT_PLUGIN_TOKEN: 'explicit-token', NAPCAT_PLUGIN_TOKEN_FILE: pluginConfig }, () => {
+      assert.equal(napcatLogin.pluginToken(), 'explicit-token');
+    });
+    withEnv({ NAPCAT_LOGIN_ENABLED: 'true', NAPCAT_TOKEN_FILE: tokenFile }, () => {
+      assert.equal(napcatLogin.pluginToken(), 'webui-token');
+    });
+    const broken = path.join(dir, 'broken.json');
+    fs.writeFileSync(broken, '{ not json', 'utf8');
+    withEnv({ NAPCAT_LOGIN_ENABLED: 'true', NAPCAT_TOKEN_FILE: tokenFile, NAPCAT_PLUGIN_TOKEN_FILE: broken }, () => {
+      assert.equal(napcatLogin.pluginToken(), 'webui-token');
+    });
+  }
+  finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('开关、Token、地址齐全时立即可用', () => {

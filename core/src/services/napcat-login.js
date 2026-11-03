@@ -13,13 +13,33 @@ function authToken() {
   const tokenFile = process.env.NAPCAT_TOKEN_FILE || '/app/napcat-auth/token';
   try { return fs.readFileSync(tokenFile, 'utf8').trim(); } catch { return String(process.env.NAPCAT_TOKEN || '').trim(); }
 }
+
+/**
+ * 扫码插件的 Token 未必等于 WebUI Token：
+ * 插件装在 NapCat 里以后，任何人都可能用 NapCat 的插件市场重装它并生成新 Token。
+ * 所以优先读「插件自己的配置」，读不到才退回 WebUI Token（启动器首次安装时两者相同）。
+ */
+function pluginToken() {
+  const direct = String(process.env.NAPCAT_PLUGIN_TOKEN || '').trim();
+  if (direct) return direct;
+  const configFile = String(process.env.NAPCAT_PLUGIN_TOKEN_FILE || '').trim();
+  if (configFile) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+      const token = String(parsed?.token || '').trim();
+      if (token) return token;
+    } catch {}
+  }
+  return authToken();
+}
+
 function config() {
   const token = authToken();
   return {
     webui: trimUrl(process.env.NAPCAT_WEBUI_URL || 'http://napcat:6099/api'),
     webuiToken: token,
     plugin: trimUrl(process.env.NAPCAT_OPENAUTH_URL || 'http://napcat:6099/plugin/qq-miniapp-openauth/api'),
-    pluginToken: token,
+    pluginToken: pluginToken(),
   };
 }
 
@@ -82,20 +102,55 @@ function normalize(value) {
   return { ...value, ...(value.data || {}), ...(value.result || {}), ...(value.data?.result || {}) };
 }
 
+function isAuthError(error) {
+  return /unauthorized|credential|凭证|认证|登录失败|401/i.test(String(error?.message || ''));
+}
+
+async function webUiLogin() {
+  const cfg = config();
+  webUiCredential = '';
+  if (!cfg.webuiToken) throw new Error('NapCat WebUI 登录失败，请检查 Token 或关闭 2FA');
+  const hash = crypto.createHash('sha256').update(`${cfg.webuiToken}.napcat`).digest('hex');
+  const login = await requestJson(`${cfg.webui}/auth/login`, { body: { hash } });
+  webUiCredential = login?.data?.Credential || '';
+  if (!webUiCredential) throw new Error('NapCat WebUI 登录失败，请检查 Token 或关闭 2FA');
+  return webUiCredential;
+}
+
+/**
+ * 调 NapCat WebUI 接口。
+ *
+ * NapCat 在 QQ 登录/注销、RestartNapCat 之后会让旧的 Credential 失效，
+ * 而它返回的是 HTTP 200 + `{code:-1,message:"Unauthorized"}`，
+ * 所以这里遇到鉴权失败要重新登录并重试一次，否则用户看到的就是一句英文 Unauthorized。
+ */
 async function webUi(action, body = {}) {
   const cfg = config();
-  if (!webUiCredential) {
-    const hash = crypto.createHash('sha256').update(`${cfg.webuiToken}.napcat`).digest('hex');
-    const login = await requestJson(`${cfg.webui}/auth/login`, { body: { hash } });
-    webUiCredential = login?.data?.Credential || '';
-    if (!webUiCredential) throw new Error('NapCat WebUI 登录失败，请检查 Token 或关闭 2FA');
+  if (!webUiCredential) await webUiLogin();
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const payload = await requestJson(`${cfg.webui}${action}`, { body, token: webUiCredential });
+      if (payload.code !== undefined && Number(payload.code) !== 0) throw new Error(payload.message || 'NapCat WebUI 请求失败');
+      return normalize(payload);
+    } catch (error) {
+      if (attempt === 0 && isAuthError(error)) {
+        await webUiLogin();
+        continue;
+      }
+      if (isAuthError(error)) throw new Error('NapCat WebUI 鉴权失败：Token 与 NapCat 实际配置不一致，请重新运行启动器（选 2）后再试');
+      throw error;
+    }
   }
+  throw new Error('NapCat WebUI 请求失败');
+}
+
+/** 调扫码插件（qq-miniapp-openauth），鉴权失败时给出人话提示 */
+async function pluginRequest(action, { method = 'GET', body, timeout = 15000 } = {}) {
+  const cfg = config();
   try {
-    const payload = await requestJson(`${cfg.webui}${action}`, { body, token: webUiCredential });
-    if (payload.code !== undefined && Number(payload.code) !== 0) throw new Error(payload.message || 'NapCat WebUI 请求失败');
-    return normalize(payload);
+    return await requestJson(`${cfg.plugin}${action}`, { method, body, token: cfg.pluginToken, timeout });
   } catch (error) {
-    if (/unauthorized|credential|凭证|认证/i.test(error.message)) webUiCredential = '';
+    if (isAuthError(error)) throw new Error('扫码插件鉴权失败：插件 Token 与面板不一致，请重新运行启动器（选 2）后再试');
     throw error;
   }
 }
@@ -121,10 +176,9 @@ function hasQqSession(state) {
 }
 
 async function logout() {
-  const cfg = config();
   // Prevent the persisted QQ session from being restored when NapCat restarts.
   await webUi('/QQLogin/SetQuickLoginQQ', { uin: '' }).catch(() => {});
-  const payload = await requestJson(`${cfg.plugin}/logout`, { token: cfg.pluginToken });
+  const payload = await pluginRequest('/logout', { method: 'POST' });
   if (payload.ok !== true || payload.loggedOut !== true) throw new Error(payload.error || 'NapCat 注销失败');
   await new Promise(resolve => setTimeout(resolve, 250));
   try {
@@ -136,6 +190,8 @@ async function logout() {
 
 async function resetNapcat() {
   await webUi('/QQLogin/RestartNapCat');
+  // 重启后旧的 Credential 一定失效，先清掉，下一轮请求会重新登录
+  webUiCredential = '';
   for (let i = 0; i < 24; i += 1) {
     await new Promise(resolve => setTimeout(resolve, i ? 250 : 1000));
     try {
@@ -227,11 +283,10 @@ async function code(id, owner) {
   if (task.status !== 'confirmed') throw new Error('请先完成 QQ 扫码确认');
   if (!task.codePromise) {
     task.codePromise = (async () => {
-      const cfg = config();
       let ready = false;
       for (let i = 0; i < 40; i += 1) {
         try {
-          const health = await requestJson(`${cfg.plugin}/status`, { method: 'GET', token: cfg.pluginToken, timeout: 5000 });
+          const health = await pluginRequest('/status', { method: 'GET', timeout: 5000 });
           if (health.ok === true && health.ready === true) {
             ready = true;
             break;
@@ -240,7 +295,7 @@ async function code(id, owner) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       if (!ready) throw new Error('QQ 已确认登录，但 NapCat 上下文尚未就绪，请稍后重试');
-      const result = await requestJson(`${cfg.plugin}/miniapp`, { body: { appId: APP_ID, interactive: true }, token: cfg.pluginToken, timeout: TTL_MS });
+      const result = await pluginRequest('/miniapp', { method: 'POST', body: { appId: APP_ID, interactive: true }, timeout: TTL_MS });
       const authCode = String(result.code || (result.operation === 'loginWithAppId' ? result.result : '') || '').trim();
       if (!result.ok || !authCode) throw new Error(result.error || 'NapCat 未返回小程序授权 Code');
       const identity = {
@@ -272,4 +327,4 @@ async function cancel(id, owner) {
   await release(task, task.status === 'confirmed' ? 'logout' : task.status === 'scanned' ? 'restart' : '');
 }
 
-module.exports = { APP_ID, isConfigured, launchEnabled, capability, create, status, code, cancel };
+module.exports = { APP_ID, isConfigured, launchEnabled, capability, pluginToken, create, status, code, cancel };

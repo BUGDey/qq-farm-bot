@@ -167,14 +167,17 @@ function installOpenauthPlugin(shellDir, token, pluginSrc = PLUGIN_SRC) {
 
 /* --------------------------- .env 处理 --------------------------- */
 
-function napcatEnvPairs(tokenFile = TOKEN_FILE) {
-  return {
+function napcatEnvPairs(tokenFile = TOKEN_FILE, pluginConfigFile = '') {
+  const pairs = {
     NAPCAT_LOGIN_ENABLED: 'true',
     NAPCAT_WEBUI_URL: `http://127.0.0.1:${NAPCAT_PORT}/api`,
     NAPCAT_OPENAUTH_URL: `http://127.0.0.1:${NAPCAT_PORT}/plugin/${PLUGIN_NAME}/api`,
     NAPCAT_TOKEN_FILE: tokenFile,
     COMPOSE_PROFILES: '',
   };
+  // 插件 Token 以插件自己的 config.json 为准：用户可能用 NapCat 插件市场重装过它
+  if (pluginConfigFile) pairs.NAPCAT_PLUGIN_TOKEN_FILE = pluginConfigFile;
+  return pairs;
 }
 
 function napcatDisablePairs() {
@@ -656,7 +659,7 @@ async function startNapcatMode() {
     log('[NapCat] qq-miniapp-openauth 插件已就绪');
   }
 
-  setEnvValues(envPath, napcatEnvPairs());
+  setEnvValues(envPath, napcatEnvPairs(TOKEN_FILE, path.join(shellDir, 'config', 'plugins', PLUGIN_NAME, 'config.json')));
   log('[配置] 已写入 .env：NAPCAT_LOGIN_ENABLED=true，Token 已生成');
 
   buildFrontendIfNeeded();

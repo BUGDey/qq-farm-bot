@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.7'
+export const APP_VERSION = '2.14.8'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.8',
+    date: '2026-11-03',
+    items: [
+      '修复 QQ 扫码登录在 NapCat 重启后提示 Unauthorized、拿不到 Code 的问题',
+      'Credential 失效时自动重新登录并重试一次，不再把英文报错抛给用户',
+      '扫码插件 Token 改为优先读插件自身配置，避免重装插件后鉴权失败',
+    ],
+  },
   {
     version: '2.14.7',
     date: '2026-11-03',
