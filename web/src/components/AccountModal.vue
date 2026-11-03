@@ -230,20 +230,30 @@ const { pause: stopQqCheck, resume: startQqCheck } = useIntervalFn(async () => {
 }, 1500, { immediate: false })
 
 const qqCapabilityLoading = ref(false)
+/** 启动器是否选过「QQ 扫码版」——决定页签显不显示 */
+const qqReady = ref(false)
+const qqReasons = ref<string[]>([])
 async function loadQqCapability() {
   qqCapabilityLoading.value = true
   try {
     const { data } = await api.get('/api/napcat-login/capability')
-    qqEnabled.value = data?.ok && data.data?.enabled === true
+    const info = data?.ok ? data.data : null
+    qqEnabled.value = info?.launchEnabled === true
+    qqReady.value = info?.enabled === true
+    qqReasons.value = Array.isArray(info?.reasons) ? info.reasons : []
   }
-  catch { qqEnabled.value = false }
+  catch {
+    qqEnabled.value = false
+    qqReady.value = false
+    qqReasons.value = []
+  }
   finally { qqCapabilityLoading.value = false }
 }
 
 /** 面板单独重启后 NapCat 可能已经起来了，允许用户手动重新检测一次 */
 async function retryQqCapability() {
   await loadQqCapability()
-  if (qqEnabled.value) {
+  if (qqReady.value) {
     qqError.value = ''
     if (!qqTaskId.value)
       void startQqLogin()
@@ -612,9 +622,13 @@ watch(activeTab, (tab) => {
     activeTab.value = 'manual'
     return
   }
+  if (tab === 'qq' && !qqEnabled.value) {
+    activeTab.value = 'manual'
+    return
+  }
   if (tab === 'wx')
     loadWxQRCode()
-  if (tab === 'qq' && qqEnabled.value && !qqTaskId.value)
+  if (tab === 'qq' && qqReady.value && !qqTaskId.value)
     void startQqLogin()
   if (tab !== 'qq')
     void cancelQqTask()
@@ -652,6 +666,7 @@ useModalFocus(() => props.show, modalSurface, close)
 
           <div class="mb-4 flex border-b" :style="{ borderColor: 'color-mix(in srgb, var(--theme-text) 10%, transparent)' }">
             <button
+              v-if="qqEnabled"
               class="flex-1 py-2 text-center text-sm font-medium transition-colors"
               :class="activeTab === 'qq' ? 'border-b-2' : 'opacity-60'"
               :style="{ color: activeTab === 'qq' ? 'var(--theme-primary)' : 'var(--theme-text)', borderColor: 'var(--theme-primary)' }"
@@ -709,12 +724,20 @@ useModalFocus(() => props.show, modalSurface, close)
 
           <div v-if="activeTab === 'qq'" class="space-y-4">
             <div
-              v-if="!qqEnabled"
+              v-if="!qqReady"
               class="rounded-lg p-4 text-sm space-y-3"
               :style="{ background: 'color-mix(in srgb, var(--theme-bg) 88%, var(--theme-text))', color: 'var(--theme-text)' }"
             >
               <p class="font-medium">
-                未检测到本机 NapCat 扫码服务
+                扫码服务还没准备好
+              </p>
+              <ul v-if="qqReasons.length" class="list-disc pl-5 opacity-80 space-y-1">
+                <li v-for="reason in qqReasons" :key="reason">
+                  {{ reason }}
+                </li>
+              </ul>
+              <p v-else class="opacity-80">
+                启动器写了开关，但面板没有读到 NapCat Token。
               </p>
               <p class="opacity-80">
                 QQ 扫码需要在启动器里选「2) 启动 QQ 扫码版」，它会顺手拉起 NapCat 并写好 Token。

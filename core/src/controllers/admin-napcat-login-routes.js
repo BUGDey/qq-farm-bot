@@ -4,7 +4,7 @@ function owner(req) { return String(req.currentUser?.username || ''); }
 function sendError(res, error) { res.status(400).json({ ok: false, error: error.message || 'NapCat 登录失败' }); }
 
 function registerAdminNapcatLoginRoutes({ app }) {
-  app.get('/api/napcat-login/capability', (_req, res) => res.json({ ok: true, data: { enabled: napcatLogin.isConfigured() } }));
+  app.get('/api/napcat-login/capability', (_req, res) => res.json({ ok: true, data: napcatLogin.capability() }));
   app.post('/api/napcat-login/tasks', async (req, res) => {
     try { res.json({ ok: true, data: await napcatLogin.create(owner(req), { refresh: req.body?.refresh === true }) }); } catch (error) { sendError(res, error); }
   });

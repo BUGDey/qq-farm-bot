@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.6'
+export const APP_VERSION = '2.14.7'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.7',
+    date: '2026-11-03',
+    items: [
+      'QQ 扫码页签恢复按需显示：只有启动器选了「2) 启动 QQ 扫码版」才会出现',
+      '扫码服务没就绪时逐条说明原因（缺 Token/缺地址/没开扫码版），不再只显示一句话',
+      '启动器启动前检测面板端口占用，旧面板没关会直接提示先 stop.bat 再启动',
+    ],
+  },
   {
     version: '2.14.6',
     date: '2026-11-03',

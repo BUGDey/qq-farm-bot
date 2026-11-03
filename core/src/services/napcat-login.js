@@ -23,10 +23,39 @@ function config() {
   };
 }
 
+/** 启动器是否选了「2) QQ 扫码版」——只代表开关，不代表 Token 已经就绪 */
+function launchEnabled() {
+  return /^(?:1|true|yes|on)$/i.test(String(process.env.NAPCAT_LOGIN_ENABLED || ''));
+}
+
 function isConfigured() {
   const cfg = config();
-  return /^(?:1|true|yes|on)$/i.test(String(process.env.NAPCAT_LOGIN_ENABLED || ''))
-    && Boolean(cfg.webui && cfg.webuiToken && cfg.plugin && cfg.pluginToken);
+  return launchEnabled() && Boolean(cfg.webui && cfg.webuiToken && cfg.plugin && cfg.pluginToken);
+}
+
+/**
+ * 面板用来决定「要不要显示 QQ 扫码页签」以及「显示二维码还是问题说明」。
+ *
+ * - launchEnabled：启动器选了扫码版 → 页签显示（此时可能还没拿到 Token）
+ * - enabled：Token 与地址都齐 → 可以直接出二维码
+ * - reasons：没就绪时逐条说明缺什么，避免前端只能显示一句「未检测到」
+ */
+function capability() {
+  const cfg = config();
+  const tokenPath = process.env.NAPCAT_TOKEN_FILE || '/app/napcat-auth/token';
+  const reasons = [];
+  if (!launchEnabled()) reasons.push('当前不是扫码版启动：请用 start.bat 选「2) 启动 QQ 扫码版」');
+  if (!cfg.webuiToken) reasons.push(`没有读到 NapCat Token（${tokenPath} 不存在或为空），请让启动器重新生成`);
+  if (!cfg.webui) reasons.push('NAPCAT_WEBUI_URL 为空，启动器没有写入 WebUI 地址');
+  if (!cfg.plugin) reasons.push('NAPCAT_OPENAUTH_URL 为空，启动器没有写入扫码插件地址');
+  return {
+    launchEnabled: launchEnabled(),
+    enabled: reasons.length === 0,
+    hasToken: Boolean(cfg.webuiToken),
+    tokenPath,
+    webui: cfg.webui,
+    reasons,
+  };
 }
 
 async function requestJson(url, { method = 'POST', body, token = '', timeout = 15000 } = {}) {
@@ -243,4 +272,4 @@ async function cancel(id, owner) {
   await release(task, task.status === 'confirmed' ? 'logout' : task.status === 'scanned' ? 'restart' : '');
 }
 
-module.exports = { APP_ID, isConfigured, create, status, code, cancel };
+module.exports = { APP_ID, isConfigured, launchEnabled, capability, create, status, code, cancel };

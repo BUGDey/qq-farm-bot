@@ -329,6 +329,33 @@ function waitPort(port, timeoutMs = 120000, intervalMs = 1000) {
   });
 }
 
+/** 端口当前是否有人监听（不做重试，只用于启动前自检） */
+function portOpen(port, timeoutMs = 800) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host: '127.0.0.1', port });
+    socket.setTimeout(timeoutMs);
+    const done = (open) => {
+      socket.destroy();
+      resolve(open);
+    };
+    socket.once('connect', () => done(true));
+    socket.once('timeout', () => done(false));
+    socket.once('error', () => done(false));
+  });
+}
+
+/**
+ * 面板端口已被占用说明旧面板还在跑：新起的实例抢不到端口，
+ * 用户看到的还是旧进程（旧环境变量），会误以为「选了 2 却没生效」。
+ */
+async function warnIfPanelRunning() {
+  if (!(await portOpen(PANEL_PORT))) return false;
+  log(`[警告] 端口 ${PANEL_PORT} 已被占用：面板可能已经在运行。`);
+  log('        新开的实例抢不到端口，你看到的仍是旧进程（旧的环境变量）。');
+  log('        请先双击 stop.bat 关闭旧面板，再重新选一次。');
+  return true;
+}
+
 function savePids(pids) {
   ensureDir(NAPCAT_HOME);
   fs.writeFileSync(PID_FILE, `${JSON.stringify(pids, null, 2)}\n`, 'utf8');
@@ -591,6 +618,7 @@ function warnIfMissingPrereqs() {
 
 async function startNapcatMode() {
   const envPath = ensureEnvFile();
+  if (await warnIfPanelRunning()) return false;
   ensureDir(TOKEN_DIR);
   const token = ensureToken();
 
@@ -716,6 +744,7 @@ async function startNapcatMode() {
 
 async function startNodeMode() {
   const envPath = ensureEnvFile();
+  if (await warnIfPanelRunning()) return false;
   setEnvValues(envPath, napcatDisablePairs());
   buildFrontendIfNeeded();
   log('');
@@ -873,4 +902,6 @@ module.exports = {
   randomAdminPassword,
   passwordProblem,
   resetAdmin,
+  portOpen,
+  warnIfPanelRunning,
 };
