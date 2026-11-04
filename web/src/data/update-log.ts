@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.9'
+export const APP_VERSION = '2.14.10'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.10',
+    date: '2026-11-04',
+    items: [
+      '购买数量上限统一按「剩余限购、余额可买、硬上限」三者取小，并兼容商城礼包的限购写法',
+      '免费商品与大额限购的硬上限从 99 放宽到 9999 件',
+      '新增购买数量计算的单元测试，覆盖余额不足、余额未知、售罄等边界',
+    ],
+  },
   {
     version: '2.14.9',
     date: '2026-11-03',

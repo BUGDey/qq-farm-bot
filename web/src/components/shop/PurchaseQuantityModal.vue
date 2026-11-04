@@ -42,7 +42,7 @@ const L = {
 
 const normalizedUnitPrice = computed(() => Math.max(0, Number(props.unitPrice) || 0))
 const normalizedBalance = computed(() => Math.max(0, Number(props.balance) || 0))
-const configuredMax = computed(() => Math.max(1, Math.min(99, Math.floor(Number(props.maxQuantity) || 99))))
+const configuredMax = computed(() => Math.max(1, Math.min(9999, Math.floor(Number(props.maxQuantity) || 9999))))
 const affordableMax = computed(() => {
   if (props.isFree)
     return configuredMax.value
@@ -50,7 +50,7 @@ const affordableMax = computed(() => {
     return 1
   return Math.floor(normalizedBalance.value / normalizedUnitPrice.value)
 })
-const maxBuyCount = computed(() => Math.max(1, Math.min(99, configuredMax.value, affordableMax.value)))
+const maxBuyCount = computed(() => Math.max(1, Math.min(9999, configuredMax.value, affordableMax.value)))
 const normalizedQuantity = computed(() => {
   const value = Math.floor(Number(quantity.value) || 1)
   return Math.max(1, Math.min(maxBuyCount.value, value))

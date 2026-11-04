@@ -19,6 +19,7 @@ import { useShopStore } from '@/stores/shop'
 import { useStatusStore } from '@/stores/status'
 import { useToastStore } from '@/stores/toast'
 import { formatCouponAmount, formatCurrencyAmountByLabel } from '@/utils/number-format'
+import { purchaseMaxCount } from '@/utils/purchase-count'
 
 const accountStore = useAccountStore()
 const shopStore = useShopStore()
@@ -314,11 +315,16 @@ function confirmAbandonMysteryMerchant() {
 
 function getShopMaxQuantity(item: any, balance: number) {
   const price = Number(item?.price || 0)
-  const byBalance = price > 0 ? Math.floor(Number(balance || 0) / price) : 99
-  const limitCount = Number(item?.limitCount || 0)
-  const boughtNum = Number(item?.boughtNum || 0)
-  const byLimit = limitCount > 0 ? Math.max(0, limitCount - boughtNum) : 99
-  return Math.max(1, Math.min(99, byBalance, byLimit))
+  // 限购来源有两种写法：商店用 limitCount/boughtNum，商城礼包用 limit.remaining
+  const limitRemaining = item?.limit?.remaining != null
+    ? Number(item.limit.remaining)
+    : (Number(item?.limitCount || 0) > 0
+        ? Math.max(0, Number(item.limitCount) - Number(item.boughtNum || 0))
+        : null)
+  return purchaseMaxCount({
+    limitRemaining,
+    costs: price > 0 ? [{ count: price, balance }] : [],
+  })
 }
 
 function openQuantityModal(item: any, mode: 'shop' | 'mall', currencyLabel: string, balance: number) {
