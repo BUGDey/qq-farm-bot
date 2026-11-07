@@ -128,9 +128,12 @@ async function withAutomationLock(name, task, options = {}) {
     const key = resolveKey(options);
     const label = String(name || 'automation');
 
-    // 可重入：同一 async 调用链里已经持有该账号的锁
+    // 可重入：同一 async 调用链里已经持有该账号的锁。
+    // 必须同时检查 active：锁释放后，原来的 async 上下文（例如任务里注册的定时器、
+    // 尚未结束的 .finally 链）仍然能看到这份 Map，若只看 has(key) 就会误判成"重入"
+    // 而绕过排队，导致两个任务同时操作同一账号。
     const held = heldStore.getStore();
-    if (held && held.has(key)) {
+    if (held && held.has(key) && held.get(key).active) {
         const entry = held.get(key);
         entry.depth += 1;
         try {
@@ -144,7 +147,8 @@ async function withAutomationLock(name, task, options = {}) {
     await takeTurn(lock, options.lockTimeoutMs, label);
 
     const nextHeld = new Map(held || []);
-    nextHeld.set(key, { depth: 1, name: label });
+    const entry = { depth: 1, name: label, active: true };
+    nextHeld.set(key, entry);
     lock.totalRuns += 1;
     const startAt = Date.now();
     try {
@@ -158,6 +162,8 @@ async function withAutomationLock(name, task, options = {}) {
         }
         throw err;
     } finally {
+        // 释放前先标记失效：此后这条调用链上的后续代码不再算作持锁
+        entry.active = false;
         releaseTurn(lock);
     }
 }

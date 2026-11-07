@@ -11,9 +11,27 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.10'
+export const APP_VERSION = '2.14.11'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.11',
+    date: '2026-11-07',
+    items: [
+      '修复自动任务锁释放后仍被判定为持有，定时器回调不再绕过排队，避免两个自动任务同时操作同一账号',
+      '修复奶茶店「还没有员工」时雇佣接口报错，未返回员工位时按空列表处理',
+      '内置插件 milk-tea 同步升级到 1.3.1',
+    ],
+  },
+  {
+    version: '2.14.11',
+    date: '2026-11-07',
+    items: [
+      '修复自动任务锁释放后仍被判定为持有，定时器回调不再绕过排队，避免两个自动任务同时操作同一账号',
+      '修复奶茶店「还没有员工」时雇佣接口报错，未返回员工位时按空列表处理',
+      '内置插件 milk-tea 同步升级到 1.3.1',
+    ],
+  },
   {
     version: '2.14.10',
     date: '2026-11-04',

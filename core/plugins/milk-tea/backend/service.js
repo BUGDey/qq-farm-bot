@@ -122,7 +122,7 @@ function createMilkTeaService({ types, sendMsgAsync, getBag, getBagItems, getSer
     }));
     const shareView = share ? { ...share, milestones: list(share.milestones).map(tier => ({ ...tier, rewards: list(tier.rewards).map(itemDto) })) } : null;
     const fundView = fund ? { ...fund, unlock_cost: list(fund.unlock_cost).map(itemDto), tiers: list(fund.tiers).map(tier => ({ ...tier, reward: list(tier.reward).map(itemDto) })) } : null;
-    return { ...state, share: shareView, fund: fundView, shop: shop.shop, recipes, work, goods, balances: ['1001', '1004', '1041', '1042'].map(id => itemDto({ id, count: inventory.filter(x => String(x.id) === id).reduce((n, x) => n + BigInt(String(x.count || 0)), 0n).toString() })), levels, durations: catalog.MilkTeaHireDurationConfig, interactions: catalog.MilkTeaInteractionType };
+    return { ...state, share: shareView, fund: fundView, shop: shop.shop ? { ...shop.shop, slots: shop.shop.slots || [] } : null, recipes, work, goods, balances: ['1001', '1004', '1041', '1042'].map(id => itemDto({ id, count: inventory.filter(x => String(x.id) === id).reduce((n, x) => n + BigInt(String(x.count || 0)), 0n).toString() })), levels, durations: catalog.MilkTeaHireDurationConfig, interactions: catalog.MilkTeaInteractionType };
   }
   // 读取活动状态：20 秒内复用上次结果（页面切换秒开），超时或 force 才真正请求官方。
   // 读取失败不缓存，下次立即重试。
@@ -167,7 +167,7 @@ function createMilkTeaService({ types, sendMsgAsync, getBag, getBagItems, getSer
       const duration = catalog.MilkTeaHireDurationConfig.find(x => x.duration_id === Number(input.durationId || 1));
       if (!duration || state.settleTime - now < duration.min_remaining_business_sec) fail('剩余营业时间不足');
       const slot = Number(input.slotIndex ?? 0); const count = catalog.MilkTeaStoreLevelConfig.find(x => x.level === Number(state.shop.level))?.employee_slot_count || 0;
-      if (!Number.isInteger(slot) || slot < 0 || slot >= count || state.shop.slots.some(x => Number(x.slot_index) === slot && Number(x.end_at) > now)) fail('员工位置不可用');
+      if (!Number.isInteger(slot) || slot < 0 || slot >= count || (state.shop.slots || []).some(x => Number(x.slot_index) === slot && Number(x.end_at) > now)) fail('员工位置不可用');
       const candidates = await op('hireList', { duration_id: duration.duration_id });
       const target = input.autoSelect === true ? selectHireCandidate(candidates, input, now)
         : input.targetGid == null ? list(candidates.robots).find(x => Number(x.state) === 0)

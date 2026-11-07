@@ -34,7 +34,7 @@ test('business and settlement boundaries fail closed', () => {
   assert.equal(phase(WINDOW.endTime), 'settling');
   assert.equal(phase(WINDOW.endTime + 1), 'ended');
 });
-function setup({ now = WINDOW.startTime + 100, diamond = false, unlocked = true, salesLog, panels = false, fundUnlocked = false, fundState = 1, inventory = [{ id: 1001, count: 1000000 }], account = {}, hireList, hireSuccess = true, workShift, sharedToday = false } = {}) {
+function setup({ now = WINDOW.startTime + 100, diamond = false, unlocked = true, salesLog, panels = false, fundUnlocked = false, fundState = 1, inventory = [{ id: 1001, count: 1000000 }], account = {}, hireList, hireSuccess = true, workShift, sharedToday = false, omitSlots = false } = {}) {
   const calls = [];
   const logs = [];
   const group = { group: { head: { id: '2026110100' }, children: [{ head: { id: '2026110101', start_time: WINDOW.startTime, end_time: WINDOW.endTime, settle_start_time: WINDOW.settleTime }, milk_tea: { summary: { shop_open_at: WINDOW.startTime, level: 1 } } }, { head: { id: '2026110102' }, shop: { goods: [{ id: 301, name: '森野甜莓种子', item: [{ id: 20525, count: 1 }], cost: [{ id: diamond ? 1004 : 1001, count: 10000 }], purchase_limit: 108, purchased_count: 0, category_tag: 'seed', cond_hints: [{ satisfied: unlocked, target: 3 }] }] } }] } };
@@ -47,7 +47,12 @@ function setup({ now = WINDOW.startTime + 100, diamond = false, unlocked = true,
     if (method === 'GetGroup') return { body: types.MilkTeaGetGroupReply.encode(types.MilkTeaGetGroupReply.fromObject(group)).finish() };
     const req = types.MilkTeaOperateRequest.toObject(types.MilkTeaOperateRequest.decode(bytes), { longs: String });calls.push(req);
     const fixture = Number(req.cmd) === 56 && hireList ? { id: req.id, cmd: req.cmd, milk_tea_get_hire_list: hireList } : Number(req.cmd) === 57 ? { id: req.id, cmd: req.cmd, milk_tea_hire: { results: [{ success: hireSuccess }] } } : Number(req.cmd) === 55 ? fixtures[282] : Number(req.cmd) === 58 ? fixtures[283] : Number(req.cmd) === 63 ? workPage : Number(req.cmd) === 65 ? { id: req.id, cmd: req.cmd, milk_tea_interact: {} } : Number(req.cmd) === 67 && salesLog ? { id: req.id, cmd: req.cmd, milk_tea_get_sales_log: salesLog } : { id: req.id, cmd: req.cmd };
-    const response = hireList && Number(req.cmd) === 55 ? { ...fixture, milk_tea_get_shop: { shop: { ...fixture.milk_tea_get_shop.shop, slots: [] } } } : fixture;
+    const response = hireList && Number(req.cmd) === 55 ? (() => {
+      const shop = { ...fixture.milk_tea_get_shop.shop };
+      // omitSlots 模拟「店里还没有员工」：服务端可能根本不回 slots 字段
+      if (omitSlots) delete shop.slots; else shop.slots = [];
+      return { ...fixture, milk_tea_get_shop: { shop } };
+    })() : fixture;
     return { body: types.MilkTeaOperateReply.encode(types.MilkTeaOperateReply.fromObject(response)).finish() };
   } });return { service, calls, logs };
 }
@@ -244,6 +249,13 @@ test('automatic hire uses selected duration and candidate in the shared validate
     await service.operateMilkTea('hire', { autoSelect: true, durationId, talentId: 9001 });
     assert.deepEqual(calls.find(x => Number(x.cmd) === 57).milk_tea_hire.hires, [{ slot_index: 0, duration_id: durationId, target_gid: '222' }]);
   }
+});
+test('automatic hire tolerates a shop reply without a slots array', async () => {
+  // 对应上游 0bbd63fe：店里没有员工时服务端不回 slots，直接 .some() 会抛
+  // "Cannot read properties of undefined"。这里断言流程能走到真正的雇佣请求。
+  const { service, calls } = setup({ omitSlots: true, inventory: [{ id: 1041, count: 1000 }], hireList: { duration_id: 1, wage_total: 270, friends: [employee(222, 9001)] } });
+  await service.operateMilkTea('hire', { autoSelect: true, durationId: 1, talentId: 9001 });
+  assert.deepEqual(calls.find(x => Number(x.cmd) === 57).milk_tea_hire.hires, [{ slot_index: 0, duration_id: 1, target_gid: '222' }]);
 });
 test('automatic hire skips no candidates and blocks insufficient wages, time and failed hires', async () => {
   const empty = setup({ hireList: { wage_total: 40 } });

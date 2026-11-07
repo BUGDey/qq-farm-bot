@@ -46,6 +46,38 @@ test('automation lock is reentrant inside the same task chain', async () => {
   assert.equal(result, 'outer-inner-ok');
 });
 
+test('automation lock does not leak into timers scheduled inside a released task', async () => {
+  resetAutomationLocks();
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const events = [];
+  let timerDone;
+
+  await withAutomationLock('outer', async () => {
+    timerDone = new Promise((resolve) => {
+      // 这个定时器继承了 outer 的异步上下文，但触发时 outer 的锁已经释放
+      setTimeout(() => {
+        withAutomationLock('timer', async () => {
+          events.push('timer-start');
+          await delay(20);
+          events.push('timer-end');
+        }, { key: 'acc-leak' })
+          .catch(() => events.push('timer-busy'))
+          .finally(resolve);
+      }, 20);
+    });
+  }, { key: 'acc-leak' });
+
+  const holder = withAutomationLock('holder', async () => {
+    events.push('holder-start');
+    await delay(80);
+    events.push('holder-end');
+  }, { key: 'acc-leak' });
+
+  await Promise.all([timerDone, holder]);
+  assert.deepEqual(events, ['holder-start', 'holder-end', 'timer-start', 'timer-end'],
+    '释放后的定时器必须重新排队，不能当作重入直接执行');
+});
+
 test('automation lock rejects with busy error when waiting too long', async () => {
   resetAutomationLocks();
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
