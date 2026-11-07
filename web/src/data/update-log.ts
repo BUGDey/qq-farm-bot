@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.15.2'
+export const APP_VERSION = '2.15.3'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.15.3',
+    date: '2026-11-08',
+    items: [
+      '修复开启网关模式后 worker 启动即报「Maximum call stack size exceeded」：包装层调到了自己，改成先冻结直连实现再覆盖',
+      '顺带修掉 gateway 模式下轮询账号状态时的同类隐患，不再出现「Worker 超过 90 秒无响应」的连锁重启',
+      '新增 `gateway-wiring` 回归测试，锁住「包装必须调用覆盖前的实现」这条约束',
+    ],
+  },
   {
     version: '2.15.2',
     date: '2026-11-08',

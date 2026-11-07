@@ -1058,7 +1058,10 @@ module.exports = {
 if (process.env.FARM_NETWORK_MODE === 'gateway') {
     try {
         const gateway = require('../runtime/gateway-client');
-        Object.assign(module.exports, gateway.createNetwork(module.exports));
+        const { applyGatewayOverrides } = require('../runtime/gateway-wiring');
+        // 必须传快照：直接把 module.exports 交给 createNetwork 再覆盖回来，
+        // 包装函数里的 direct.sendMsgAsync 会指向自己，栈会直接爆掉。
+        applyGatewayOverrides(module.exports, gateway.createNetwork);
     } catch (error) {
         console.error('[网关] 网关客户端加载失败，退回直连模式:', error.message);
     }
