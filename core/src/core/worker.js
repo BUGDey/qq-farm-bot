@@ -1581,7 +1581,13 @@ onMasterMessage(async (msg) => {
             }
         }
     } catch (err) {
-        sendToMaster({ type: 'error', error: err.message });
+        // 只有 message 时像「Maximum call stack size exceeded」这种错误无从定位，
+        // 所以把调用栈一并带给主进程（截断，避免刷爆日志）。
+        sendToMaster({
+            type: 'error',
+            error: err && err.message ? err.message : String(err),
+            stack: err && err.stack ? String(err.stack).slice(0, 1500) : '',
+        });
     }
 });
 

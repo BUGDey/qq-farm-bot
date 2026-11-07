@@ -11,9 +11,17 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.15.3'
+export const APP_VERSION = '2.15.4'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.15.4',
+    date: '2026-11-08',
+    items: [
+      'Worker 报错现在带上调用栈（日志里多一行「报错栈」），「Maximum call stack size exceeded」这类错误不再无从定位',
+      '顺带确认网关模式的包装层已改为调用覆盖前的实现，worker 启动不再爆栈',
+    ],
+  },
   {
     version: '2.15.3',
     date: '2026-11-08',

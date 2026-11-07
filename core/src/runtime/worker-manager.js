@@ -651,6 +651,13 @@ function createWorkerManager(deps) {
                 accountId: String(accountId),
                 accountName: wrk.name
             });
+            // 带上 worker 侧调用栈，否则「爆栈」这类错误无法定位
+            if (msg.stack) {
+                log('错误', `账号[${  accountId  }]报错栈: ${String(msg.stack).split('\n').slice(0, 6).join(' | ')}`, {
+                    accountId: String(accountId),
+                    accountName: wrk.name
+                });
+            }
         } else if (msg.type === 'ws_error') {
             // WebSocket 错误
             const code = Number(msg.code) || 0;
