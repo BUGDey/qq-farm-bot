@@ -184,6 +184,59 @@ function napcatDisablePairs() {
   return { NAPCAT_LOGIN_ENABLED: 'false' };
 }
 
+/* --------------------- NapCat OneBot HTTP（好友探针用） --------------------- */
+
+const ONEBOT_SERVER_NAME = 'qq-farm-bot';
+const ONEBOT_PORT = 3000;
+
+/**
+ * 给 NapCat 打开本机 OneBot HTTP 服务，好友探针才能读到 QQ 侧好友列表。
+ *
+ * 只加一个我们自己命名的 server 条目，不动用户已有的配置；已存在就跳过，
+ * 用户手动关掉后下次启动会再补回来（我们只保证「有这个条目」）。
+ */
+function ensureOnebotHttp(shellDir, tokenFile = TOKEN_FILE) {
+  const configDir = path.join(shellDir, 'config');
+  if (!fs.existsSync(configDir)) return { ok: false, reason: 'config 目录不存在' };
+  const target = fs
+    .readdirSync(configDir)
+    .find((name) => /^onebot11_.*\.json$/.test(name));
+  if (!target) return { ok: false, reason: '还没生成 onebot11_<uin>.json（先扫码登录一次 NapCat）' };
+
+  const file = path.join(configDir, target);
+  let current = {};
+  try {
+    current = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return { ok: false, reason: `${target} 不是合法 JSON` };
+  }
+  current.network = current.network || {};
+  current.network.httpServers = Array.isArray(current.network.httpServers) ? current.network.httpServers : [];
+  if (current.network.httpServers.some((item) => item && item.name === ONEBOT_SERVER_NAME)) {
+    return { ok: true, changed: false, file, port: ONEBOT_PORT };
+  }
+
+  let token = '';
+  try {
+    token = fs.readFileSync(tokenFile, 'utf8').trim();
+  } catch {
+    token = '';
+  }
+  current.network.httpServers.push({
+    name: ONEBOT_SERVER_NAME,
+    enable: true,
+    host: '127.0.0.1',
+    port: ONEBOT_PORT,
+    enableCors: false,
+    enableWebsocket: false,
+    messagePostFormat: 'array',
+    token,
+    debug: false,
+  });
+  fs.writeFileSync(file, `${JSON.stringify(current, null, 2)}\n`, 'utf8');
+  return { ok: true, changed: true, file, port: ONEBOT_PORT };
+}
+
 function ensureEnvFile() {
   const envPath = path.join(ROOT, '.env');
   if (fileExists(envPath)) return envPath;
@@ -662,6 +715,12 @@ async function startNapcatMode() {
   setEnvValues(envPath, napcatEnvPairs(TOKEN_FILE, path.join(shellDir, 'config', 'plugins', PLUGIN_NAME, 'config.json')));
   log('[配置] 已写入 .env：NAPCAT_LOGIN_ENABLED=true，Token 已生成');
 
+  // 好友探针要靠本机 OneBot HTTP 才能读到 QQ 侧好友；没登录过 NapCat 时这一步会跳过
+  const onebot = ensureOnebotHttp(shellDir, TOKEN_FILE);
+  if (onebot.ok && onebot.changed) log(`[配置] 已开启 NapCat OneBot HTTP：127.0.0.1:${onebot.port}（好友探针用）`);
+  else if (onebot.ok) log(`[配置] NapCat OneBot HTTP 已在 127.0.0.1:${onebot.port}`);
+  else log(`[提示] 暂未开启 OneBot HTTP：${onebot.reason}`);
+
   buildFrontendIfNeeded();
 
   const runtimeRoot = findShellRoot();
@@ -893,6 +952,7 @@ module.exports = {
   installOpenauthPlugin,
   napcatEnvPairs,
   napcatDisablePairs,
+  ensureOnebotHttp,
   panelEnv,
   napcatBootEntry,
   shellDownloadUrls,

@@ -1,4 +1,6 @@
 const DOG_INFO_HTTP_TIMEOUT_MS = 11 * 60 * 1000;
+// 用 open_id 换 gid 可能要好几个来回（每批 100 个），给足 3 分钟
+const FRIEND_SYNC_HTTP_TIMEOUT_MS = 3 * 60 * 1000;
 
 function getAccountOrRespond(req, res, { getAccountIdFromRequest, canAccessAccount, includeMissingMessage = true }) {
   const accountId = getAccountIdFromRequest(req);
@@ -95,6 +97,34 @@ function registerAdminFriendRoutes({
       await provider.clearFriendsCache(accountId);
       res.json({ ok: true });
     } catch (error) {
+      sendProviderError(res, error);
+    }
+  });
+
+  // 用 open_id 列表换 gid：NapCat 只有 uin，游戏好友的锚点是 open_id，
+  // 所以把一串 open_id 交给游戏自己的 SyncAll，就能把 gid 补回来。
+  app.post("/api/friends/sync-open-ids", async (req, res) => {
+    req.setTimeout(FRIEND_SYNC_HTTP_TIMEOUT_MS);
+    res.setTimeout(FRIEND_SYNC_HTTP_TIMEOUT_MS);
+
+    const accountId = getAccountOrRespond(req, res, access);
+    if (!accountId) return;
+
+    const body = req.body || {};
+    const openIds = Array.isArray(body.openIds)
+      ? body.openIds
+      : String(body.openIds || body.text || "").split(/[\s,;]+/);
+
+    try {
+      const result = await provider.syncFriendsByOpenIds(accountId, openIds, {
+        remember: body.remember !== false,
+      });
+      res.json({ ok: true, data: result });
+    } catch (error) {
+      const message = String((error && error.message) || error);
+      if (message.includes("open_id")) {
+        return res.status(400).json({ ok: false, error: message, errorType: "INVALID_ARGUMENT" });
+      }
       sendProviderError(res, error);
     }
   });

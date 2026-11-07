@@ -1729,6 +1729,14 @@ async function startBot(config) {
         // NapCat only supplies Code/UIN. Bootstrap farm-side GIDs after the
         // authenticated game connection is ready, without requiring openid.
         if (loginType === 'qq_napcat') {
+            // NapCat 拿到 Code 之后 QQ 就该退出去了，否则会把用户电脑上的 QQ 顶下线。
+            // 开一个空闲守卫：没有扫码任务时，发现 NapCat 里还挂着 QQ 就自动注销。
+            try {
+                require('../services/napcat-login').startIdleGuard();
+                void require('../services/napcat-login').releaseIdleSession();
+            } catch {
+                // 守卫启动失败不影响正常跑图
+            }
             workerScheduler.setTimeoutTask('napcat_friend_gid_bootstrap', 2000, async () => {
                 if (!loginReady) return;
                 try {
@@ -1736,6 +1744,21 @@ async function startBot(config) {
                 } catch (err) {
                     log('好友', `NapCat 扫码后的好友GID补充失败: ${err.message}`, {
                         module: 'friend', event: 'QQ好友GID引导同步', result: 'error'
+                    });
+                }
+
+                // 用游戏回包里攒到的 open_id 自动补 GID（不需要人工粘贴）
+                try {
+                    const openIds = require('../services/friend-openids').getOpenIds();
+                    if (openIds.length > 0) {
+                        const result = await require('../services/friend-api').syncFriendsFromOpenIds(openIds);
+                        log('好友', `用 open_id 自动补 GID：提交 ${result.requested}，换回 ${result.returned}`, {
+                            module: 'friend', event: 'open_id自动补GID', result: 'ok'
+                        });
+                    }
+                } catch (err) {
+                    log('好友', `open_id 自动补 GID 失败: ${err.message}`, {
+                        module: 'friend', event: 'open_id自动补GID', result: 'error'
                     });
                 }
             });
@@ -1793,6 +1816,11 @@ async function stopBot() {
 
     stopUnifiedScheduler();
     stopMysteryShopAutoBuyTimer();
+    try {
+        require('../services/napcat-login').stopIdleGuard();
+    } catch {
+        // NapCat 模块没加载也不影响停止
+    }
 
     networkEvents.off('kickout', onKickout);
     networkEvents.off('reconnect_failed', onReconnectFailed);
@@ -1926,6 +1954,9 @@ async function handleApiCallInternal(msg) {
                 break;
             case 'getFriends':
                 result = await getFriendsList(args[0] === true);
+                break;
+            case 'syncFriendsByOpenIds':
+                result = await require('../services/friend-api').syncFriendsFromOpenIds(args[0] || [], args[1] || {});
                 break;
             case 'getDiamondBalance':
                 result = await require('../services/pay').getDiamondBalance();
@@ -2274,6 +2305,21 @@ async function handleApiCallInternal(msg) {
             case 'operateCollections': {
                 const { operateCollections } = require('../services/collections');
                 result = await operateCollections(args[0], args[1] || {});
+                break;
+            }
+            case 'getDecorations': {
+                const { getDecorationsSnapshot } = require('../services/decoration');
+                result = await getDecorationsSnapshot();
+                break;
+            }
+            case 'equipDecoration': {
+                const { equipDecoration } = require('../services/decoration');
+                result = await equipDecoration(args[0]);
+                break;
+            }
+            case 'getDecorationDiagnostics': {
+                const { getDecorationDiagnostics } = require('../services/decoration');
+                result = await getDecorationDiagnostics();
                 break;
             }
             case 'getCareerInfo': {

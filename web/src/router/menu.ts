@@ -47,6 +47,13 @@ export const menuRoutes: MenuItem[] = [
     component: () => import('@/views/Activity.vue'),
   },
   {
+    path: 'decorations',
+    name: 'decorations',
+    label: '装扮',
+    icon: 'i-carbon-paint-brush',
+    component: () => import('@/views/Decorations.vue'),
+  },
+  {
     path: 'shop',
     name: 'shop',
     label: '商城',

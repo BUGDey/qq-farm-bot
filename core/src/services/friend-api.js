@@ -256,6 +256,12 @@ function buildFriendReply(friends) {
 
 /** Sync known friend GIDs into config and notify master process. */
 function syncKnownFriendGidsFromFriends(friends) {
+  // 顺手把回包里带的 open_id 攒下来：以后可以用它们调 SyncAll 自动补 GID
+  try {
+    require('./friend-openids').harvestFromFriends(friends);
+  } catch {
+    // 收集失败不影响主流程
+  }
   const newGids = normalizeFriendGids(
     (Array.isArray(friends) ? friends : []).map(f => f && f.gid)
   );
@@ -907,7 +913,79 @@ function clearAllInvalidKnownFriendGidCooldown() {
   invalidKnownFriendGidCooldownUntil.clear();
 }
 
-// ===== Exports =====
+// ===== 好友探针（诊断用，只读） =====
+
+/**
+ * 逐条探测好友数据来源，把每一路的真实结果原样报给面板。
+ *
+ * 只读：不写已知 GID、不移除失效好友、不改缓存。
+ * 目的是回答「这个号到底有没有好友」以及「哪一路接口能拿到」，
+ * 所以失败也要把错误码带回去，而不是折叠成一句「获取失败」。
+ */
+async function syncFriendsFromOpenIds(openIds, options = {}) {
+  const Req = types.SyncAllRequest || types.SyncAllFriendsRequest;
+  const Rep = types.SyncAllReply || types.SyncAllFriendsReply;
+  if (!Req || !Rep) throw new Error('SyncAll 接口类型未加载');
+
+  const seen = new Set();
+  const ids = [];
+  for (const raw of Array.isArray(openIds) ? openIds : []) {
+    const value = String(raw || '').trim();
+    if (!/^[0-9a-fA-F]{8,64}$/.test(value)) continue;
+    const key = value.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    ids.push(key);
+  }
+  if (ids.length === 0) {
+    throw new Error('没有可用的 open_id（应为 32 位十六进制字符串）');
+  }
+
+  const batchSize = Math.max(1, Math.min(200, toNum(options.batchSize) || 100));
+  const friends = new Map();
+  const errors = [];
+  let batches = 0;
+
+  for (let cursor = 0; cursor < ids.length; cursor += batchSize) {
+    const slice = ids.slice(cursor, cursor + batchSize);
+    batches += 1;
+    try {
+      const payload = Req.encode(Req.create({ open_ids: slice })).finish();
+      const { body } = await sendMsgAsync('gamepb.friendpb.FriendService', 'SyncAll', payload);
+      const reply = Rep.decode(body);
+      for (const friend of extractReplyFriends(reply)) {
+        const gid = toNum(friend.gid);
+        if (!gid) continue;
+        friends.set(gid, {
+          gid,
+          openId: friend.open_id || friend.openId || '',
+          name: friend.name || '',
+          avatarUrl: friend.avatar_url || friend.avatarUrl || '',
+          level: toNum(friend.level) || 0,
+        });
+      }
+    } catch (err) {
+      errors.push(`第 ${batches} 批失败：${(err && err.message) || err}`);
+    }
+  }
+
+  const list = [...friends.values()].sort((a, b) => a.gid - b.gid);
+  if (options.remember !== false && list.length > 0) {
+    try {
+      syncKnownFriendGidsFromFriends(list);
+    } catch (err) {
+      errors.push(`写入已知 GID 失败：${(err && err.message) || err}`);
+    }
+  }
+
+  return {
+    requested: ids.length,
+    batches,
+    returned: list.length,
+    matched: list,
+    errors,
+  };
+}
 module.exports = {
   DOG_NAMES,
   getDogName,
@@ -928,6 +1006,7 @@ module.exports = {
   parseTimeToMinutes,
   inFriendQuietHours,
   getAllFriends,
+  syncFriendsFromOpenIds,
   bootstrapQqFriendGids,
   getApplications,
   acceptFriends,

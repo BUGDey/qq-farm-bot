@@ -1,4 +1,5 @@
 const { registerAdminDecorationShopRoutes } = require("./admin-decoration-shop-routes");
+  const { registerAdminDecorationRoutes } = require("./admin-decoration-routes");
   const { registerAdminMallRoutes } = require("./admin-mall-routes");
   const { registerAdminMysteryShopRoutes } = require("./admin-mystery-shop-routes");
   const { registerAdminPetShopRoutes } = require("./admin-pet-shop-routes");
@@ -13,6 +14,7 @@ function registerAdminShopRoutes(context) {
   registerAdminSeedShopRoutes(context);
   registerAdminShopDebugRoutes(context);
   registerAdminDecorationShopRoutes(context);
+  registerAdminDecorationRoutes(context);
   registerAdminShopPurchaseRoutes(context);
 }
 

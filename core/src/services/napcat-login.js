@@ -202,6 +202,48 @@ async function resetNapcat() {
   throw new Error('NapCat 重启后仍未确认退出登录');
 }
 
+/**
+ * 空闲守卫：NapCat 只在「扫码取 Code」这段时间需要 QQ 在线，
+ * 用完必须退出来，否则同一个 QQ 号会把用户电脑上的 QQ 顶下线。
+ *
+ * 没有进行中的登录任务、但 NapCat 里还挂着 QQ 会话时，就主动注销；
+ * 刚扫码进任务的过程中不会误伤（tasks.size > 0 直接跳过）。
+ */
+const IDLE_GUARD_INTERVAL_MS = 30 * 1000;
+let idleGuardTimer = null;
+let idleGuardBusy = false;
+
+async function releaseIdleSession() {
+  if (idleGuardBusy) return false;
+  if (tasks.size > 0) return false;
+  idleGuardBusy = true;
+  try {
+    const state = await webUi('/QQLogin/CheckLoginStatus').catch(() => null);
+    if (!state || !hasQqSession(state)) return false;
+    await logout();
+    console.log('[NapCat] 已自动退出 QQ 登录，把号还给本机 QQ');
+    return true;
+  } catch (error) {
+    // 退不掉也不能把守卫打死，下一轮再试
+    return false;
+  } finally {
+    idleGuardBusy = false;
+  }
+}
+
+function startIdleGuard() {
+  if (idleGuardTimer) return;
+  // 启动后先等一会儿，避免和扫码流程抢
+  setTimeout(() => { void releaseIdleSession(); }, 5000).unref?.();
+  idleGuardTimer = setInterval(() => { void releaseIdleSession(); }, IDLE_GUARD_INTERVAL_MS);
+  idleGuardTimer.unref?.();
+}
+
+function stopIdleGuard() {
+  if (idleGuardTimer) clearInterval(idleGuardTimer);
+  idleGuardTimer = null;
+}
+
 async function clearStaleSession() {
   try {
     const state = await webUi('/QQLogin/CheckLoginStatus');
@@ -298,6 +340,7 @@ async function code(id, owner) {
       const result = await pluginRequest('/miniapp', { method: 'POST', body: { appId: APP_ID, interactive: true }, timeout: TTL_MS });
       const authCode = String(result.code || (result.operation === 'loginWithAppId' ? result.result : '') || '').trim();
       if (!result.ok || !authCode) throw new Error(result.error || 'NapCat 未返回小程序授权 Code');
+
       const identity = {
         uin: String(result.uin || task.user?.uin || '').trim(),
         nickname: String(result.nickname || task.user?.nickname || '').trim(),
@@ -327,4 +370,18 @@ async function cancel(id, owner) {
   await release(task, task.status === 'confirmed' ? 'logout' : task.status === 'scanned' ? 'restart' : '');
 }
 
-module.exports = { APP_ID, isConfigured, launchEnabled, capability, pluginToken, create, status, code, cancel };
+module.exports = {
+  APP_ID,
+  isConfigured,
+  launchEnabled,
+  capability,
+  pluginToken,
+  create,
+  status,
+  code,
+  cancel,
+  logout,
+  releaseIdleSession,
+  startIdleGuard,
+  stopIdleGuard,
+};

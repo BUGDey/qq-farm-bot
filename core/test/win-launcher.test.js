@@ -205,3 +205,25 @@ test('passwordProblem 与后端口令策略一致', () => {
   assert.match(launcher.passwordProblem('abc'), /至少 6 位/);
   assert.match(launcher.passwordProblem('abcdef'), /至少两种/);
 });
+
+test('ensureOnebotHttp 打开 OneBot HTTP 并保持幂等', () => {
+  const dir = tempDir('qqfarm-onebot-');
+  const configDir = path.join(dir, 'config');
+  fs.mkdirSync(configDir, { recursive: true });
+  const configFile = path.join(configDir, 'onebot11_123456.json');
+  fs.writeFileSync(configFile, JSON.stringify({ network: { httpServers: [] } }, null, 2));
+  const tokenFile = path.join(dir, 'token');
+  fs.writeFileSync(tokenFile, 'abc123\n');
+
+  const first = launcher.ensureOnebotHttp(dir, tokenFile);
+  assert.strictEqual(first.ok, true);
+  assert.strictEqual(first.changed, true);
+  const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+  assert.strictEqual(config.network.httpServers.length, 1);
+  assert.strictEqual(config.network.httpServers[0].port, 3000);
+  assert.strictEqual(config.network.httpServers[0].token, 'abc123');
+
+  const second = launcher.ensureOnebotHttp(dir, tokenFile);
+  assert.strictEqual(second.changed, false);
+  assert.strictEqual(JSON.parse(fs.readFileSync(configFile, 'utf8')).network.httpServers.length, 1);
+});

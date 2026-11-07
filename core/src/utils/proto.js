@@ -52,6 +52,8 @@ async function loadProto() {
         getResourcePath('proto', 'careerpb.proto'),
         getResourcePath('proto', 'paypb.proto'),
         getResourcePath('proto', 'collectionpb.proto'),
+        getResourcePath('proto', 'skinpb.proto'),
+        getResourcePath('proto', 'avatarframepb.proto'),
     ], { keepCase: true });
 
     for (const name of ['MilkTeaOperateRequest', 'MilkTeaOperateReply', 'MilkTeaGetGroupReply']) {
@@ -70,6 +72,34 @@ async function loadProto() {
       'SwitchSceneDisplayReply',
     ]) {
       types[name] = root.lookupType(`gamepb.collectionpb.${name}`);
+    }
+
+    // 装扮（皮肤）与头像框
+    for (const name of [
+        'SkinsOwnedRequest',
+        'SkinsOwnedReply',
+        'SkinsEquippedRequest',
+        'SkinsEquippedReply',
+        'EquipRequest',
+        'EquipReply',
+        'MarkAsViewedRequest',
+        'MarkAsViewedReply',
+        'SkinChangeNotify',
+    ]) {
+        types[name] = root.lookupType(`gamepb.skinpb.${name}`);
+    }
+    types.SkinEquipRequest = types.EquipRequest;
+    types.SkinEquipReply = types.EquipReply;
+
+    for (const name of ['AvatarFramesOwnedRequest', 'AvatarFramesOwnedReply', 'AvatarFrameRedDotNotify']) {
+  types.UpdateEquipRequest = root.lookupType("gamepb.avatarframepb.UpdateEquipRequest");
+  types.UpdateEquipAltRequest = root.lookupType("gamepb.avatarframepb.UpdateEquipAltRequest");
+  types.UpdateEquipReply = root.lookupType("gamepb.avatarframepb.UpdateEquipReply");
+  types.AvatarFrameEquipRequest = root.lookupType("gamepb.avatarframepb.EquipRequest");
+  types.AvatarFrameEquipReply = root.lookupType("gamepb.avatarframepb.EquipReply");
+  types.AvatarFrameUnequipRequest = root.lookupType("gamepb.avatarframepb.UnequipRequest");
+  types.AvatarFrameUnequipReply = root.lookupType("gamepb.avatarframepb.UnequipReply");
+        types[name] = root.lookupType(`gamepb.avatarframepb.${name}`);
     }
 
     // 网关

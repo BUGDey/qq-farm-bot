@@ -11,9 +11,21 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.11'
+export const APP_VERSION = '2.14.12'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.14.12',
+    date: '2026-11-07',
+    items: [
+      '新增「装扮」页（更多 → 装扮）：小屋、木牌、栅栏、围栏、盆栽、狗屋、仓库、街道、头像框、铭牌共 119 件，缩略图直接读本地缓存',
+      '已解锁状态改为读游戏 SkinService（已拥有 / 当前穿戴），不再只看背包，修掉「解锁了仍显示未拥有」',
+      '头像框与铭牌替换改用 avatarframepb 的 Equip（只带 frame_id），修掉 1039004「头像框未拥有」与 1036002「皮肤当前不可用」',
+      '好友新增「用 open_id 换 GID」：贴入 open_id 列表即可补全 GID，NapCat 登录后也会自动用攒到的 open_id 补齐',
+      'NapCat 取码后自动退出 QQ 登录，把号还给本机 QQ，不再顶掉常用登录',
+      '同步官方 1.16.3.8 数据与双端 TSDK wasm（客户端版本 1.16.3.8_20261028）',
+    ],
+  },
   {
     version: '2.14.11',
     date: '2026-11-07',

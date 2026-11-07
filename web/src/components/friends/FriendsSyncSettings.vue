@@ -11,6 +11,7 @@ defineEmits<{
   (e: 'refreshSettings'): void
   (e: 'saveSettings'): void
   (e: 'openBatchAdd'): void
+  (e: 'syncOpenIds'): void
 }>()
 
 const knownFriendGidSyncCooldownSec = defineModel<number>('knownFriendGidSyncCooldownSec', { required: true })
@@ -38,6 +39,13 @@ const friendsListCacheTtlSec = defineModel<number>('friendsListCacheTtlSec', { r
         </p>
       </div>
       <div class="flex shrink-0 gap-2">
+        <button
+          class="rounded bg-teal-100 px-3 py-1.5 text-sm text-teal-700 transition dark:bg-teal-900/30 hover:bg-teal-200 dark:text-teal-300 dark:hover:bg-teal-900/50"
+          title="NapCat 只能给 QQ 号，游戏好友靠 open_id 认人；把 open_id 交给游戏自己的 SyncAll 就能换回 GID"
+          @click="$emit('syncOpenIds')"
+        >
+          用 open_id 换 GID
+        </button>
         <button
           class="rounded bg-amber-100 px-3 py-1.5 text-sm text-amber-700 transition dark:bg-amber-900/30 hover:bg-amber-200 dark:text-amber-400 disabled:opacity-50 dark:hover:bg-amber-900/50"
           :disabled="loading"

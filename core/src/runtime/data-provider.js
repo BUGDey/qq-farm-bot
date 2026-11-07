@@ -92,6 +92,24 @@ function createDataProvider(deps) {
         return callWorkerApi(accountId, 'operateCollections', action, input || {});
     }
 
+    /** 装扮清单（小屋 / 木牌 / 栅栏 / 围栏 / 仓库 / 街道 / 头像框） */
+    function getDecorations(ref) {
+        const accountId = resolveAccountId(ref);
+        return callWorkerReadOnce(`decorations:${String(accountId || '')}`, accountId, 'getDecorations');
+    }
+
+    /** 装备一件已拥有的装扮 */
+    function equipDecoration(ref, itemId) {
+        const accountId = resolveAccountId(ref);
+        return callWorkerApi(accountId, 'equipDecoration', itemId);
+    }
+
+    /** 装扮诊断：三路来源的原始 ID（只读） */
+    function getDecorationDiagnostics(ref) {
+        const accountId = resolveAccountId(ref);
+        return callWorkerApi(accountId, 'getDecorationDiagnostics');
+    }
+
     /** 向全部 worker 广播消息（活动插件宿主装载/卸载用） */
     function sendToWorkers(message) {
         for (const worker of Object.values(workers || {})) {
@@ -219,6 +237,7 @@ function createDataProvider(deps) {
         getFriends: (ref, force = false) => callWorkerApi(resolveAccountId(ref), 'getFriends', force,
             force ? FRIEND_TIMEOUT : undefined),
         clearFriendsCache: (ref) => callWorkerApi(resolveAccountId(ref), 'clearFriendsCache'),
+        syncFriendsByOpenIds: (ref, openIds, options) => callWorkerApi(resolveAccountId(ref), 'syncFriendsByOpenIds', openIds, options || {}, { _timeoutMs: 180000 }),
         getInteractRecords: (ref) => callWorkerApi(resolveAccountId(ref), 'getInteractRecords'),
         getFriendLands: (ref, gid) => callWorkerApi(resolveAccountId(ref), 'getFriendLands', gid),
         doFriendOp: (ref, gid, op) => callWorkerApi(resolveAccountId(ref), 'doFriendOp', gid, op),
@@ -290,6 +309,11 @@ function createDataProvider(deps) {
         // ========== Collections（蓝晶藏品） ==========
         getCollectionsSnapshot,
         operateCollections,
+
+        // ========== Decoration（小屋 / 木牌 / 栅栏等装扮） ==========
+        getDecorations,
+        equipDecoration,
+        getDecorationDiagnostics,
 
         // ========== Career ==========
         getCareerInfo: (ref, gid) => callWorkerApi(resolveAccountId(ref), 'getCareerInfo', gid),

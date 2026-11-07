@@ -163,6 +163,8 @@ async function pollWxLogin(refreshExpired = true) {
           wxid: result.wxid,
           avatar: result.avatar,
           wxSessionId: wxLoginStore.uuid,
+          // 扫码登录完成后直接启动，不用回列表手动点「开始」
+          startAfterSave: true,
         })
       }
     }

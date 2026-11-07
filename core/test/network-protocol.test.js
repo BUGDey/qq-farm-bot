@@ -27,14 +27,16 @@ const OFFICIAL_HEARTBEAT_BODY = '08f9d6ffc5041211312e31352e302e325f3230323631303
 test.before(async () => loadProto());
 
 test('default client protocol is upgraded without replacing custom versions', () => {
-  assert.equal(DEFAULT_CLIENT_VERSION, '1.16.1.6_20261028');
+  assert.equal(DEFAULT_CLIENT_VERSION, '1.16.3.8_20261028');
   assert.equal(resolveClientVersion('1.13.0.5_20260723'), DEFAULT_CLIENT_VERSION);
   assert.equal(resolveClientVersion('1.13.2.9_20260723'), DEFAULT_CLIENT_VERSION);
-  // 低于基线日期的版本统一回落到基线，更新的版本保留
+  // 低于基线（版本或日期）的统一回落到基线，更新的版本保留
   assert.equal(resolveClientVersion('1.15.0.1_20261001'), DEFAULT_CLIENT_VERSION);
   assert.equal(resolveClientVersion('1.15.0.3_20261001'), DEFAULT_CLIENT_VERSION);
   assert.equal(resolveClientVersion('1.15.1.0_20261015'), DEFAULT_CLIENT_VERSION);
-  assert.equal(resolveClientVersion('1.16.1.8_20261028'), '1.16.1.8_20261028');
+  assert.equal(resolveClientVersion('1.16.1.8_20261028'), DEFAULT_CLIENT_VERSION);
+  assert.equal(resolveClientVersion('1.16.4.0_20261028'), '1.16.4.0_20261028');
+  assert.equal(resolveClientVersion('1.16.3.8_20261101'), '1.16.3.8_20261101');
   assert.equal(resolveClientVersion('custom-build'), 'custom-build');
 });
 

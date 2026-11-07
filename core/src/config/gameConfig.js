@@ -100,6 +100,22 @@ let mutantEffectConfig = null;
 const mutantEffectMap = new Map();       // mutantId → mutantEffect
 const mutantEffectByIconMap = new Map(); // icon → mutantEffect
 
+/**
+ * 变异图标短名。
+ * 1.16.3 起官方把 icon 从短名（lightning）改成整条贴图路径
+ * （gui/texture/mutant/icon/lightning/spriteFrame），这里统一还原成短名，
+ * 调用方与旧配置保持一致。
+ */
+function mutantIconKey(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const parts = raw.split('/').filter(Boolean);
+    if (parts.length <= 1) return raw.replace(/\.png$/i, '');
+    const index = parts.findIndex((part) => part.toLowerCase() === 'icon');
+    const slug = index >= 0 && parts[index + 1] ? parts[index + 1] : parts[parts.length - 2];
+    return String(slug || '').replace(/\.png$/i, '');
+}
+
 /** 加载所有游戏配置文件 */
 function loadConfigs() {
     const basePath = getResourcePath('gameConfig');
@@ -395,7 +411,15 @@ function loadConfigs() {
                 const mutantId = Number(mutant && mutant.id) || 0;
                 if (mutantId <= 0) continue;
                 mutantEffectMap.set(mutantId, mutant);
-                if (mutant.icon) mutantEffectByIconMap.set(mutant.icon, mutant);
+                // 1.16.3 起 icon 变成完整贴图路径，统一还原成短名；原始值留在 icon_res。
+                const iconKey = mutantIconKey(mutant.icon);
+                if (iconKey) {
+                    if (mutant.icon !== iconKey) {
+                        mutant.icon_res = mutant.icon;
+                        mutant.icon = iconKey;
+                    }
+                    mutantEffectByIconMap.set(iconKey, mutant);
+                }
             }
             console.warn(`[配置] 已加载变异效果配置 (${  mutantEffectConfig.length  } 种)`);
         }
