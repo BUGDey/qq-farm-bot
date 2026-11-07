@@ -702,6 +702,7 @@ async function getDecorationDiagnostics() {
 module.exports = {
   CATEGORY_LABELS,
   EMPTY_SLOT_IDS,
+  PLACEHOLDER_SLOT_IDS,
   loadCatalog,
   isDecorationRow,
   categoryFromIconRes,

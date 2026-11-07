@@ -1,5 +1,6 @@
 const { createScheduler } = require('../services/scheduler');
 const { resourcePolicy, createResourceMonitor } = require('./resource-policy');
+const { createGatewayManager } = require('./gateway-manager');
 
 /**
  * 创建 Worker 管理器
@@ -36,6 +37,8 @@ function createWorkerManager(deps) {
     let pluginHostRef = deps.pluginHost || null;
 
     const scheduler = createScheduler('worker_manager');
+    // 连接网关：开启后连接由独立子进程持有，重启 worker 不会掉线、不用重新抓码
+    const gatewayManager = createGatewayManager({ fork, log: (scope, message) => log('系统', `[${scope}] ${message}`) });
     const resourceMonitor = createResourceMonitor();
     const restartHistory = new Map();
     const credentialRefreshes = new Map();
@@ -274,11 +277,18 @@ function createWorkerManager(deps) {
                 }
             });
         }
+        const gatewayEnv = gatewayManager.isGatewayMode()
+            ? {
+                FARM_NETWORK_MODE: 'gateway',
+                FARM_GATEWAY_SOCK: gatewayManager.getGatewaySock(account.id),
+            }
+            : {};
         return fork(workerScriptPath, [], {
             stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
             env: {
                 ...processRef.env,
-                FARM_ACCOUNT_ID: String(account.id || '')
+                FARM_ACCOUNT_ID: String(account.id || ''),
+                ...gatewayEnv,
             }
         });
     }
@@ -287,7 +297,8 @@ function createWorkerManager(deps) {
      * 根据运行模式创建 Worker
      */
     function createWorker(account) {
-        if (threadMode) return createThreadWorker(account);
+        // 网关模式每个账号要独立进程（自己的 socket 与 env），thread 满足不了
+        if (threadMode && !gatewayManager.isGatewayMode()) return createThreadWorker(account);
         return createForkWorker(account);
     }
 
@@ -295,6 +306,23 @@ function createWorkerManager(deps) {
      * 启动账号 Worker
      */
     function startWorker(account) {
+        if (!account || !account.id) return false;
+        if (workers[account.id]) return false;
+        if (gatewayManager.isGatewayMode()) {
+            // 先把连接网关拉起来（已存在则直接复用），再起 worker
+            return gatewayManager.ensureGateway(account.id)
+                .then(() => startWorkerNow(account))
+                .catch((error) => {
+                    log('错误', `账号 ${account.name} 的连接网关启动失败: ${error.message}`, {
+                        accountId: String(account.id), accountName: account.name
+                    });
+                    return false;
+                });
+        }
+        return startWorkerNow(account);
+    }
+
+    function startWorkerNow(account) {
         if (!account || !account.id) return false;
         if (workers[account.id]) return false;
 
@@ -433,6 +461,9 @@ function createWorkerManager(deps) {
 
         const targetProc = wrk.process;
         wrk.stopping = true;
+
+        // 用户显式停止账号：连接网关也一起收掉（重启 worker 不会杀网关，只有这里才杀）
+        try { gatewayManager.killGateway(accountId, '停止账号'); } catch { }
 
         // 发送停止指令（fork 模式下通道已关闭时 send 会同步抛错，走强制杀死兜底）
         try {

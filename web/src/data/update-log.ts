@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.14.12'
+export const APP_VERSION = '2.15.0'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.15.0',
+    date: '2026-11-08',
+    items: [
+      '新增「连接网关」模式（`FARM_NETWORK_MODE=gateway`）：连接与业务拆成两个进程，改代码重启 worker 不再掉线、不用重新扫码',
+      '网络假死分两级：连续 2 次请求无回音先让路（停业务只留心跳），累计 7 次才判死重连，退避 30s→180s 封顶',
+      '新增 `tools/asset-fetcher/`：按 bundle 清单从官方 CDN 直接取图，附 `audit-image-refs.py` 与 `audit-item-images.js` 两个审计脚本（`--check` 可进 CI）',
+    ],
+  },
   {
     version: '2.14.12',
     date: '2026-11-07',

@@ -28,14 +28,11 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.14.12
+## 🎉 最新更新 · v2.15.0
 
-- 新增「装扮」页（更多 → 装扮）：小屋、木牌、栅栏、围栏、盆栽、狗屋、仓库、街道、头像框、铭牌共 119 件，缩略图直接读本地缓存
-- 已解锁状态改为读游戏 SkinService（已拥有 / 当前穿戴），不再只看背包，修掉「解锁了仍显示未拥有」
-- 头像框与铭牌替换改用 avatarframepb 的 Equip（只带 frame_id），修掉 1039004「头像框未拥有」与 1036002「皮肤当前不可用」
-- 好友新增「用 open_id 换 GID」：贴入 open_id 列表即可补全 GID，NapCat 登录后也会自动用攒到的 open_id 补齐
-- NapCat 取码后自动退出 QQ 登录，把号还给本机 QQ，不再顶掉常用登录
-- 同步官方 1.16.3.8 数据与双端 TSDK wasm（客户端版本 1.16.3.8_20261028）
+- 新增「连接网关」模式（`FARM_NETWORK_MODE=gateway`）：连接与业务拆成两个进程，改代码重启 worker 不再掉线、不用重新扫码
+- 网络假死分两级：连续 2 次请求无回音先让路（停业务只留心跳），累计 7 次才判死重连，退避 30s→180s 封顶
+- 新增 `tools/asset-fetcher/`：按 bundle 清单从官方 CDN 直接取图，附 `audit-image-refs.py` 与 `audit-item-images.js` 两个审计脚本（`--check` 可进 CI）
 
 ## 💬 微信扫码登录
 
@@ -424,6 +421,22 @@ node tools/audit-capture-compatibility.js <capture-dir>
 内部直接委派给 `core/scripts/inspect-protocol-capture.js`。
 更多用法见 [工具脚本](docs/tools.md)。
 
+## 🔌 连接网关（可选）
+
+把「握连接」和「跑业务」拆成两个进程后，**改代码重启 worker 不会掉线，也不用重新扫码**——
+连接和凭证都留在网关进程里。
+
+```bash
+# .env 或启动脚本里加一行即可开启，默认关闭
+FARM_NETWORK_MODE=gateway
+```
+
+顺手还带了两级「假死」处理：连续 2 次请求没回音就先**让路**（停业务、只留心跳），
+累计到 7 次才判死重连——判定故意做得慢，因为大部分「卡死」其实是连接还活着，
+急着重连只会白扔一个凭证。
+
+细节见 [连接网关：连接与业务分离](docs/gateway-process.md)。
+
 ## 🛠️ 常用命令
 
 | 命令 | 用途 |
@@ -456,6 +469,7 @@ qq-farm-bot/
 专题说明统一收录在 [`docs/`](docs/)：
 
 - [工具脚本](docs/tools.md)
+- [连接网关：连接与业务分离](docs/gateway-process.md)
 - [网络并发模型](docs/network-concurrency.md)
 - [TSDK 运行约定](docs/tsdk-runtime.md)
 - [配置存储、迁移与缓存](docs/config-storage.md)

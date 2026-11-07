@@ -351,6 +351,12 @@ async function sendMsgAsync(serviceName, methodName, bodyBytes, timeout = 20000,
     }
 }
 
+// ============ 原始帧钩子（网关进程用） ============
+// 连接网关进程持有 WebSocket，但业务解码与分发必须留在 worker。
+// 网关把每一帧原样转给 worker，worker 侧调用 ingestFrame() 走本地 handleMessage。
+let rawMessageHook = null;
+function setRawMessageHook(fn) { rawMessageHook = typeof fn === 'function' ? fn : null; }
+
 // ============ 消息处理 ============
 function handleMessage(data) {
     try {
@@ -368,6 +374,8 @@ function handleMessage(data) {
 
         // Notify
         if (msgType === 3) {
+            // 网关进程只负责连接：业务通知交给 worker 解码，这里不复算一遍
+            if (process.env.FARM_NETWORK_ROLE === 'gateway') return;
             handleNotify(msg);
             return;
         }
@@ -950,7 +958,12 @@ function connect(code, onLoginSuccess) {
     });
 
     socket.on('message', (data) => {
-        handleMessage(Buffer.isBuffer(data) ? data : Buffer.from(data));
+        const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+        // 网关角色：先把原始帧抛给钩子（转发给 worker），再本地处理（解析自己发的请求回包）
+        if (rawMessageHook) {
+            try { rawMessageHook(buf); } catch { /* 转发失败不影响本地处理 */ }
+        }
+        handleMessage(buf);
     });
 
     socket.on('close', (code, _reason) => {
@@ -1009,7 +1022,13 @@ function getAceStatus() {
     return tsdkRuntime ? { running: false, runtime: tsdkRuntime.getStatus() } : null;
 }
 
+function ingestFrame(buf) {
+    handleMessage(Buffer.isBuffer(buf) ? buf : Buffer.from(buf || ''));
+}
+
 module.exports = {
+    setRawMessageHook,
+    ingestFrame,
     connect, reconnect, cleanup, stopNetwork, getWs, isConnected,
     sendMsg, sendMsgAsync,
     getUserState,
@@ -1030,3 +1049,15 @@ module.exports = {
     networkEvents,
     handleMessage,
 };
+
+// ============ 网关模式切换 ============
+// FARM_NETWORK_MODE=gateway 时，本进程不再自己握 WebSocket，所有连接动作
+// 交给独立的连接网关进程；这样重启 worker 不会掉线，不用重新抓码。
+if (process.env.FARM_NETWORK_MODE === 'gateway') {
+    try {
+        const gateway = require('../runtime/gateway-client');
+        Object.assign(module.exports, gateway.createNetwork(module.exports));
+    } catch (error) {
+        console.error('[网关] 网关客户端加载失败，退回直连模式:', error.message);
+    }
+}
