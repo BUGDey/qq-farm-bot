@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import AdminSystemPanel from '@/components/admin/AdminSystemPanel.vue'
 import DeviceProtocolCard from '@/components/settings/DeviceProtocolCard.vue'
+import NetworkModeCard from '@/components/settings/NetworkModeCard.vue'
 import YYBConfigCard from '@/components/settings/YYBConfigCard.vue'
 import { useUserSettings } from '@/composables/settings/useUserSettings'
 import { useAdminSystemConfig } from '@/composables/useAdminSystemConfig'
@@ -63,6 +64,8 @@ onMounted(() => {
 
 <template>
   <div class="space-y-4">
+    <NetworkModeCard />
+
     <YYBConfigCard
       v-model:config="yybConfig"
       :loading="yybConfigLoading"

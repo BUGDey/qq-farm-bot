@@ -198,6 +198,62 @@ function registerAdminSystemRoutes({
     },
   );
 
+  // 连接网关开关（全局设置）：写入配置后需要重启面板才生效。
+  // 返回值里带上 effective，方便界面直接告诉用户「现在实际用的是哪种模式」。
+  const networkModePayload = () => {
+    const envMode = String(process.env.FARM_NETWORK_MODE || "").trim().toLowerCase();
+    const saved = typeof store.getNetworkMode === "function" ? store.getNetworkMode() : "direct";
+    return {
+      saved,
+      envOverride: envMode || "",
+      effective: envMode ? (envMode === "gateway" ? "gateway" : "direct") : saved,
+      restartRequired: false,
+    };
+  };
+
+  app.get(
+    "/api/admin/network-mode",
+    requireAdminToken,
+    requireAdminRole,
+    (req, res) => {
+      try {
+        res.json({ ok: true, data: networkModePayload() });
+      } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
+      }
+    },
+  );
+
+  app.post(
+    "/api/admin/network-mode",
+    requireAdminToken,
+    requireAdminRole,
+    (req, res) => {
+      try {
+        if (!requireDangerConfirmation(req, res, "UPDATE_SYSTEM_CONFIG")) return;
+        const mode = String((req.body || {}).mode || "").trim().toLowerCase();
+        if (mode !== "direct" && mode !== "gateway") {
+          return res.status(400).json({ ok: false, error: "模式只能是 direct 或 gateway" });
+        }
+        if (typeof store.setNetworkMode !== "function") {
+          return res.status(400).json({ ok: false, error: "当前版本不支持配置连接模式" });
+        }
+        const saved = store.setNetworkMode(mode);
+        logger.warn("更新连接模式", {
+          admin: req.currentUser?.username || "",
+          mode: saved,
+          confirmation: "UPDATE_SYSTEM_CONFIG",
+        });
+        res.json({
+          ok: true,
+          data: { ...networkModePayload(), saved, restartRequired: true },
+        });
+      } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
+      }
+    },
+  );
+
   app.get("/api/public/login-links", (req, res) => {
     try {
       res.json({ ok: true, data: store.getLoginLinks() });

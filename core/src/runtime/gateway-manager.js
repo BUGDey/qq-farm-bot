@@ -14,8 +14,17 @@ const os = require('os');
 const GATEWAY_SCRIPT = path.join(__dirname, 'gateway-process.js');
 const READY_TIMEOUT_MS = Number(process.env.FARM_GATEWAY_READY_TIMEOUT_MS) || 15000;
 
+// 网关模式判定：环境变量优先（便于运维临时覆盖），否则读「全局设置」里保存的开关。
+// 该值是进程级开关，需要重启面板才生效——调用方在启动账号时取一次即可。
 function isGatewayMode(env = process.env) {
-    return String(env.FARM_NETWORK_MODE || '').toLowerCase() === 'gateway';
+    const fromEnv = String(env.FARM_NETWORK_MODE || '').trim().toLowerCase();
+    if (fromEnv) return fromEnv === 'gateway';
+    try {
+        const store = require('../models/store');
+        return typeof store.getNetworkMode === 'function' && store.getNetworkMode() === 'gateway';
+    } catch (error) {
+        return false;
+    }
 }
 
 function socketPathFor(accountId) {

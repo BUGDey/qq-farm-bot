@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.15.0'
+export const APP_VERSION = '2.15.1'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.15.1',
+    date: '2026-11-08',
+    items: [
+      '管理后台「全局设置」新增「连接网关」开关：开启后自动写入配置，重启面板生效，无需改环境变量',
+      '界面直接显示当前实际生效的模式，并提示环境变量 `FARM_NETWORK_MODE` 会覆盖这里的设置',
+      '保存后立刻提示「重启面板后生效」；非法取值一律回落直连，不会把账号卡在错误模式里',
+    ],
+  },
   {
     version: '2.15.0',
     date: '2026-11-08',

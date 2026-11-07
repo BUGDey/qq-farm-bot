@@ -704,6 +704,12 @@ function normalizeFertilizerLandTypes(rawTypes, fallback = DEFAULT_FERTILIZER_LA
     return result;
 }
 
+// 连接网关模式：只有 'direct' 与 'gateway' 两个合法值，其他一律当直连。
+function normalizeNetworkMode(value) {
+    const mode = String(value || '').trim().toLowerCase();
+    return mode === 'gateway' ? 'gateway' : 'direct';
+}
+
 function normalizeOfflineReminder(raw) {
     const input = raw && typeof raw === 'object' ? raw : {};
     const def = DEFAULT_OFFLINE_REMINDER;
@@ -944,7 +950,10 @@ const globalConfig = {
     deviceProtocol: null,
     userDeviceProtocols: {},
     antiResaleConfig: null,
-    yybConfig: null
+    yybConfig: null,
+    // 连接网关：'direct' 由 worker 自己连游戏；'gateway' 由网关进程持有连接。
+    // 进程级开关，保存后需重启面板生效（见 docs/gateway-process.md）。
+    networkMode: 'direct'
 };
 
 function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
@@ -1242,6 +1251,9 @@ function loadGlobalConfig() {
         }
 
         // 公告
+        // 连接网关模式（进程级开关，保存后重启面板生效）
+        globalConfig.networkMode = normalizeNetworkMode(data.networkMode);
+
         if (data.announcement && typeof data.announcement === 'object') {
             globalConfig.announcement = {
                 content: String(data.announcement.content || '').trim(),
@@ -1825,6 +1837,16 @@ function setUsersSeeAllAccounts(enabled) {
 function setUITheme(theme) {
     const raw = String(theme || '').toLowerCase();
     return applyConfigSnapshot({ ui: { theme: raw === 'light' ? 'light' : 'dark' } });
+}
+
+function getNetworkMode() {
+    return normalizeNetworkMode(globalConfig.networkMode);
+}
+
+function setNetworkMode(mode) {
+    globalConfig.networkMode = normalizeNetworkMode(mode);
+    saveGlobalConfig();
+    return getNetworkMode();
 }
 
 function getOfflineReminder(username) {
@@ -2469,6 +2491,8 @@ module.exports = {
     setUsersSeeAllAccounts,
     getOfflineReminder,
     setOfflineReminder,
+    getNetworkMode,
+    setNetworkMode,
     deleteUserOfflineReminder,
     getGlobalMailer,
     setGlobalMailer,
