@@ -4,6 +4,7 @@ import api from '@/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseSwitch from '@/components/ui/BaseSwitch.vue'
 import { useToastStore } from '@/stores/toast'
+import { formatEpochMinute } from '@/utils/datetime'
 
 const toast = useToastStore()
 
@@ -14,11 +15,9 @@ const loading = ref(false)
 const saving = ref(false)
 
 const updatedAtText = computed(() => {
-  if (!updatedAt.value)
-    return '尚未发布过公告'
-  const date = new Date(updatedAt.value * 1000)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `最近更新：${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  // 后端存的是毫秒（Date.now()），不是秒；老数据如果给了秒，formatEpochMinute 自己会判断
+  const text = formatEpochMinute(updatedAt.value)
+  return text ? `最近更新：${text}` : '尚未发布过公告'
 })
 
 async function load() {
@@ -52,7 +51,7 @@ async function save() {
       showOnce: showOnce.value,
     })
     if (res.data?.ok) {
-      updatedAt.value = Number(res.data.data?.updatedAt) || Math.floor(Date.now() / 1000)
+      updatedAt.value = Number(res.data.data?.updatedAt) || Date.now()
       toast.success(content.value.trim() ? '公告已保存，用户登录后会看到' : '公告已清空')
     }
     else {

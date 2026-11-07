@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.15.6'
+export const APP_VERSION = '2.16.0'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.0',
+    date: '2026-11-08',
+    items: [
+      '系统公告的「最近更新」不再显示成 58822 年：后端存的是毫秒，前端却按秒乘了 1000，多乘了整整一千倍',
+      '时间戳显示统一走 `parseEpoch()`：秒、毫秒两种历史数据都能正确认出，以后再有新旧格式混用也不会跳出鬼日期',
+      '补了 4 条前端单测盯住这个换算（毫秒、秒、空值、格式化输出）',
+    ],
+  },
   {
     version: '2.15.6',
     date: '2026-11-08',
