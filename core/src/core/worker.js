@@ -1646,16 +1646,30 @@ async function startBot(config) {
 
     // 断线监听
     if (onDisconnectHandler) networkEvents.off('disconnect', onDisconnectHandler);
+    let gatewayOfflineTimer = null;
     onDisconnectHandler = () => {
         if (!loginReady) return;
         loginReady = false;
         log('系统', '连接断开，暂停自动化任务，等待重连...');
+        // 网关模式下 worker 不会自己退出，光靠「暂停任务」界面会一直显示运行中。
+        // 给 60 秒宽限：这期间网关自己重连成功就当无事发生，超过就上报让主进程停号并按阶梯重登。
+        if (process.env.FARM_NETWORK_MODE === 'gateway') {
+            if (gatewayOfflineTimer) clearTimeout(gatewayOfflineTimer);
+            gatewayOfflineTimer = setTimeout(() => {
+                sendToMaster({ type: 'ws_reconnect_failed', reason: 'gateway_disconnect_60s' });
+            }, 60000);
+            if (typeof gatewayOfflineTimer.unref === 'function') gatewayOfflineTimer.unref();
+        }
     };
     networkEvents.on('disconnect', onDisconnectHandler);
 
     // 登录成功回调
     const onReady = async () => {
         loginReady = true;
+        if (gatewayOfflineTimer) {
+            clearTimeout(gatewayOfflineTimer);
+            gatewayOfflineTimer = null;
+        }
         if (!accountRunStartedAt) accountRunStartedAt = Date.now();
 
         // 出售收益监听

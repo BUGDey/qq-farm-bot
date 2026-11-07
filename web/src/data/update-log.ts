@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.15.5'
+export const APP_VERSION = '2.15.6'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.15.6',
+    date: '2026-11-08',
+    items: [
+      '网关模式下业务请求不再抢跑：worker 会先等网关把游戏登录做完再发请求，网关进程自己也会等连接就绪再转发，避免启动时满屏「连接未打开: GetGameFriends」',
+      '网关模式重新把登录、断线事件交回业务层（复用直连的事件总线），登录成功才会真正启动自动化任务',
+      '网关模式掉线超过 60 秒仍未恢复时自动上报停号并按秒级阶梯重新取码，不再出现「已经掉线但界面还显示运行中」',
+    ],
+  },
   {
     version: '2.15.5',
     date: '2026-11-08',

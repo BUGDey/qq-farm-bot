@@ -80,8 +80,27 @@ function startLogin(code) {
     });
 }
 
+/** 等自己和游戏服务器连上（worker 常常在 connect 之后立刻发业务请求） */
+async function waitForLoggedIn(ms = 15000) {
+    const deadline = Date.now() + Math.max(500, Number(ms) || 15000);
+    while (Date.now() < deadline) {
+        if (loggedIn && network.isConnected()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    return loggedIn && network.isConnected();
+}
+
 async function handleRequest(client, frame) {
     const { id, service, method, body, timeout } = frame;
+    // 还没连上游戏服务器时不要往下转发：否则直接拿到「连接未打开: Xxx」，
+    // worker 那边会把它当成业务错误一路重试。先等，等不到就给一句人话。
+    if (!network.isConnected()) {
+        const ready = await waitForLoggedIn(Math.min(Number(timeout) || 20000, 15000));
+        if (!ready) {
+            sendTo(client, { t: 'response', id, error: '还没连上游戏服务器（正在登录），请稍后重试' });
+            return;
+        }
+    }
     try {
         const result = await network.sendMsgAsync(service, method, fromBase64(body), Number(timeout) || 20000);
         const verdict = stall.onSuccess(service, method);

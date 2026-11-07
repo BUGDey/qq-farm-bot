@@ -37,7 +37,10 @@ function createNetwork(direct) {
     let backoffReason = '';
     let lastHealth = { pending: 0, oldestPendingMs: 0 };
     const pending = new Map();
-    const networkEvents = new EventEmitter();
+    // 复用直连那份 EventEmitter：业务模块在覆盖前就订阅了它，
+    // 网关这边必须往同一个实例里发事件，否则 disconnect / kickout / login
+    // 这些信号业务侧永远收不到（表现为「已经掉线了，界面还是运行中」）。
+    const networkEvents = direct.networkEvents || new EventEmitter();
     const userState = { gid: 0, name: '', level: 0, gold: 0, exp: 0, openId: '', avatar: '' };
 
     function ensureSocket() {
@@ -76,6 +79,9 @@ function createNetwork(direct) {
             loggedIn = true;
             Object.assign(userState, frame.userState || {});
             if (frame.t === 'reused') log('网关', '复用网关里已有的连接，worker 重启不影响登录态');
+            // 必须把登录信号发出去：worker 的 connect(code, onLoginSuccess) 就是等这个事件，
+            // 之前没发，导致「已连上网关」之后业务照旧按未登录状态乱跑。
+            networkEvents.emit('login', { ...userState });
             break;
         case 'response': {
             const p = pending.get(frame.id);
@@ -117,6 +123,24 @@ function createNetwork(direct) {
         networkEvents.emit(name, payload);
     }
 
+    /** 等网关把登录信号发回来（已登录立刻返回） */
+    function waitForLogin(ms = 15000) {
+        if (loggedIn) return Promise.resolve(true);
+        return new Promise((resolve) => {
+            let done = false;
+            const finish = (ok) => {
+                if (done) return;
+                done = true;
+                clearTimeout(timer);
+                networkEvents.removeListener('login', onLogin);
+                resolve(ok);
+            };
+            const onLogin = () => finish(true);
+            const timer = setTimeout(() => finish(loggedIn), Math.max(500, Number(ms) || 15000));
+            networkEvents.once('login', onLogin);
+        });
+    }
+
     function isBackoffActive(now = Date.now()) {
         if (!backoffUntil) return false;
         if (now >= backoffUntil) {
@@ -152,8 +176,13 @@ function createNetwork(direct) {
             const remainS = Math.ceil((backoffUntil - Date.now()) / 1000);
             throw new Error(`网关亚健康退避中（${backoffReason}），剩余 ${remainS}s，暂停业务请求给心跳让路`);
         }
-        const id = nextId++;
         const limit = Math.max(1000, Number(timeout) || DEFAULT_TIMEOUT_MS);
+        // 网关进程刚起来时它自己还没连上游戏，这时把请求转过去只会拿到
+        // 「连接未打开: Xxx」。先等登录信号，最多等到本次请求超时的 3/4。
+        if (!loggedIn && !critical) {
+            await waitForLogin(Math.min(Math.floor(limit * 0.75), 15000));
+        }
+        const id = nextId++;
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
                 pending.delete(id);
