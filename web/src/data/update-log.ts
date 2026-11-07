@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.15.1'
+export const APP_VERSION = '2.15.2'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.15.2',
+    date: '2026-11-08',
+    items: [
+      '断线重连次数 5 → 8、单次间隔封顶 30 秒，2 分钟以内的网络抖动可以靠同一份 code 自己扛回来',
+      '掉线重登改为阶梯：10 秒 → 30 秒 → 90 秒 → 5 分钟，不再干等默认 60 分钟',
+      '重登成功即清零阶梯；日志写明第几次重试与倒计时，便于判断是抖动还是真掉线',
+    ],
+  },
   {
     version: '2.15.1',
     date: '2026-11-08',

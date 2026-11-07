@@ -1,6 +1,16 @@
 const { createScheduler } = require('../services/scheduler');
 const wxLoginAdapter = require('../services/wx-login-adapter');
 
+// 掉线后的重登阶梯：先快后慢。前四次在 5 分钟内试完，
+// 超过阶梯再退回用户配置的定时间隔，避免拿凭证猛砸服务器。
+const RELOGIN_LADDER_MS = [10 * 1000, 30 * 1000, 90 * 1000, 300 * 1000];
+
+function reloginDelayMs(attempt, intervalMinutes = 60) {
+  const index = Math.max(0, (Number(attempt) || 1) - 1);
+  if (index < RELOGIN_LADDER_MS.length) return RELOGIN_LADDER_MS[index];
+  return Math.max(1, Number(intervalMinutes) || 60) * 60000;
+}
+
 function createAutoCodeRefreshService(deps) {
   const {
     store,
@@ -13,6 +23,7 @@ function createAutoCodeRefreshService(deps) {
 
   const scheduler = createScheduler('auto_code_refresh');
   const recoveryState = new Map();
+  const reloginStreak = new Map();
   const MAX_DAILY_RECOVERIES = 8;
   const MAX_CONSECUTIVE_FAILURES = 3;
 
@@ -96,6 +107,7 @@ function createAutoCodeRefreshService(deps) {
         accountName: account.name,
       });
       if (recovery) recovery.failures = 0;
+      reloginStreak.delete(String(accountId));
       return true;
     } catch (err) {
       if (recovery) recovery.failures += 1;
@@ -182,11 +194,16 @@ function createAutoCodeRefreshService(deps) {
     }
     const taskName = `relogin_${String(accountId || '')}`;
     scheduler.clear(taskName);
-    scheduler.setTimeoutTask(taskName, cfg.intervalMinutes * 60000, () => {
+    const key = String(accountId);
+    const attempt = (reloginStreak.get(key) || 0) + 1;
+    reloginStreak.set(key, attempt);
+    const delayMs = reloginDelayMs(attempt, cfg.intervalMinutes);
+    scheduler.setTimeoutTask(taskName, delayMs, () => {
       refreshAccountCode(accountId, reason);
     });
-    log('系统', `账号 ${account.name} 将在 ${cfg.intervalMinutes} 分钟后自动刷新凭证并重登`, {
-      accountId: String(accountId), accountName: account.name, reason,
+    const human = delayMs >= 60000 ? `${Math.round(delayMs / 60000)} 分钟` : `${Math.round(delayMs / 1000)} 秒`;
+    log('系统', `账号 ${account.name} 将在 ${human}后自动刷新凭证并重登（第 ${attempt} 次）`, {
+      accountId: String(accountId), accountName: account.name, reason, attempt, delayMs,
     });
     return true;
   }
@@ -197,7 +214,8 @@ function createAutoCodeRefreshService(deps) {
     rescheduleAll,
     stopAccount,
     scheduleRelogin,
+    reloginDelayMs,
   };
 }
 
-module.exports = { createAutoCodeRefreshService };
+module.exports = { createAutoCodeRefreshService, reloginDelayMs };

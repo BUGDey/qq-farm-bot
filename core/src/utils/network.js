@@ -851,7 +851,9 @@ function buildWebSocketHeaders(deviceProtocol) {
     return headers;
 }
 
-const MAX_RECONNECT_ATTEMPTS = 5;
+// 断网几分钟不该等于「账号报废」：重试次数要够多，单次间隔要封顶，
+// 这样 2~3 分钟的抖动可以靠同一份 code 自己扛过去，不用等人工或换凭证。
+const MAX_RECONNECT_ATTEMPTS = 8;
 const RECONNECT_BASE_DELAY_MS = 2000;
 const RECONNECT_MAX_DELAY_MS = 30000;
 
