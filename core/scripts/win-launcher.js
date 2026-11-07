@@ -43,8 +43,27 @@ const PANEL_PORT = Number(process.env.ADMIN_PORT || 3007);
 const NAPCAT_PORT = Number(process.env.NAPCAT_WEBUI_PORT || 6099);
 const NAPCAT_VERSION = process.env.NAPCAT_SHELL_VERSION || 'v4.18.42';
 const NAPCAT_DOWNLOAD_URL = `https://github.com/NapNeko/NapCatQQ/releases/download/${NAPCAT_VERSION}/NapCat.Shell.Windows.Node.zip`;
-/** GitHub 直链在部分地区不稳，按顺序回退到镜像（可用 FARM_NAPCAT_SHELL_URL 覆盖） */
-const NAPCAT_MIRRORS = ['https://ghproxy.net/', 'https://mirror.ghproxy.com/'];
+/**
+ * GitHub 直链在部分地区不稳，按顺序回退到镜像。
+ * 这里只是「默认候选表」，真正的顺序由 shellDownloadUrls() 决定；
+ * 想临时加源可以用 FARM_NAPCAT_SHELL_URL / FARM_NAPCAT_SHELL_URLS（逗号分隔）。
+ */
+const NAPCAT_MIRRORS = [
+  // gh-proxy.org 家族（含 v4/v6/cdn/axisnow 节点）
+  'https://gh-proxy.org/',
+  'https://v4.gh-proxy.org/',
+  'https://v6.gh-proxy.org/',
+  'https://cdn.gh-proxy.org/',
+  'https://axisnow.gh-proxy.org/',
+  // github.akams.cn 前端里内置的加速节点
+  'https://gh.dpik.top/',
+  // 老牌公共镜像
+  'https://ghproxy.net/',
+  'https://mirror.ghproxy.com/',
+  'https://ghfast.top/',
+  'https://gh-proxy.com/',
+  'https://ghproxy.cc/',
+];
 const MIN_ZIP_BYTES = 5 * 1024 * 1024;
 
 /* ----------------------------- 小工具 ----------------------------- */
@@ -527,14 +546,27 @@ function printNapcatMissingHint() {
   log(`  官方直链：${NAPCAT_DOWNLOAD_URL}`);
 }
 
-/** 候选下载地址：自定义 > 官方直链 > 镜像 */
+/**
+ * 候选下载地址：自定义（可多个，逗号分隔）> 官方直链 > 镜像。
+ * 自动去重，避免重复请求同一个地址。
+ */
 function shellDownloadUrls() {
-  const custom = String(process.env.FARM_NAPCAT_SHELL_URL || '').trim();
-  const urls = [];
-  if (custom) urls.push(custom);
-  urls.push(NAPCAT_DOWNLOAD_URL);
-  for (const mirror of NAPCAT_MIRRORS) urls.push(mirror + NAPCAT_DOWNLOAD_URL);
-  return urls;
+  const raw = [
+    String(process.env.FARM_NAPCAT_SHELL_URL || ''),
+    String(process.env.FARM_NAPCAT_SHELL_URLS || ''),
+  ]
+    .join(',')
+    .replace(/[；;、\s]+/g, ',');
+  const custom = raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const urls = [...custom, NAPCAT_DOWNLOAD_URL];
+  for (const mirror of NAPCAT_MIRRORS) {
+    urls.push(mirror.replace(/\/+$/, '') + '/' + NAPCAT_DOWNLOAD_URL.replace(/^\/+/, ''));
+  }
+  return [...new Set(urls)];
 }
 
 /** 判断是不是真的 zip（防止把 HTML 拦截页当压缩包） */

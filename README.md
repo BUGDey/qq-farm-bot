@@ -28,10 +28,11 @@
 
 > 🌱 想看看这片农场是怎么一步步长大的吗？前往[农场成长记录](docs/CHANGELOG.md)查看最新更新和完整历史。
 
-## 🎉 最新更新 · v2.15.4
+## 🎉 最新更新 · v2.15.5
 
-- Worker 报错现在带上调用栈（日志里多一行「报错栈」），「Maximum call stack size exceeded」这类错误不再无从定位
-- 顺带确认网关模式的包装层已改为调用覆盖前的实现，worker 启动不再爆栈
+- Windows 一键装 NapCat Shell 的下载源新增 gh-proxy.org 家族（含 v4 / v6 / cdn / axisnow 节点）与 gh.dpik.top，下载慢的地区更容易连上
+- 新增 `FARM_NAPCAT_SHELL_URLS`：一次填多个自定义源（逗号、分号、空格都可分隔），自动去重后按顺序回退
+- 每个候选源下载后仍校验 zip 头与体积，拦截页不会被当成安装包
 
 ## 💬 微信扫码登录
 

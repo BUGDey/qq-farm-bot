@@ -113,9 +113,36 @@ test('shellDownloadUrls 优先自定义源并包含镜像回退', () => {
       ),
     );
     assert.ok(urls.some((u) => u.startsWith('https://ghproxy.net/')));
+    // gh-proxy.org 家族（含 v4/v6/cdn/axisnow）与 akams 站点里的节点都应在候选表里
+    assert.ok(urls.some((u) => u.startsWith('https://gh-proxy.org/')));
+    assert.ok(urls.some((u) => u.startsWith('https://v4.gh-proxy.org/')));
+    assert.ok(urls.some((u) => u.startsWith('https://v6.gh-proxy.org/')));
+    assert.ok(urls.some((u) => u.startsWith('https://cdn.gh-proxy.org/')));
+    assert.ok(urls.some((u) => u.startsWith('https://axisnow.gh-proxy.org/')));
+    assert.ok(urls.some((u) => u.startsWith('https://gh.dpik.top/')));
   } finally {
     delete process.env.FARM_NAPCAT_SHELL_URL;
     if (saved !== undefined) process.env.FARM_NAPCAT_SHELL_URL = saved;
+  }
+});
+
+test('shellDownloadUrls 支持一次给多个自定义源并自动去重', () => {
+  const saved = {
+    one: process.env.FARM_NAPCAT_SHELL_URL,
+    many: process.env.FARM_NAPCAT_SHELL_URLS,
+  };
+  process.env.FARM_NAPCAT_SHELL_URLS =
+    'https://a.example/napcat.zip, https://b.example/napcat.zip；https://a.example/napcat.zip';
+  try {
+    const urls = launcher.shellDownloadUrls();
+    assert.strictEqual(urls[0], 'https://a.example/napcat.zip');
+    assert.strictEqual(urls[1], 'https://b.example/napcat.zip');
+    assert.strictEqual(urls.filter((u) => u === 'https://a.example/napcat.zip').length, 1);
+  } finally {
+    if (saved.one === undefined) delete process.env.FARM_NAPCAT_SHELL_URL;
+    else process.env.FARM_NAPCAT_SHELL_URL = saved.one;
+    if (saved.many === undefined) delete process.env.FARM_NAPCAT_SHELL_URLS;
+    else process.env.FARM_NAPCAT_SHELL_URLS = saved.many;
   }
 });
 

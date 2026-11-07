@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.15.4'
+export const APP_VERSION = '2.15.5'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.15.5',
+    date: '2026-11-08',
+    items: [
+      'Windows 一键装 NapCat Shell 的下载源新增 gh-proxy.org 家族（含 v4 / v6 / cdn / axisnow 节点）与 gh.dpik.top，下载慢的地区更容易连上',
+      '新增 `FARM_NAPCAT_SHELL_URLS`：一次填多个自定义源（逗号、分号、空格都可分隔），自动去重后按顺序回退',
+      '每个候选源下载后仍校验 zip 头与体积，拦截页不会被当成安装包',
+    ],
+  },
   {
     version: '2.15.4',
     date: '2026-11-08',
