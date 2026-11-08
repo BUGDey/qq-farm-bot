@@ -2,6 +2,7 @@
 import type { Redemption } from '@/stores/user'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import InviteCard from '@/components/account/InviteCard.vue'
 import { useAccountStore } from '@/stores/account'
 import { useToastStore } from '@/stores/toast'
 import {
@@ -198,6 +199,9 @@ onMounted(load)
         </div>
       </div>
     </div>
+
+    <!-- 邀请好友 -->
+    <InviteCard />
 
     <!-- 核销记录 -->
     <div class="ui-card rounded-xl p-4">

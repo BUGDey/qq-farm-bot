@@ -3508,3 +3508,11 @@ for (const [method, label] of Object.entries({
 module.exports.isSolarTermClaimable = isSolarTermClaimable;
 
 module.exports.normalizeSolarTermsInfo = normalizeSolarTermsInfo;
+
+// 活动插件（solar-terms 等）需要自己解析原始 proto 字段，这里把底层读取工具暴露出去。
+module.exports.readProtoFields = readProtoFields;
+module.exports.getProtoNumber = getProtoNumber;
+module.exports.getProtoBytes = getProtoBytes;
+module.exports.getProtoBytesAll = getProtoBytesAll;
+module.exports.getProtoString = getProtoString;
+module.exports.parseActivityItemMessage = parseActivityItemMessage;

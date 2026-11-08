@@ -5,6 +5,7 @@
  * admin.js 的 PUBLIC_API_PATHS 中放行，无需 token 即可访问。
  */
 const { USER_SYSTEM_CONFIG } = require('../config/user-system');
+const inviteService = require('../services/invite-rewards');
 
 function getClientIp(req) {
   const cfIp = req.headers['cf-connecting-ip'];
@@ -101,9 +102,9 @@ function registerAdminAuthRoutes({
     });
   });
 
-  /** 注册：必须绑定一张加时卡，卡密面值决定初始有效期 */
+  /** 注册：必须绑定一张加时卡，卡密面值决定初始有效期；邀请码可选 */
   app.post('/api/register', (req, res) => {
-    const { username, password, cardCode } = req.body || {};
+    const { username, password, cardCode, inviteCode } = req.body || {};
     const ip = getClientIp(req);
     if (!username || !password || !cardCode) {
       return res.status(400).json({ ok: false, error: '请填写用户名、密码和卡密' });
@@ -119,7 +120,35 @@ function registerAdminAuthRoutes({
       return res.status(400).json(result);
     }
     userStore.addLoginLog('register_success', username, null, ip, req.headers['user-agent'] || '');
-    return res.json({ ok: true, data: result.user });
+
+    // 邀请奖励：任何异常都不能影响注册结果，所以整段兜住
+    let invite = null;
+    if (inviteCode) {
+      try {
+        invite = inviteService.handleRegistration({
+          inviteCode,
+          invitee: result.user.username,
+          ip,
+          userStore,
+        });
+        if (invite.ok) {
+          logger.info('邀请奖励已处理', {
+            inviter: invite.inviter,
+            invitee: result.user.username,
+            pending: invite.pending,
+            inviteeDays: invite.inviteeDays,
+            ip,
+          });
+        } else {
+          logger.warn('邀请码未生效', { invitee: result.user.username, reason: invite.reason, ip });
+        }
+      } catch (error) {
+        logger.warn('邀请奖励处理失败', { invitee: result.user.username, error: error.message });
+        invite = null;
+      }
+    }
+
+    return res.json({ ok: true, data: result.user, invite });
   });
 
   /** 卡密预览：注册页输入卡密后回显面值（不消耗卡密） */

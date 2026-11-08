@@ -1056,6 +1056,56 @@ function renewUser(username, cardCode) {
   return redeemCard(username, cardCode, { operator: username });
 }
 
+/**
+ * 直接给账号加时长（不消耗卡密）。邀请奖励、活动补偿都走这里。
+ * 永久账号保持永久，不做无意义的累加。
+ */
+function extendSubscriptionByDays(username, days, meta = {}) {
+  const amount = Number(days);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, error: '奖励天数无效' };
+  }
+  const users = loadUsers();
+  const user = findUserRecord(users, username);
+  if (!user) return { ok: false, error: '用户不存在' };
+
+  const timestamp = now();
+  const subscription = normalizeSubscription(user.subscription, user.username);
+  if (subscription.isPermanent) {
+    return { ok: true, subscription, addedMs: 0, permanent: true };
+  }
+
+  const ms = Math.round(amount * 24 * 60 * 60 * 1000);
+  const base = Math.max(Number(subscription.expiresAt) || 0, timestamp);
+  subscription.expiresAt = base + ms;
+  subscription.enabled = subscription.enabled !== false;
+  subscription.totalAddedMs = (Number(subscription.totalAddedMs) || 0) + ms;
+  subscription.updatedAt = timestamp;
+  subscription.lastGrant = String(meta.reason || 'grant');
+  user.subscription = subscription;
+  user.updatedAt = timestamp;
+
+  saveUsers(users);
+
+  appendRedemption({
+    at: timestamp,
+    code: '',
+    cardType: CARD_TYPES.TIME,
+    username: user.username,
+    operator: String(meta.operator || 'system'),
+    action: String(meta.reason || 'grant'),
+    summary: `赠送 ${amount} 天（${meta.reason === 'invite' ? '邀请奖励' : '系统赠送'}）`,
+    before: null,
+    after: {
+      expiresAt: subscription.expiresAt,
+      isPermanent: false,
+      accountLimit: user.accountLimit,
+    },
+  });
+
+  return { ok: true, subscription: toPublicUser(user).subscription, addedMs: ms };
+}
+
 // ==================== 用户查询 ====================
 
 function getUserByName(username) {
@@ -1710,6 +1760,7 @@ module.exports = {
   validateUser,
   registerUser,
   renewUser,
+  extendSubscriptionByDays,
   redeemCard,
   changePassword,
   verifyCardOwnership,

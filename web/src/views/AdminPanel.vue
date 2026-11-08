@@ -4,6 +4,7 @@ import { onMounted, ref, watch } from 'vue'
 import AdminAnnouncementPanel from '@/components/admin/AdminAnnouncementPanel.vue'
 import AdminCardPanel from '@/components/admin/AdminCardPanel.vue'
 import AdminGlobalSettingsPanel from '@/components/admin/AdminGlobalSettingsPanel.vue'
+import AdminInvitePanel from '@/components/admin/AdminInvitePanel.vue'
 import AdminMailPanel from '@/components/admin/AdminMailPanel.vue'
 import AdminPluginsPanel from '@/components/admin/AdminPluginsPanel.vue'
 import AdminUserPanel from '@/components/admin/AdminUserPanel.vue'
@@ -13,11 +14,12 @@ import { useUserStore } from '@/stores/user'
 const userStore = useUserStore()
 const toast = useToastStore()
 
-type TabKey = 'users' | 'cards' | 'redemptions' | 'logs' | 'settings' | 'announcement' | 'mail' | 'plugins'
+type TabKey = 'users' | 'cards' | 'invite' | 'redemptions' | 'logs' | 'settings' | 'announcement' | 'mail' | 'plugins'
 const tab = ref<TabKey>('users')
 const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'users', label: '用户管理', icon: 'i-carbon-user-multiple' },
   { key: 'cards', label: '卡密管理', icon: 'i-carbon-purchase' },
+  { key: 'invite', label: '邀请奖励', icon: 'i-carbon-user-follow' },
   { key: 'redemptions', label: '核销流水', icon: 'i-carbon-receipt' },
   { key: 'logs', label: '登录日志', icon: 'i-carbon-document' },
   { key: 'settings', label: '全局设置', icon: 'i-carbon-settings' },
@@ -150,6 +152,7 @@ onMounted(() => {
 
     <AdminUserPanel v-if="tab === 'users'" />
     <AdminCardPanel v-else-if="tab === 'cards'" />
+    <AdminInvitePanel v-else-if="tab === 'invite'" />
 
     <!-- 核销流水 -->
     <div v-else-if="tab === 'redemptions'" class="ui-card overflow-hidden rounded-xl">

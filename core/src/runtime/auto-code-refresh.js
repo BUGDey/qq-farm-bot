@@ -83,6 +83,19 @@ function createAutoCodeRefreshService(deps) {
     const account = findAccount(accountId);
     if (!account) return false;
 
+    // 只有微信扫码号才有可再生凭证（wxid + 登录缓冲）。
+    // QQ 号没有任何本地凭据可以换新 Code，硬刷只会刷出一串「缺少 wxid」错误，
+    // 所以这里直接跳过，给一条明确提示，让用户去重新扫码。
+    if (String(account.platform || '') !== 'wx') {
+      addAccountLog('auto_code_refresh_skipped', 'QQ 账号没有可再生凭证，需要重新扫码登录',
+        account.id, account.name, { reason });
+      log('警告', `QQ 账号无法自动刷新 Code，请重新扫码: ${account.name}`, {
+        accountId: String(account.id),
+        accountName: account.name,
+      });
+      return false;
+    }
+
     const recovery = isRecoveryReason(reason) ? getRecoveryState(accountId) : null;
     if (recovery && (recovery.attempts >= MAX_DAILY_RECOVERIES
       || recovery.failures >= MAX_CONSECUTIVE_FAILURES)) {

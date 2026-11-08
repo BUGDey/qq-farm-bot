@@ -11,9 +11,21 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.0'
+export const APP_VERSION = '2.16.1'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.1',
+    date: '2026-11-08',
+    items: [
+      '新增邀请奖励：分享 8 位邀请码，对方注册即得天数，邀请人奖励在对方绑定第一个挂机账号后到账',
+      '防刷：禁止自邀、同一账号只算一次、邀请人需满 24 小时、单人/单 IP 每日次数上限、每日奖励天数封顶，被拒记录可审计',
+      '后台新增「邀请奖励」页签：启用开关、双方奖励天数、各项限额、待定保留天数与拦截原因统计',
+      '修复「节令小札读取失败：readProtoFields is not a function」——活动插件要用的 proto 读取工具从没被导出',
+      '修复网关模式误判掉线：只要还在收下行帧就不算死，心跳窗口 30 秒放宽到 90 秒，连续 4 次无回应才重连',
+      'QQ 号不再尝试自动刷新 Code（本就没有可再生凭证），改为明确提示重新扫码',
+    ],
+  },
   {
     version: '2.16.0',
     date: '2026-11-08',

@@ -142,3 +142,16 @@ module.exports = {
     itemDto,
     serializeMutation,
 };
+
+// 活动插件（solar-terms）会从 helpers 里取这几个 proto 读取工具。
+// activity.js 在本文件被它 require 之后才加载完，这里用惰性代理避免循环依赖时拿到 undefined。
+for (const name of [
+    'readProtoFields',
+    'getProtoNumber',
+    'getProtoBytes',
+    'getProtoBytesAll',
+    'getProtoString',
+    'parseActivityItemMessage',
+]) {
+    module.exports[name] = (...args) => require('./activity')[name](...args);
+}

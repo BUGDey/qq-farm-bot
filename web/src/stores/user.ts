@@ -245,9 +245,14 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function register(name: string, password: string, cardCode: string) {
+  async function register(name: string, password: string, cardCode: string, inviteCode = '') {
     try {
-      const res = await api.post('/api/register', { username: name, password, cardCode })
+      const res = await api.post('/api/register', {
+        username: name,
+        password,
+        cardCode,
+        ...(inviteCode ? { inviteCode } : {}),
+      })
       return unwrap(res)
     }
     catch (error: any) {

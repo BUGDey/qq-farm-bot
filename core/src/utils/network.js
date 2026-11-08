@@ -360,6 +360,8 @@ function setRawMessageHook(fn) { rawMessageHook = typeof fn === 'function' ? fn 
 // ============ 消息处理 ============
 function handleMessage(data) {
     try {
+        // 只要收到任何下行帧，就说明链路活着（心跳回复只是其中一种）。
+        lastInboundAt = Date.now();
         const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
         const msg = types.GateMessage.decode(buf);
         const meta = msg.meta;
@@ -722,15 +724,20 @@ async function sendLogin(onLoginSuccess, deviceProtocol) {
 
 // ============ 心跳 ============
 let lastHeartbeatResponse = Date.now();
+// 任意下行帧都会刷新这个时间戳：空闲期只要还在收帧（通知、回包）就不该判死。
+let lastInboundAt = Date.now();
 let heartbeatMissCount = 0;
-const HEARTBEAT_TIMEOUT = 30000;
-const MAX_HEARTBEAT_MISS = 3;
+// 心跳判活窗口：以前 30 秒没收到心跳回复就判死，实测游戏在空闲期 60~90 秒才回一次，
+// 结果「连接其实是好的」被当成掉线 → 主动断线重连 → 二维码/Code 一次性凭证直接作废。
+// 现在放宽到 90 秒，并且只要收到任何下行帧都算活着（lastInboundAt）。
+const HEARTBEAT_TIMEOUT = Math.max(30000, Number(process.env.FARM_HEARTBEAT_TIMEOUT_MS) || 90000);
+const MAX_HEARTBEAT_MISS = Math.max(2, Number(process.env.FARM_HEARTBEAT_MAX_MISS) || 4);
 
 function getGatewayHealth() {
     const now = Date.now();
     const result = evaluateGatewayHealth({
         connected: isConnected(),
-        heartbeatAgeMs: now - lastHeartbeatResponse,
+        heartbeatAgeMs: now - Math.max(lastHeartbeatResponse, lastInboundAt),
         oldestPendingAgeMs: getOldestPendingAgeMs(pendingStartedAt.values(), now),
         heartbeatLimitMs: HEARTBEAT_TIMEOUT,
         pendingLimitMs: 5000,
@@ -747,7 +754,7 @@ function isGatewayHealthyForBusiness() {
     const now = Date.now();
     const health = evaluateGatewayHealth({
         connected: isConnected(),
-        heartbeatAgeMs: now - lastHeartbeatResponse,
+        heartbeatAgeMs: now - Math.max(lastHeartbeatResponse, lastInboundAt),
         oldestPendingAgeMs: getOldestPendingAgeMs(pendingStartedAt.values(), now),
         heartbeatLimitMs: HEARTBEAT_TIMEOUT,
         pendingLimitMs: 5000,
@@ -789,40 +796,51 @@ function startHeartbeat() {
     heartbeatMissCount = 0;
 
     networkScheduler.setIntervalTask('heartbeat_interval', CONFIG.heartbeatInterval, () => {
-        if (!userState.gid) return;
+        if (!userState.gid) {
+            // 还没登录完/刚重连，不能算掉线；顺手刷新时间戳，避免把登录耗时算成 miss。
+            lastHeartbeatResponse = Date.now();
+            return;
+        }
 
-        const timeSinceLastResponse = Date.now() - lastHeartbeatResponse;
-        if (timeSinceLastResponse > HEARTBEAT_TIMEOUT) {
-            heartbeatMissCount++;
-            logWarn('心跳', `连接可能已断开 (${Math.round(timeSinceLastResponse/1000)}s 无响应, miss=${heartbeatMissCount}/${MAX_HEARTBEAT_MISS}, pending=${pendingCallbacks.size})`);
-            if (heartbeatMissCount >= MAX_HEARTBEAT_MISS) {
+        // 先发一次真实心跳：只有「连心跳都发不出去/收不到回包」才算异常，
+        // 而不是「距离上次心跳回复过了多久」——空闲期游戏本来就回得慢。
+        const quietMs = Date.now() - Math.max(lastHeartbeatResponse, lastInboundAt);
+        const probing = sendMsgAsync('gamepb.userpb.UserService', 'Heartbeat', buildHeartbeatBody(userState.gid), 20000, { priority: 'critical' })
+            .then(({ body: replyBody }) => {
+                lastHeartbeatResponse = Date.now();
+                heartbeatMissCount = 0;
+                try {
+                    const reply = types.HeartbeatReply.decode(replyBody);
+                    applyServerVersionInfo(reply.version_info);
+                    if (reply.server_time) {
+                        const serverTime = toNum(reply.server_time);
+                        const serverTimeMs = serverTime > 1e12 ? serverTime : serverTime * 1000;
+                        syncServerTime(serverTimeMs);
+                    }
+                } catch { }
+                return true;
+            })
+            .catch(() => false);
+
+        // 心跳是异步的，这里用独立链路处理失败计数，避免阻塞下一个 tick。
+        if (typeof probing === 'object' && typeof probing.then === 'function') {
+            probing.then(ok => {
+                if (ok) return;
+                if (quietMs < HEARTBEAT_TIMEOUT) return;
+                heartbeatMissCount++;
+                logWarn('心跳', `心跳无回应 (${Math.round(quietMs / 1000)}s 静默, miss=${heartbeatMissCount}/${MAX_HEARTBEAT_MISS}, pending=${pendingCallbacks.size})`);
+                if (heartbeatMissCount < MAX_HEARTBEAT_MISS) return;
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
                     log('心跳', '连接已关闭，立即重连...');
                 } else {
-                    log('心跳', '心跳超时，关闭连接并重连...');
+                    log('心跳', '心跳连续无回应，关闭连接并重连...');
                     try { ws.close(); } catch { }
                 }
                 networkEvents.emit('disconnect', { code: 'heartbeat_timeout' });
                 rejectAllPendingRequests('连接超时，已清理');
                 reconnect(null);
-                return;
-            }
+            }).catch(() => { });
         }
-
-        const body = buildHeartbeatBody(userState.gid);
-        sendMsgAsync('gamepb.userpb.UserService', 'Heartbeat', body, 20000, { priority: 'critical' }).then(({ body: replyBody }) => {
-            lastHeartbeatResponse = Date.now();
-            heartbeatMissCount = 0;
-            try {
-                const reply = types.HeartbeatReply.decode(replyBody);
-                applyServerVersionInfo(reply.version_info);
-                if (reply.server_time) {
-                    const serverTime = toNum(reply.server_time);
-                    const serverTimeMs = serverTime > 1e12 ? serverTime : serverTime * 1000;
-                    syncServerTime(serverTimeMs);
-                }
-            } catch { }
-        }).catch(() => { });
     });
 }
 

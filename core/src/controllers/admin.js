@@ -71,6 +71,7 @@ const { createAdminSessionManager } = require("./admin-session-manager");
 const { registerAdminSystemRoutes } = require("./admin-system-routes");
 const { registerAdminUserRoutes } = require("./admin-user-routes");
 const { registerAdminCardRoutes } = require("./admin-card-routes");
+const { registerAdminInviteRoutes } = require("./admin-invite-routes");
 const { registerAdminLoginLogRoutes } = require("./admin-login-log-routes");
 const userStore = require("../models/user-store");
 
@@ -99,6 +100,7 @@ const PUBLIC_API_PREFIXES = [
   "/public/renew",
   "/public/account-status",
   "/public/reset-password/",
+  "/public/invite/",
 ];
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 const ONE_MINUTE_MS = 60 * 1000;
@@ -535,6 +537,12 @@ function startAdminServer(dataProvider) {
     requireDangerConfirmation,
     userStore,
     adminLogger,
+  });
+  registerAdminInviteRoutes({
+    app,
+    requireAdminToken,
+    requireAdminRole,
+    userStore,
   });
 
   registerAdminFarmResourceRoutes({

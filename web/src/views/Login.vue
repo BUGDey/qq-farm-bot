@@ -2,6 +2,7 @@
 import type { ApiResult } from '@/stores/user'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/api'
 import LoginRenewModal from '@/components/login/LoginRenewModal.vue'
 import UpdateLogModal from '@/components/login/UpdateLogModal.vue'
 import { APP_VERSION } from '@/data/update-log'
@@ -32,7 +33,17 @@ const loginForm = ref({ username: '', password: '' })
 const rememberUsername = ref(false)
 
 // 注册
-const registerForm = ref({ username: '', password: '', confirm: '', cardCode: '' })
+const registerForm = ref({ username: '', password: '', confirm: '', cardCode: '', inviteCode: '' })
+const invitePreview = ref<{ valid: boolean, inviteeDays?: number, inviterDays?: number, reason?: string } | null>(null)
+const checkingInvite = ref(false)
+const invitePreviewText = computed(() => {
+  const reason = invitePreview.value?.reason || ''
+  if (reason === 'disabled')
+    return '管理员暂未开启邀请奖励，邀请码先留着'
+  if (reason === 'code_not_found')
+    return '邀请码不存在，请核对后重填（不填也能注册）'
+  return '邀请码无效，不填也能注册'
+})
 const cardPreview = ref<{ ok: boolean, error?: string, data?: any } | null>(null)
 const checkingCard = ref(false)
 const claimingCard = ref(false)
@@ -128,6 +139,29 @@ function scheduleCardPreview() {
   }, 400)
 }
 
+let invitePreviewTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleInvitePreview() {
+  invitePreview.value = null
+  if (invitePreviewTimer)
+    clearTimeout(invitePreviewTimer)
+  const code = registerForm.value.inviteCode.trim()
+  if (code.length < 4)
+    return
+  invitePreviewTimer = setTimeout(async () => {
+    checkingInvite.value = true
+    try {
+      const res = await api.get(`/api/public/invite/preview`, { params: { code }, skipErrorToast: true } as never)
+      invitePreview.value = res.data?.data || null
+    }
+    catch {
+      invitePreview.value = { valid: false, reason: 'network' }
+    }
+    finally {
+      checkingInvite.value = false
+    }
+  }, 400)
+}
 async function handleClaimFreeCard() {
   if (claimingCard.value)
     return
@@ -156,14 +190,16 @@ async function handleRegister() {
       registerForm.value.username,
       registerForm.value.password,
       registerForm.value.cardCode.trim(),
+      registerForm.value.inviteCode.trim(),
     )
     if (!showResult(result, '注册失败'))
       return
     toast.success('注册成功，请使用账号密码登录')
     loginForm.value.username = registerForm.value.username
     loginForm.value.password = ''
-    registerForm.value = { username: '', password: '', confirm: '', cardCode: '' }
+    registerForm.value = { username: '', password: '', confirm: '', cardCode: '', inviteCode: '' }
     cardPreview.value = null
+    invitePreview.value = null
     tab.value = 'login'
   }
   finally {
@@ -402,6 +438,37 @@ onMounted(() => {
               <p v-if="passwordMismatch" class="mt-1.5 text-xs text-red-500">
                 两次输入的密码不一致
               </p>
+            </div>
+
+            <!-- 邀请码（可选，不影响注册） -->
+            <div>
+              <div class="mb-1.5 flex items-center justify-between">
+                <span class="text-xs text-gray-600 font-medium">邀请码（可选）</span>
+                <span class="text-[11px] text-gray-400">不填也能注册</span>
+              </div>
+              <div class="login-input font-mono">
+                <div class="i-carbon-user-follow text-base text-gray-400" />
+                <input
+                  v-model="registerForm.inviteCode"
+                  type="text"
+                  placeholder="有朋友邀请你，就填他的邀请码"
+                  @input="scheduleInvitePreview"
+                >
+              </div>
+              <div v-if="checkingInvite" class="mt-1.5 text-xs text-gray-400">
+                正在校验邀请码…
+              </div>
+              <div
+                v-else-if="invitePreview"
+                class="mt-1.5 flex items-center gap-1.5 text-xs"
+                :class="invitePreview.valid ? 'text-green-600' : 'text-red-500'"
+              >
+                <div :class="invitePreview.valid ? 'i-carbon-checkmark-filled' : 'i-carbon-warning-filled'" />
+                <span v-if="invitePreview.valid">
+                  有效 · 注册后你得 {{ invitePreview.inviteeDays }} 天，邀请人得 {{ invitePreview.inviterDays }} 天
+                </span>
+                <span v-else>{{ invitePreviewText }}</span>
+              </div>
             </div>
           </template>
 
