@@ -1753,6 +1753,9 @@ async function startBot(config) {
         // 而且 NapCat 是所有 QQ 号共用的，一登出就带着别人一起掉。
         // 需要释放 QQ 登录态时由主进程在「没有任何 QQ 账号在跑」时统一处理。
         if (loginType === 'qq_napcat') {
+            // 告诉主进程「这个号的 Code 已经用掉了」：Windows 上等所有 QQ 号都连上后，
+            // 由主进程统一把 QQ 从 NapCat 里退掉，避免 NapCat 抢本机 QQ 登录。
+            sendToMaster({ type: 'qq_code_consumed' });
             workerScheduler.setTimeoutTask('napcat_friend_gid_bootstrap', 2000, async () => {
                 if (!loginReady) return;
                 try {

@@ -370,7 +370,15 @@ async function cancel(id, owner) {
   await release(task, task.status === 'confirmed' ? 'logout' : task.status === 'scanned' ? 'restart' : '');
 }
 
+/**
+ * 是否有扫码任务正在进行（释放 QQ 登录态前要避开它）。
+ */
+function hasActiveTasks() {
+    return tasks.size > 0;
+}
+
 module.exports = {
+    hasActiveTasks,
   APP_ID,
   isConfigured,
   launchEnabled,

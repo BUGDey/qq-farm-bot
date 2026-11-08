@@ -11,9 +11,19 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.4'
+export const APP_VERSION = '2.16.5'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.5',
+    date: '2026-11-08',
+    items: [
+      'Windows 上恢复「拿完 Code 就把 QQ 从 NapCat 里退掉」，避免 NapCat 抢占本机 QQ 登录',
+      '释放时机改到「所有在跑的 QQ 号都连上游戏之后」统一做一次：NapCat 是共用的，退早了别人重连会 400',
+      'Linux / macOS 不做释放（不存在抢登录问题），后续重连也不用重新扫码',
+      '扫码进行中会跳过释放，不会把正在扫的号踢掉',
+    ],
+  },
   {
     version: '2.16.4',
     date: '2026-11-08',

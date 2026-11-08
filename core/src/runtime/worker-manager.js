@@ -455,12 +455,40 @@ function createWorkerManager(deps) {
     /**
      * 停止账号 Worker
      */
+    let napcatReleaseTimer = null;
+
+    /**
+     * Windows 上 NapCat 会抢占本机 QQ 登录，所以拿完 Code 要把 QQ 退出来；
+     * 但 NapCat 是所有 QQ 号共用的，退早了别人重连就会 400。
+     * 因此只在「所有在跑的 QQ 号都已连上游戏」之后统一释放一次。
+     * Linux/macOS 没有抢登录的问题，不释放，免得后续重连还要重新扫码。
+     */
+    function maybeReleaseNapcatQq() {
+        if (process.platform !== 'win32') return;
+        const running = Object.values(workers).filter(w => w && !w.stopping && String(w.platform || '') === 'qq');
+        if (running.length === 0) return;
+        if (running.some(w => !w.codeConsumedAt)) return;
+        if (napcatReleaseTimer) return;
+
+        napcatReleaseTimer = scheduler.setTimeoutTask('napcat_release_qq', 3000, () => {
+            napcatReleaseTimer = null;
+            try {
+                const current = Object.values(workers).filter(w => w && !w.stopping && String(w.platform || '') === 'qq');
+                if (current.length === 0 || current.some(w => !w.codeConsumedAt)) return;
+                const napcat = require('../services/napcat-login');
+                if (typeof napcat.hasActiveTasks === 'function' && napcat.hasActiveTasks()) return;
+                void Promise.resolve(napcat.releaseIdleSession()).catch(() => {});
+            } catch { /* NapCat 未配置时忽略 */ }
+        });
+    }
+
     function stopWorker(accountId) {
         const wrk = workers[accountId];
         if (!wrk) return;
 
         const targetProc = wrk.process;
         wrk.stopping = true;
+        wrk.codeConsumedAt = 0;
 
         // 用户显式停止账号：连接网关也一起收掉（重启 worker 不会杀网关，只有这里才杀）
         try { gatewayManager.killGateway(accountId, '停止账号'); } catch { }
@@ -562,6 +590,9 @@ function createWorkerManager(deps) {
         } else if (msg.type === 'task_permit_release') {
             activePermits.delete(`${accountId}:${String(msg.token || '')}`);
             drainPermitQueue();
+        } else if (msg.type === 'qq_code_consumed') {
+            if (wrk) wrk.codeConsumedAt = Date.now();
+            maybeReleaseNapcatQq();
         } else if (msg.type === 'status_sync') {
             // 状态同步
             wrk.status = normalizeStatusForPanel(msg.data, accountId, wrk.name);
@@ -939,7 +970,8 @@ function createWorkerManager(deps) {
         dispose: () => {
             scheduler.dispose();
             resourceMonitor.dispose();
-        }
+        },
+        maybeReleaseNapcatQq
     };
 }
 
