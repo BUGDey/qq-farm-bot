@@ -79,7 +79,7 @@ const shareText = computed(() => {
   const d = data.value
   if (!d)
     return ''
-  return `注册时填邀请码 ${d.code}，我们双方都能加时长${d.requireBoundAccount ? '（你绑定一个挂机账号后我这边才到账）' : ''}。`
+  return `注册时填邀请码 ${d.code}，我们双方都能加时长${d.requireBoundAccount ? '（绑定一个挂机账号后双方一起到账）' : ''}。`
 })
 
 async function copyShare() {
@@ -173,7 +173,7 @@ onMounted(load)
           每邀请 1 位好友注册，你得 <b class="text-gray-600 dark:text-gray-300">{{ data.inviterDays }} 天</b>、
           对方得 <b class="text-gray-600 dark:text-gray-300">{{ data.inviteeDays }} 天</b>。
           <template v-if="data.requireBoundAccount">
-            对方<b>绑定第一个挂机账号</b>后你的奖励才到账 —— 这是防止有人批量注册空号的闸门。
+            对方<b>绑定一个挂机账号</b>后，你和他各自的时长才会一起到账 —— 这是防止批量注册空号的闸门；同一个挂机账号只能给一个账号带来奖励，拿小号绑同一个游戏号不会再加时长。
           </template>
         </template>
         <template v-else>

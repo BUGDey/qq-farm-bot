@@ -11,9 +11,19 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.3'
+export const APP_VERSION = '2.16.4'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.4',
+    date: '2026-11-08',
+    items: [
+      '邀请奖励改为「绑定挂机账号后双方一起到账」：注册时只记一条待定，绑定后才发天数，注册空号拿不到任何时长',
+      '同一个挂机账号（QQ 号 / 微信 openid）只认一次：拿小号去绑别人已经用过的游戏号，邀请人和被邀请人都不再增加时长',
+      '账号标识取自 QQ 号或微信 openid，重新登录、换设备都不会变，本地 data 目录单独留档',
+      '邀请卡与注册页文案同步：明确「绑定后双方各得 N 天」以及「同一个游戏号只能算一次」',
+    ],
+  },
   {
     version: '2.16.3',
     date: '2026-11-08',

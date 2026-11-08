@@ -65,7 +65,7 @@ function normalizeSettings(raw = {}) {
 }
 
 function emptyState() {
-  return { settings: { ...DEFAULT_SETTINGS }, codes: {}, records: [], seq: 0 };
+  return { settings: { ...DEFAULT_SETTINGS }, codes: {}, records: [], identities: {}, seq: 0 };
 }
 
 function loadState() {
@@ -76,6 +76,7 @@ function loadState() {
       settings: normalizeSettings(parsed.settings),
       codes: parsed.codes && typeof parsed.codes === 'object' ? parsed.codes : {},
       records: Array.isArray(parsed.records) ? parsed.records : [],
+      identities: parsed.identities && typeof parsed.identities === 'object' ? parsed.identities : {},
       seq: Number(parsed.seq) || 0,
     };
   } catch {
@@ -220,6 +221,22 @@ function checkEligibility({ inviteCode, invitee, ip = '', userStore } = {}) {
   return { ok: true, code, inviter, settings };
 }
 
+/**
+ * 把一个挂机账号折算成「不会因重新登录而改变」的身份标识。
+ * QQ 号用 uin（QQ 号本身），微信端用 openId/wxid —— 两者都是账号级常量。
+ * 同一个标识只能被一个注册用户占用，用于挡住「注册一堆小号绑同一个游戏号刷时长」。
+ */
+function identityFromAccount(account = {}) {
+  const platform = String(account.platform || '').trim().toLowerCase() || 'unknown';
+  const raw = account.uin || account.qq || account.openId || account.open_id || account.wxid || '';
+  const id = String(raw).trim().toLowerCase();
+  if (!id) return '';
+  return `${platform}:${id}`;
+}
+
+/**
+ * 记录一条邀请流水（只保留最近 2000 条，避免文件无限膨胀）。
+ */
 function pushRecord(state, record) {
   state.seq = (Number(state.seq) || 0) + 1;
   const saved = { id: state.seq, at: Date.now(), ...record };
@@ -233,6 +250,10 @@ function pushRecord(state, record) {
 
 /**
  * 注册成功后调用。返回给前端的提示信息。
+ * @param {{inviteCode:string, invitee:string, ip?:string, userStore?:object}} input
+ */
+/**
+ * 注册成功后的处理：写流水并按设置决定是立即发奖还是等绑定挂机账号。
  * @param {{inviteCode:string, invitee:string, ip?:string, userStore?:object}} input
  */
 function handleRegistration({ inviteCode, invitee, ip = '', userStore } = {}) {
@@ -259,45 +280,70 @@ function handleRegistration({ inviteCode, invitee, ip = '', userStore } = {}) {
   const { settings, inviter } = check;
   const inviteeDays = settings.inviteeDays;
   const inviterDays = settings.inviterDays;
+  const pending = settings.requireBoundAccount === true;
+
+  // 强制绑定模式：双方都先记成 pending，等这个新号真的绑上（并首次登录）一台挂机账号再发。
+  // 这样「注册一堆小号立刻领天数」的路就被堵死了。
+  if (pending) {
+    pushRecord(state, {
+      inviter: inviter.username,
+      invitee,
+      code: inviter.code,
+      ip,
+      status: 'pending',
+      reason: 'waiting_bound_account',
+      inviterDays: 0,
+      inviteeDays: 0,
+      pendingDays: inviterDays,
+      pendingInviteeDays: inviteeDays,
+    });
+    saveState(state);
+    return {
+      ok: true,
+      inviter: inviter.username,
+      inviteeDays: 0,
+      pending: true,
+      pendingInviteeDays: inviteeDays,
+      pendingInviterDays: inviterDays,
+    };
+  }
+
   let inviteeGrantedDays = 0;
   let grantError = '';
-
   if (inviteeDays > 0) {
     const grant = userStore?.extendSubscriptionByDays?.(invitee, inviteeDays, { reason: 'invite' });
     if (grant && grant.ok) inviteeGrantedDays = inviteeDays;
     else grantError = grant?.error || '';
   }
+  let inviterGrantedDays = 0;
+  if (inviterDays > 0) {
+    const grant = userStore?.extendSubscriptionByDays?.(inviter.username, inviterDays, { reason: 'invite' });
+    if (grant && grant.ok) inviterGrantedDays = inviterDays;
+    else grantError = grantError || grant?.error || '';
+  }
 
-  const pending = settings.requireBoundAccount && inviterDays > 0;
   pushRecord(state, {
     inviter: inviter.username,
     invitee,
     code: inviter.code,
     ip,
-    status: pending ? 'pending' : 'granted',
-    reason: pending ? 'waiting_bound_account' : '',
-    inviterDays: pending ? 0 : inviterDays,
+    status: 'granted',
+    reason: '',
+    inviterDays: inviterGrantedDays,
     inviteeDays: inviteeGrantedDays,
-    pendingDays: pending ? inviterDays : 0,
     grantError,
   });
   saveState(state);
-
-  if (!pending && inviterDays > 0) {
-    userStore?.extendSubscriptionByDays?.(inviter.username, inviterDays, { reason: 'invite' });
-    settleGrant(state, inviter.username, inviterDays);
-  }
 
   return {
     ok: true,
     inviter: inviter.username,
     inviteeDays: inviteeGrantedDays,
-    pending,
+    pending: false,
     reason: grantError,
   };
 }
 
-/** 把「已发放」的奖励天数补记到记录里（保持记录与实际一致） */
 function settleGrant(state, inviter, days) {
   const latest = [...state.records].reverse().find(r => r.inviter === inviter && r.status === 'granted' && r.inviterDays === 0);
   if (latest) {
@@ -310,38 +356,61 @@ function settleGrant(state, inviter, days) {
  * 被邀请人绑定了第一个挂机账号 → 结算邀请人的待定奖励。
  * 由账号创建路由调用，失败不影响建号。
  */
-function markInviteeBound(invitee, userStore) {
+function markInviteeBound(invitee, userStore, identity = '') {
   const state = loadState();
   const settings = state.settings;
-  const pending = state.records.filter(r => r.invitee === invitee && r.status === 'pending');
-  if (pending.length === 0) return { ok: true, settled: 0 };
+  const pendingRecords = state.records.filter(r => r.invitee === invitee && r.status === 'pending');
+  if (pendingRecords.length === 0) return { ok: true, settled: 0 };
 
-  const expired = pending.filter(r => Date.now() - Number(r.at) > settings.pendingExpireDays * DAY_MS);
+  const expired = pendingRecords.filter(r => Date.now() - Number(r.at) > settings.pendingExpireDays * DAY_MS);
   for (const record of expired) {
     record.status = 'expired';
     record.reason = 'pending_expired';
   }
 
-  let settled = 0;
-  for (const record of pending) {
-    if (record.status !== 'pending') continue;
-    const days = Number(record.pendingDays) || 0;
-    const granted = days > 0
-      ? userStore?.extendSubscriptionByDays?.(record.inviter, days, { reason: 'invite' })
-      : { ok: true };
-    if (granted && granted.ok) {
-      record.status = 'granted';
-      record.inviterDays = days;
-      record.pendingDays = 0;
-      record.reason = '';
-      record.settledAt = Date.now();
-      settled += 1;
-    } else {
-      record.reason = granted?.error || 'grant_failed';
+  // 同一个挂机账号只能给一个注册用户带来奖励：占过就判 reused。
+  const key = String(identity || '').trim().toLowerCase();
+  if (key) {
+    const owner = state.identities[key];
+    if (owner && owner.username && owner.username !== invitee) {
+      for (const record of pendingRecords) {
+        if (record.status !== 'pending') continue;
+        record.status = 'rejected';
+        record.reason = 'identity_reused';
+        record.identity = key;
+        record.identityOwner = owner.username;
+      }
+      saveState(state);
+      return { ok: false, reason: 'identity_reused', owner: owner.username, settled: 0 };
     }
+    if (!owner) state.identities[key] = { username: invitee, at: Date.now() };
+  }
+
+  let settled = 0;
+  for (const record of pendingRecords) {
+    if (record.status !== 'pending') continue;
+    const inviteeDays = Number(record.pendingInviteeDays) || 0;
+    const inviterDays = Number(record.pendingDays) || 0;
+    const inviteeGrant = inviteeDays > 0
+      ? userStore?.extendSubscriptionByDays?.(record.invitee, inviteeDays, { reason: 'invite' })
+      : { ok: true };
+    const inviterGrant = inviterDays > 0
+      ? userStore?.extendSubscriptionByDays?.(record.inviter, inviterDays, { reason: 'invite' })
+      : { ok: true };
+    if (inviteeGrant?.ok === false || inviterGrant?.ok === false) {
+      record.grantError = inviteeGrant?.error || inviterGrant?.error || '';
+      continue;
+    }
+    record.status = 'granted';
+    record.reason = '';
+    record.inviteeDays = inviteeDays;
+    record.inviterDays = inviterDays;
+    record.identity = key || '';
+    record.settledAt = Date.now();
+    settled += 1;
   }
   saveState(state);
-  return { ok: true, settled };
+  return { ok: true, settled, identity: key };
 }
 
 /** 用户侧：我的邀请码 + 战绩 */
@@ -422,6 +491,7 @@ module.exports = {
   checkEligibility,
   handleRegistration,
   markInviteeBound,
+  identityFromAccount,
   getUserSummary,
   getAdminOverview,
   normalizeCode,

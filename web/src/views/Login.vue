@@ -465,7 +465,7 @@ onMounted(() => {
               >
                 <div :class="invitePreview.valid ? 'i-carbon-checkmark-filled' : 'i-carbon-warning-filled'" />
                 <span v-if="invitePreview.valid">
-                  有效 · 注册后你得 {{ invitePreview.inviteeDays }} 天，邀请人得 {{ invitePreview.inviterDays }} 天
+                  有效 · 绑定挂机账号后双方各得：你 {{ invitePreview.inviteeDays }} 天、邀请人 {{ invitePreview.inviterDays }} 天
                 </span>
                 <span v-else>{{ invitePreviewText }}</span>
               </div>

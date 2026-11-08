@@ -53,26 +53,51 @@ test('邀请码按用户生成且保持不变', () => {
   assert.notStrictEqual(invite.ensureCodeFor('bob'), first);
 });
 
-test('被邀请人立刻到账，邀请人待其绑定账号后结算', () => {
+test('绑定挂机账号后才给双方发奖', () => {
   resetState();
   const store = fakeUserStore();
   const code = invite.ensureCodeFor('alice');
 
   const result = invite.handleRegistration({ inviteCode: code, invitee: 'carol', ip: '1.1.1.1', userStore: store });
   assert.strictEqual(result.ok, true);
-  assert.strictEqual(result.inviteeDays, 2);
   assert.strictEqual(result.pending, true);
-  assert.deepStrictEqual(store.granted, [{ username: 'carol', days: 2, reason: 'invite' }]);
+  assert.strictEqual(result.inviteeDays, 0, '绑定前不发天数，避免注册小号即领奖');
+  assert.deepStrictEqual(store.granted, []);
 
   const summary = invite.getUserSummary('alice');
   assert.strictEqual(summary.pendingCount, 1);
   assert.strictEqual(summary.earnedDays, 0);
 
-  invite.markInviteeBound('carol', store);
-  assert.deepStrictEqual(store.granted.at(-1), { username: 'alice', days: 3, reason: 'invite' });
+  const bound = invite.markInviteeBound('carol', store, invite.identityFromAccount({ platform: 'qq', uin: '171576763' }));
+  assert.strictEqual(bound.settled, 1);
+  assert.deepStrictEqual(store.granted, [
+    { username: 'carol', days: 2, reason: 'invite' },
+    { username: 'alice', days: 3, reason: 'invite' },
+  ]);
+
   const after = invite.getUserSummary('alice');
   assert.strictEqual(after.grantedCount, 1);
   assert.strictEqual(after.earnedDays, 3);
+});
+
+test('同一个挂机账号不能被不同账号重复领奖', () => {
+  resetState();
+  const store = fakeUserStore();
+  const code = invite.ensureCodeFor('alice');
+  const identity = invite.identityFromAccount({ platform: 'qq', uin: '171576763' });
+
+  invite.handleRegistration({ inviteCode: code, invitee: 'erin', ip: '2.2.2.2', userStore: store });
+  assert.strictEqual(invite.markInviteeBound('erin', store, identity).settled, 1);
+
+  // 老用户又拿自己的码注册了个小号，想再绑同一个 QQ 号
+  store.users.frank = { username: 'frank', createdAt: Date.now(), subscription: { enabled: true } };
+  const again = invite.handleRegistration({ inviteCode: code, invitee: 'frank', ip: '3.3.3.3', userStore: store });
+  assert.strictEqual(again.ok, true, '注册本身不受影响');
+
+  const denied = invite.markInviteeBound('frank', store, identity);
+  assert.strictEqual(denied.ok, false);
+  assert.strictEqual(denied.reason, 'identity_reused');
+  assert.strictEqual(denied.owner, 'erin');
 });
 
 test('自己邀请自己无效', () => {
