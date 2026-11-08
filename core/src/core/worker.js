@@ -1748,15 +1748,11 @@ async function startBot(config) {
 
         // NapCat only supplies Code/UIN. Bootstrap farm-side GIDs after the
         // authenticated game connection is ready, without requiring openid.
+        // NapCat 只负责提供 Code/UIN；**不要**在拿到 Code 之后就把 QQ 登出。
+        // 登出 NapCat 会让这个小程序会话失效，之后任何一次 WS 重连都会拿到 400，
+        // 而且 NapCat 是所有 QQ 号共用的，一登出就带着别人一起掉。
+        // 需要释放 QQ 登录态时由主进程在「没有任何 QQ 账号在跑」时统一处理。
         if (loginType === 'qq_napcat') {
-            // NapCat 拿到 Code 之后 QQ 就该退出去了，否则会把用户电脑上的 QQ 顶下线。
-            // 开一个空闲守卫：没有扫码任务时，发现 NapCat 里还挂着 QQ 就自动注销。
-            try {
-                require('../services/napcat-login').startIdleGuard();
-                void require('../services/napcat-login').releaseIdleSession();
-            } catch {
-                // 守卫启动失败不影响正常跑图
-            }
             workerScheduler.setTimeoutTask('napcat_friend_gid_bootstrap', 2000, async () => {
                 if (!loginReady) return;
                 try {

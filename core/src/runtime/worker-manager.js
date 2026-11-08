@@ -45,7 +45,7 @@ function createWorkerManager(deps) {
     const permitQueue = [];
     const activePermits = new Map();
     const WATCHDOG_PING_MS = 30000;
-    const WATCHDOG_TIMEOUT_MS = 90000;
+    const WATCHDOG_TIMEOUT_MS = 180000;
     const DEFAULT_API_TIMEOUT_MS = 10000;
     // 按方法名的超时覆盖。萌宠日记单次操作要串行多次 RPC（读组 → 校验 → 操作 → 重读快照），
     // 10 秒默认值会误判超时，取值与上游一致。
@@ -478,6 +478,22 @@ function createWorkerManager(deps) {
                 delete workers[accountId];
             }
         });
+
+        // NapCat 里的 QQ 会话是所有 QQ 号共用的：只有「一个 QQ 号都不跑了」才放掉它。
+        // 提前登出会让其他还在跑的号在下一次重连时直接拿到 400。
+        scheduler.setTimeoutTask(`napcat_release_${  accountId}`, 2000, () => {
+            try {
+                const self = findAccount(accountId);
+                if (!self || String(self.platform || '') !== 'qq') return;
+                const data = typeof getAccounts === 'function' ? getAccounts() : { accounts: [] };
+                const otherRunning = (data.accounts || []).some(other => String(other.id) !== String(accountId)
+                    && String(other.platform || '') === 'qq'
+                    && workers[other.id] && !workers[other.id].stopping);
+                if (otherRunning) return;
+                const napcat = require('../services/napcat-login');
+                void Promise.resolve(napcat.releaseIdleSession()).catch(() => {});
+            } catch { /* NapCat 未配置时忽略 */ }
+        });
     }
 
     /**
@@ -670,7 +686,19 @@ function createWorkerManager(deps) {
                     'offline_reminder', `账号 ${wrk.name} 登录失效，已发送下线提醒`);
                 addAccountLog('ws_400', `账号 ${  wrk.name  } 登录失效，请更新 Code`,
                     accountId, wrk.name);
-                if (typeof refreshAccountCode === 'function' && !credentialRefreshes.has(accountId)) {
+                const account = findAccount(accountId);
+                const isWx = String(account && account.platform || '') === 'wx';
+                if (!isWx) {
+                    // QQ 号没有可再生凭证：刷不回来，继续按阶梯重试只会
+                    // 反复用已失效的 Code 撞 400，日志刷屏还拖着别的号一起掉。
+                    // 这里直接停下，等用户重新扫码。
+                    log('警告', `账号 ${wrk.name} 的 Code 已失效（QQ 号无法自动刷新），已停止，请重新扫码`, {
+                        accountId, accountName: wrk.name
+                    });
+                    addAccountLog('ws_400_need_rescan', 'Code 已失效，请重新扫码', accountId, wrk.name);
+                    wrk.stopping = true;
+                    stopWorker(accountId);
+                } else if (typeof refreshAccountCode === 'function' && !credentialRefreshes.has(accountId)) {
                     const task = Promise.resolve(refreshAccountCode(accountId, 'ws_400'))
                         .then(ok => {
                             if (!ok && typeof scheduleAutoRelogin === 'function') {
@@ -683,6 +711,7 @@ function createWorkerManager(deps) {
             }
         } else if (msg.type === 'watchdog_pong') {
             wrk.lastPongAt = Date.now();
+            wrk.watchdogMisses = 0;
         } else if (msg.type === 'account_kicked') {
             // 被踢下线
             const reason = msg.reason || '未知';
@@ -819,6 +848,17 @@ function createWorkerManager(deps) {
         for (const [accountId, wrk] of Object.entries(workers)) {
             if (!wrk || wrk.stopping) continue;
             if (now - Number(wrk.lastPongAt || 0) > WATCHDOG_TIMEOUT_MS) {
+                // 一次没回话不代表死了：worker 可能在等一串长请求、或者刚好在做重活。
+                // 必须连续两次（约 WATCHDOG_PING_MS * 2）都没回，才认定它真的卡住，
+                // 否则误杀一次就要用旧 Code 重连，反而把账号彻底搞掉。
+                wrk.watchdogMisses = Number(wrk.watchdogMisses || 0) + 1;
+                if (wrk.watchdogMisses < 2) {
+                    log('警告', `账号 ${wrk.name} Worker 心跳延迟（第 ${wrk.watchdogMisses} 次），先观察一轮`, {
+                        accountId, accountName: wrk.name
+                    });
+                    try { wrk.process.send({ type: 'watchdog_ping', at: now }); } catch { }
+                    continue;
+                }
                 const history = (restartHistory.get(accountId) || [])
                     .filter(at => now - at < 60 * 60 * 1000);
                 if (history.length >= WATCHDOG_MAX_RESTARTS) {
@@ -837,7 +877,7 @@ function createWorkerManager(deps) {
                 history.push(now);
                 restartHistory.set(accountId, history);
                 const account = findAccount(accountId);
-                log('错误', `账号 ${wrk.name} Worker 超过 90 秒无响应，正在自动重启`, {
+                log('错误', `账号 ${wrk.name} Worker 连续 ${Math.round(WATCHDOG_TIMEOUT_MS / 1000)} 秒无响应，正在自动重启`, {
                     accountId, accountName: wrk.name
                 });
                 if (account) restartWorker(account);

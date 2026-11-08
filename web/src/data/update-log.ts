@@ -11,9 +11,19 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.2'
+export const APP_VERSION = '2.16.3'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.3',
+    date: '2026-11-08',
+    items: [
+      'NapCat 拿到 Code 后不再自动登出 QQ：NapCat 是所有 QQ 号共用的，提前登出会让其他号的 Code 在下一次重连时直接 400，这正是「一个号掉线、其他号跟着掉」的原因',
+      '只有当一个 QQ 号都不在跑时，才把 NapCat 里的 QQ 会话放掉，把号还给本机 QQ',
+      'Worker 看门狗从 90 秒放宽到 180 秒，且必须连续两次没心跳才重启，避免把「正在干重活」误判成卡死',
+      'QQ 号 Code 失效后不再按阶梯反复重试（它本来就没有可再生凭证），直接停止并提示重新扫码，不再刷屏',
+    ],
+  },
   {
     version: '2.16.2',
     date: '2026-11-08',
