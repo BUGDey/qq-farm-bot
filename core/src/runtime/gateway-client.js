@@ -33,9 +33,10 @@ function createNetwork(direct) {
     let buffer = '';
     let nextId = 1;
     let loggedIn = false;
+    let lastCode = '';
     let backoffUntil = 0;
     let backoffReason = '';
-    let lastHealth = { pending: 0, oldestPendingMs: 0 };
+    let wsErrorState = null;
     const pending = new Map();
     // 复用直连那份 EventEmitter：业务模块在覆盖前就订阅了它，
     // 网关这边必须往同一个实例里发事件，否则 disconnect / kickout / login
@@ -101,6 +102,11 @@ function createNetwork(direct) {
             break;
         case 'pong':
             break;
+        case 'log':
+            // 网关进程自己的日志（连上了、退避了…）并入 worker 日志，方便一条日志看全
+            if (frame.level === 'warn' || frame.level === 'error') logWarn('网关', String(frame.message || ''));
+            else log('网关', String(frame.message || ''));
+            break;
         default:
             break;
         }
@@ -119,6 +125,10 @@ function createNetwork(direct) {
             backoffReason = '';
             networkEvents.emit('connection_recovered', payload);
             return;
+        }
+        if (name === 'ws_error') {
+            // 记住 400 之类的握手错误：上层靠它判断「Code 失效，需要重新扫码」
+            wsErrorState = { code: Number(payload.code) || 0, message: String(payload.message || ''), at: Date.now() };
         }
         networkEvents.emit(name, payload);
     }
@@ -152,10 +162,11 @@ function createNetwork(direct) {
     }
 
     function connect(code, onLoginSuccess) {
+        lastCode = String(code || '');
         sendFrame({
             t: 'connect',
             accountId,
-            code: String(code || ''),
+            code: lastCode,
             platform: process.env.FARM_PLATFORM || '',
             os: process.env.FARM_OS || '',
             clientVersion: process.env.FARM_CLIENT_VERSION || '',
@@ -188,7 +199,7 @@ function createNetwork(direct) {
                 pending.delete(id);
                 reject(new Error(`网关请求超时: ${method}`));
             }, limit);
-            pending.set(id, { resolve, reject, timer });
+            pending.set(id, { resolve, reject, timer, startedAt: Date.now() });
             const ok = sendFrame({
                 t: 'request',
                 accountId,
@@ -210,22 +221,75 @@ function createNetwork(direct) {
     function stopNetwork() {
         loggedIn = false;
         try { sendFrame({ t: 'stop' }); } catch { /* 网关可能已退出 */ }
+        for (const [id, p] of pending) {
+            clearTimeout(p.timer);
+            pending.delete(id);
+            try { p.reject(new Error('网关已停止，请求取消')); } catch { /* ignore */ }
+        }
         if (sock) { sock.destroy(); sock = null; }
     }
 
-    function reconnect() {
-        // 网关自己负责重连；worker 侧只需等待 login/reused 事件
+    function reconnect(code) {
+        // 网关自己负责「网关 ↔ 游戏」的重连；这里负责「worker ↔ 网关进程」这条 socket。
+        // 网关进程挂掉时 sock 会 close，若不重建 socket，worker 就永远收不到 login 了。
+        if (code) lastCode = String(code);
+        try { if (sock) { sock.destroy(); sock = null; } } catch { /* ignore */ }
+        buffer = '';
+        loggedIn = false;
+        if (!socketPath) return false;
+        try { ensureSocket(); } catch (err) {
+            logWarn('网关', `重建网关连接失败: ${err.message}`);
+            return false;
+        }
+        if (!lastCode) return true;
+        // 带着原 Code 重新握手：网关若还持有连接会回 reused，不会重新消耗凭证
+        sendFrame({
+            t: 'connect',
+            accountId,
+            code: lastCode,
+            platform: process.env.FARM_PLATFORM || '',
+            os: process.env.FARM_OS || '',
+            clientVersion: process.env.FARM_CLIENT_VERSION || '',
+        });
         return true;
     }
 
     function getGatewayHealth() {
+        const now = Date.now();
+        let oldestPendingMs = 0;
+        for (const p of pending.values()) {
+            const age = now - (p.startedAt || now);
+            if (age > oldestPendingMs) oldestPendingMs = age;
+        }
         return {
-            ...lastHealth,
+            pending: pending.size,
+            oldestPendingMs,
+            loggedIn,
             degraded: isBackoffActive(),
             degradedRemainingMs: backoffUntil ? Math.max(0, backoffUntil - Date.now()) : 0,
             reason: backoffReason,
             mode: 'gateway',
+            wsError: wsErrorState,
         };
+    }
+
+    // 网关模式下「空闲」必须看真正的在途请求数，否则后台任务会一直以为自己最闲，
+    // 一起涌上来把连接压垮。
+    function isGatewayIdleForLowPriority() {
+        if (!loggedIn) return false;
+        if (isBackoffActive()) return false;
+        return pending.size === 0;
+    }
+
+    async function waitForGatewayIdle(maxWaitMs = 8000, pollMs = 200) {
+        const limit = Math.max(0, Number(maxWaitMs) || 0);
+        const step = Math.max(50, Number(pollMs) || 200);
+        const deadline = Date.now() + limit;
+        while (Date.now() < deadline) {
+            if (isGatewayIdleForLowPriority()) return true;
+            await new Promise(resolve => setTimeout(resolve, step));
+        }
+        return isGatewayIdleForLowPriority();
     }
 
     function isGatewayHealthyForBusiness() { return loggedIn && !isBackoffActive(); }
@@ -241,11 +305,11 @@ function createNetwork(direct) {
         getUserState: () => (userState.gid ? userState : direct.getUserState()),
         getGatewayHealth,
         isGatewayHealthyForBusiness,
-        isGatewayIdleForLowPriority: () => !isBackoffActive(),
-        waitForGatewayIdle: async () => true,
+        isGatewayIdleForLowPriority,
+        waitForGatewayIdle,
         getAceStatus: () => ({ running: false, runtime: 'gateway' }),
         networkEvents,
-        getWsErrorState: () => direct.getWsErrorState(),
+        getWsErrorState: () => wsErrorState || direct.getWsErrorState(),
         setHealthBackoff(ms, reason) {
             const dur = Number(ms) || 0;
             if (dur <= 0) return;

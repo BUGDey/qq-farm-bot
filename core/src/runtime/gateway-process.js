@@ -154,6 +154,12 @@ function handleFrame(client, frame) {
         network.stopNetwork('worker 请求停止');
         loggedIn = false;
         broadcast({ t: 'event', name: 'stopped', payload: {} });
+        // 账号被停掉时网关进程自己也该退场：否则 socket/管道文件留在原处，
+        // 下次启动会连到一个「活着但没有连接」的僵尸网关。
+        setTimeout(() => {
+            try { server.close(); } catch { /* 忽略 */ }
+            process.exit(0);
+        }, 200);
         break;
     case 'ping':
         sendTo(client, { t: 'pong' });

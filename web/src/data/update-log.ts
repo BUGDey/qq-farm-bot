@@ -11,9 +11,20 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.1'
+export const APP_VERSION = '2.16.2'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.2',
+    date: '2026-11-08',
+    items: [
+      '网关模式健康快照补上在途请求数与最老请求耗时，后台任务不再永远认为自己最闲',
+      '网关进程挂掉后 worker 会重建 socket 并用原 Code 重新握手（网关仍在线时复用连接，不再多消耗凭证）',
+      '停止账号时挂起的请求立即失败，不再干等 30 秒超时',
+      '网关进程的 ws_error（如 400）现在会回传，界面能正确提示「Code 失效，请重新扫码」',
+      '网关进程收到停止指令后自行退出，避免残留僵尸网关占着管道',
+    ],
+  },
   {
     version: '2.16.1',
     date: '2026-11-08',
