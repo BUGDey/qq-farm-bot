@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.5'
+export const APP_VERSION = '2.16.6'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.6',
+    date: '2026-11-08',
+    items: [
+      '修复：重新扫码（或重新填 Code）后「已运行」仍接着上次的计时锚点，导致刚登录就显示好几天；现在换凭证即视为一次全新登录，从这次重新计时',
+      '自动刷新 Code 仍然不清零，后台刷新不会让累计时长跳回 0 秒',
+      '手动「停止」账号依旧清零，下次启动重新开始计时',
+    ],
+  },
   {
     version: '2.16.5',
     date: '2026-11-08',

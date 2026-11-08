@@ -313,12 +313,14 @@ function registerAdminAccountRoutes({
       }
 
       let onlyRenaming = false;
+      let existingLoginBuffer = "";
       if (isUpdate) {
         const accounts = provider.getAccounts();
         const existing = accounts.accounts.find(
           (account) => account.id === nextAccount.id,
         );
         if (existing) {
+          existingLoginBuffer = existing.loginBuffer || "";
           const keys = Object.keys(nextAccount);
           onlyRenaming =
             keys.length === 2 && keys.includes("id") && keys.includes("name");
@@ -327,6 +329,21 @@ function registerAdminAccountRoutes({
 
       if (!isUpdate && currentUser) nextAccount.username = currentUser.username;
       const data = addOrUpdateAccount(nextAccount);
+      // 重新扫码 / 重新填码 = 一次全新登录：把「已运行」的计时锚点清零，从这次登录重新算。
+      // 自动刷新 Code 走的是 restartWorker，不经过这里，所以累计时长不会被误清。
+      try {
+        const credentialChanged = isUpdate
+          && nextAccount.loginBuffer !== undefined
+          && String(nextAccount.loginBuffer || "") !== String(existingLoginBuffer || "");
+        if (credentialChanged) {
+          const accountStore = require("../models/store");
+          const targetId = nextAccount.id
+            || (Array.isArray(data.accounts) ? (data.accounts.at(-1) || {}).id : "");
+          if (targetId && typeof accountStore.clearAccountLogin === "function") {
+            accountStore.clearAccountLogin(targetId);
+          }
+        }
+      } catch { /* 计时锚点清理失败不影响保存 */ }
       // 新号第一次绑定挂机账号 → 结算邀请人的待定奖励（失败不影响建号）
       if (!isUpdate && currentUser?.username) {
         try {
