@@ -463,6 +463,20 @@ function createWorkerManager(deps) {
      * 因此只在「所有在跑的 QQ 号都已连上游戏」之后统一释放一次。
      * Linux/macOS 没有抢登录的问题，不释放，免得后续重连还要重新扫码。
      */
+    /**
+     * 账号因为掉线 / 被踢而停止时，把「已运行」的计时锚点一起清掉：
+     * 下次重新扫码登录应该从 0 开始，而不是接着几天前的记录算。
+     * 自动刷新 Code 能自愈的情况不清，避免累计时长被误清零。
+     */
+    function resetLoginSince(accountId) {
+        try {
+            const accountStore = require('../models/store');
+            if (accountStore && typeof accountStore.clearAccountLogin === 'function') {
+                accountStore.clearAccountLogin(accountId);
+            }
+        } catch { /* 存储不可用时忽略 */ }
+    }
+
     function maybeReleaseNapcatQq() {
         if (process.platform !== 'win32') return;
         const running = Object.values(workers).filter(w => w && !w.stopping && String(w.platform || '') === 'qq');
@@ -727,6 +741,7 @@ function createWorkerManager(deps) {
                         accountId, accountName: wrk.name
                     });
                     addAccountLog('ws_400_need_rescan', 'Code 已失效，请重新扫码', accountId, wrk.name);
+                resetLoginSince(accountId);
                     wrk.stopping = true;
                     stopWorker(accountId);
                 } else if (typeof refreshAccountCode === 'function' && !credentialRefreshes.has(accountId)) {
@@ -756,6 +771,7 @@ function createWorkerManager(deps) {
                 `账号 ${  wrk.name  } 被踢下线，已自动停止`,
                 accountId, wrk.name, { reason });
 
+            resetLoginSince(accountId);
             stopWorker(accountId);
             if (typeof scheduleAutoRelogin === 'function') {
                 scheduleAutoRelogin(accountId, `kickout:${reason}`);
@@ -772,6 +788,7 @@ function createWorkerManager(deps) {
                 `账号 ${  wrk.name  } 连接多次重试失败，已自动停止`,
                 accountId, wrk.name, { reason });
 
+            resetLoginSince(accountId);
             stopWorker(accountId);
             if (typeof scheduleAutoRelogin === 'function') {
                 scheduleAutoRelogin(accountId, `ws_reconnect_failed:${reason}`);

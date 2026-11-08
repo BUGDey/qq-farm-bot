@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.6'
+export const APP_VERSION = '2.16.7'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.7',
+    date: '2026-11-08',
+    items: [
+      '自动掉线（多次重连失败）或被踢下线导致账号停止时，同时清掉「已运行」的计时锚点，下次扫码登录从 0 开始计时',
+      'QQ 号 Code 失效需重新扫码时同样清零，不会再显示几天前的累计时长',
+      '自动刷新 Code 能自愈的情况仍然不清零，累计时长不会被误清',
+    ],
+  },
   {
     version: '2.16.6',
     date: '2026-11-08',
