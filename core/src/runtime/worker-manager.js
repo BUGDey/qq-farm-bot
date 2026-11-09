@@ -468,6 +468,13 @@ function createWorkerManager(deps) {
      * 下次重新扫码登录应该从 0 开始，而不是接着几天前的记录算。
      * 自动刷新 Code 能自愈的情况不清，避免累计时长被误清零。
      */
+    // 「已在其他终端登录」属于外部顶号：反复自动重登只会互相顶，状态放在 kick-guard 里共享
+    const kickGuard = require('../services/kick-guard');
+
+    function shouldStopAutoRelogin(accountId, reason) {
+        return kickGuard.shouldStopAutoRelogin(accountId, reason);
+    }
+
     function resetLoginSince(accountId) {
         try {
             const accountStore = require('../models/store');
@@ -772,8 +779,15 @@ function createWorkerManager(deps) {
                 accountId, wrk.name, { reason });
 
             resetLoginSince(accountId);
+            const stopRelogin = shouldStopAutoRelogin(accountId, reason);
             stopWorker(accountId);
-            if (typeof scheduleAutoRelogin === 'function') {
+            if (stopRelogin) {
+                log('警告', `账号 ${wrk.name} 短时间内多次被其他终端顶号，已停止自动重登（继续重登只会互相顶）。请关掉在别处登录的这个号，或手动启动`,
+                    { accountId: String(accountId), accountName: wrk.name, reason });
+                addAccountLog('kickout_auto_relogin_disabled',
+                    '多次被其他终端顶号，已停止自动重登（请检查别处是否还登着这个号）',
+                    accountId, wrk.name, { reason });
+            } else if (typeof scheduleAutoRelogin === 'function') {
                 scheduleAutoRelogin(accountId, `kickout:${reason}`);
             }
         } else if (msg.type === 'ws_reconnect_failed') {

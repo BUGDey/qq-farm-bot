@@ -2047,6 +2047,12 @@ function addOrUpdateAccount(account) {
         } else {
             ensureAccountConfig(accountId);
         }
+        // 身份标识：记住「这台游戏账号」对应哪个账号 id；
+        // 删号后重新登录会拿到新的 id，把旧 id 的统计接过来，排行榜不会出现匿名幽灵行。
+        try {
+            const saved = data.accounts.find(item => String(item.id) === String(accountId));
+            if (saved) require('../services/account-identity').reattachStats(saved);
+        } catch { /* 身份登记失败不影响保存 */ }
     }
     return data;
 }

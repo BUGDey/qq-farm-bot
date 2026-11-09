@@ -31,12 +31,18 @@ function registerRankingRoute({ app, requireAdminToken, store }) {
       if (fs.existsSync(statsDir)) {
         for (const file of fs.readdirSync(statsDir)) {
           if (!file.endsWith('.json')) continue;
+          // `_identities.json` 这类索引文件不是账号统计，跳过
+          if (file.startsWith('_')) continue;
+          const accountId = file.replace(/\.json$/, '');
+          // 只统计本站当前还在的账号：已删除账号的数据留在磁盘上封存，但不参与排行，
+          // 避免出现空名字的「神秘农场」幽灵行。用户用同一台游戏账号重新登录后，
+          // 会由 account-identity 把旧统计数据接到新账号 id 上，历史记录照常显示。
+          const meta = byId.get(accountId);
+          if (!meta) continue;
           try {
             const raw = JSON.parse(fs.readFileSync(path.join(statsDir, file), 'utf8'));
             const seg = raw && raw.rank && raw.rank[period];
             if (!seg || typeof seg !== 'object') continue;
-            const accountId = file.replace(/\.json$/, '');
-            const meta = byId.get(accountId) || { name: '', avatar: '', platform: 'qq', owner: '' };
             rows.push({
               accountId,
               name: meta.name,

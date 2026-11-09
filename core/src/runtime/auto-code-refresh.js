@@ -1,5 +1,6 @@
 const { createScheduler } = require('../services/scheduler');
 const wxLoginAdapter = require('../services/wx-login-adapter');
+const kickGuard = require('../services/kick-guard');
 
 // 掉线后的重登阶梯：先快后慢。前四次在 5 分钟内试完，
 // 超过阶梯再退回用户配置的定时间隔，避免拿凭证猛砸服务器。
@@ -169,6 +170,15 @@ function createAutoCodeRefreshService(deps) {
     if (!cfg.enabled) return;
 
     scheduler.setIntervalTask(taskName, cfg.intervalMinutes * 60000, () => {
+      // 刚被其他终端顶号时先让路：刷完重启只会再被顶一次，白白耗掉一次凭证
+      if (kickGuard.isRecentlyKicked(accountId)) {
+        const latest = findAccount(accountId);
+        log('系统', `跳过本轮自动刷新：账号 ${latest ? latest.name : accountId} 刚被其他终端顶号，先让路`, {
+          accountId: String(accountId),
+          accountName: latest ? latest.name : '',
+        });
+        return;
+      }
       refreshAccountCode(accountId, 'timer');
     }, { preventOverlap: true });
 

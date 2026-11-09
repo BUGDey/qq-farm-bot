@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.7'
+export const APP_VERSION = '2.16.8'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.8',
+    date: '2026-11-09',
+    items: [
+      '修复微信账号被「已在其他终端登录」顶下线后无限重登互踢：短时间被顶 3 次停止自动重登，定时刷新也会让路',
+      '排行榜只统计本站当前存在的账号，已删除账号的数据封存不显示，不再出现「神秘农场」幽灵行',
+      '删号后用同一台游戏账号重新登录，会按 qq:QQ号 / wx:openId 把历史排行数据接回来',
+    ],
+  },
   {
     version: '2.16.7',
     date: '2026-11-08',

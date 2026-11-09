@@ -64,7 +64,7 @@ const rankedList = computed(() => list.value.map((row, index) => ({ ...row, posi
 function maskName(name: string) {
   const trimmed = String(name || '').trim()
   if (!trimmed)
-    return '神秘农场'
+    return '未命名农场'
   return `${trimmed.slice(0, 1)}******`
 }
 
