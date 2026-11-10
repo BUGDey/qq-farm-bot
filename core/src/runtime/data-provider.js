@@ -459,6 +459,10 @@ function createDataProvider(deps) {
             const account = findAccount(id || ref);
             if (!account) return false;
             if (typeof scheduleAutoCodeRefresh === 'function') scheduleAutoCodeRefresh(account.id);
+            // 手动启动 QQ 账号必然要重新扫码/填 Code，按用户约定从这次登录重新计时
+            if (account.platform !== 'wx' && typeof store.clearAccountLogin === 'function') {
+                store.clearAccountLogin(account.id);
+            }
             if (account.platform === 'wx' && account.loginBuffer && typeof refreshAccountCode === 'function') {
                 const refreshed = await refreshAccountCode(account.id, 'manual_start');
                 if (refreshed) return true;

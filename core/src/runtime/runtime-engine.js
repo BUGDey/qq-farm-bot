@@ -32,12 +32,15 @@ function applySessionUptime(accountId, status) {
     const workerUptimeSec = Math.max(0, Number(status.uptime) || 0);
     let since = Number(store.getAccountLoginSince(accountId)) || 0;
     if (!since) {
-        // 首次观测到登录成功：以 worker 本次运行的起点作为锚点
-        const anchor = Date.now() - workerUptimeSec * 1000;
+        // 首次观测到登录成功：锚点取「此刻」。
+        // 不要用 worker 上报的 uptime 反推起点——锚点被清（手动启动/掉线/被踢）时，
+        // worker 可能还是上一个会话的进程，反推会把旧时长又接回去，看起来就是「时间跳一下」。
+        const anchor = Date.now();
         since = Number(store.markAccountLogin(accountId, anchor)) || anchor;
     }
-    const totalSec = Math.max(workerUptimeSec, Math.floor((Date.now() - since) / 1000));
-    if (!Number.isFinite(totalSec)) return status;
+    // 只用锚点计算：锚点被清（手动启动/掉线/被踢）后从头计，不会被 worker 进程的旧时长拉回去
+    let totalSec = Math.floor((Date.now() - since) / 1000);
+    if (!Number.isFinite(totalSec) || totalSec < 0) totalSec = 0;
     // uptime：累计运行时长（展示用）；sessionUptime：本次进程运行时长（算效率用，重启后从 0 开始）
     return { ...status, uptime: Math.max(0, totalSec), sessionUptime: workerUptimeSec };
 }

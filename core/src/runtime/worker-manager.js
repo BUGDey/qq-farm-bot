@@ -653,6 +653,8 @@ function createWorkerManager(deps) {
 
                 const offlineDuration = now - wrk.disconnectedSince;
                 if (!wrk.offlineReminderTriggered && offlineDuration >= 60000) {
+                    // 触发下线提醒即视为这次运行结束，已运行时长清零，重新登录后从 0 开始
+                    resetLoginSince(accountId);
                     const offlineMinutes = Math.floor(offlineDuration / 60000);
                     log('系统', `账号 ${  wrk.name  } 已离线 ${  offlineMinutes  } 分钟，发送下线提醒`);
 

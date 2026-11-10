@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.8'
+export const APP_VERSION = '2.16.9'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.9',
+    date: '2026-11-10',
+    items: [
+      '修复 QQ 账号「已运行」时长登录后会跳一下再变不准：不再用 worker 进程的旧时长反推起点，一律以本次登录时刻为准',
+      'QQ 账号手动扫码/手动填 Code 启动即从 0 计时，被踢下线或触发下线提醒也会清零',
+      '微信账号保持原行为：自动刷新 Code 重启 worker 不会把已运行时长清零',
+    ],
+  },
   {
     version: '2.16.8',
     date: '2026-11-09',
