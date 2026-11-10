@@ -170,6 +170,16 @@ jobs:
             cp -a web/dist "${STAGE}/web/dist"
           fi
 
+          # Windows 完整包：把后端依赖一起打进去（全部是纯 JS 包，无原生模块）
+          # 否则用户解压后直接跑 start.bat 会报 Cannot find module 'express'
+          if [ "${TARGET}" = "win" ] && [ "${FLAVOR}" = "full" ]; then
+            echo "::group::预装 core 依赖"
+            ( cd "${STAGE}/core" && npm install --omit=dev --no-audit --no-fund --loglevel=error )
+            rm -rf "${STAGE}/core/package-lock.json" "${STAGE}/core/node_modules/.cache"
+            echo "node_modules 体积：$(du -sh "${STAGE}/core/node_modules" | cut -f1)"
+            echo "::endgroup::"
+          fi
+
           # 按平台裁剪启动脚本
           if [ "${TARGET}" = "win" ]; then
             rm -f "${STAGE}/start.sh" "${STAGE}/compose.sh" "${STAGE}/deploy.sh"
@@ -197,6 +207,7 @@ jobs:
           ------------------------------------------------------------
             ${LAUNCH_TEXT}
             需要 Node.js 20 及以上；没有 pnpm 时脚本会自动用 corepack 安装。
+            Windows 完整部署包已内置后端依赖，不需要联网安装，解压即可启动。
             启动后浏览器打开 http://localhost:3007（服务器则用 http://服务器IP:3007）
             用 Docker 方式（已装 Docker 时选 1 或 2）首次启动需要联网安装容器依赖；
             构建报镜像源超时的话，在项目根目录 .env 里加一行 NPM_REGISTRY=<你那边可用的 npm 源> 再重跑即可。
@@ -227,7 +238,10 @@ jobs:
           四、数据与升级
           ------------------------------------------------------------
             运行数据（用户、卡密、账号配置）在 core/data/；Docker 模式在 ./data/。
-            升级时保留该目录即可，压缩包里不含 .env、node_modules、core/data。
+            升级时保留该目录即可，压缩包里不含 .env 与 core/data。
+            Windows 完整部署包（*-win-x64-full.zip）已内置后端依赖 core/node_modules，
+            解压后直接双击 start.bat 即可，不需要联网装依赖；
+            其余三种包（*-source.zip 与 Linux 完整包）会在首次启动时自动安装后端依赖。
             完整部署包（*-full.zip）已内置构建好的 web/dist，启动时不会再重新构建前端
             （Docker 方式也复用该产物）；源码包（*-source.zip）才会在首次启动时构建。
             更新内容见 docs/CHANGELOG.md，面板登录页的「更新日志」也有完整记录。

@@ -531,6 +531,40 @@ function buildFrontendIfNeeded() {
   return true;
 }
 
+/** core/node_modules 是否就绪（完整包已内置；源码包要装一次） */
+function coreDepsPresent(dir = path.join(ROOT, 'core')) {
+  return fileExists(path.join(dir, 'node_modules', 'express', 'package.json'));
+}
+
+/**
+ * 面板依赖缺失时先装一次。
+ * 完整部署包（*-full.zip）已内置 core/node_modules，正常不会走到这里；
+ * 主要兜住三种情况：用源码包、解压后被杀毒软件删了依赖、旧包没带依赖。
+ */
+function ensureCoreDeps() {
+  if (coreDepsPresent()) return true;
+  log('[依赖] core\\node_modules 缺失，正在安装后端依赖（首次较慢，需要联网）…');
+  const pnpm = pnpmCommand();
+  let res = spawnSync(pnpm.cmd, [...pnpm.args, '-C', 'core', 'install', '--prod'], {
+    cwd: ROOT,
+    stdio: 'inherit',
+  });
+  if (res.status !== 0) {
+    log('[警告] pnpm 安装失败，改用 npm 重试…');
+    const comspec = process.env.ComSpec || 'cmd.exe';
+    res = spawnSync(comspec, ['/c', 'npm', 'install', '--omit=dev', '--no-audit', '--no-fund'], {
+      cwd: path.join(ROOT, 'core'),
+      stdio: 'inherit',
+    });
+  }
+  if (!coreDepsPresent()) {
+    log('[错误] 后端依赖仍缺失：请联网后重试，或在 core 目录手动执行 pnpm install --prod');
+    return false;
+  }
+  log('[依赖] 后端依赖已就绪');
+  return true;
+}
+
 function printNapcatMissingHint() {
   log('');
   log('[需要 NapCat Shell] 自动下载失败，没能准备好 NapCat');
@@ -613,6 +647,8 @@ function downloadFile(url, dest) {
   }
   const script = [
     "$ProgressPreference='SilentlyContinue'",
+    // PowerShell 5.1 默认不启用 TLS1.2，直接请求 GitHub 会报「未能创建 SSL/TLS 安全通道」
+    "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
     `Invoke-WebRequest -Uri '${url}' -OutFile '${dest}' -UseBasicParsing -TimeoutSec 900`,
   ].join('; ');
   const res = spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script], {
@@ -714,7 +750,15 @@ async function startNapcatMode() {
   if (!shellDir && fileExists(NAPCAT_ZIP)) {
     if (isZipArchive(NAPCAT_ZIP)) {
       log('[解压] 发现本地 NapCat.Shell.Windows.Node.zip，正在解压…');
-      if (!extractZip(NAPCAT_ZIP, NAPCAT_HOME)) log('[错误] 解压失败，将尝试重新下载');
+      if (!extractZip(NAPCAT_ZIP, NAPCAT_HOME)) {
+        log('[错误] 解压失败（压缩包可能下载不完整），已删除并重新下载');
+        // 半截的 zip 下次还会被当成「本地包」，留着只会重复失败
+        try {
+          fs.rmSync(NAPCAT_ZIP, { force: true });
+        } catch {
+          /* 忽略 */
+        }
+      }
       shellDir = findShellDir();
     } else {
       log('[警告] data\\napcat\\ 下的 zip 不完整，已忽略');
@@ -754,6 +798,7 @@ async function startNapcatMode() {
   else log(`[提示] 暂未开启 OneBot HTTP：${onebot.reason}`);
 
   buildFrontendIfNeeded();
+  if (!ensureCoreDeps()) return false;
 
   const runtimeRoot = findShellRoot();
   const webuiFile = writeWebuiConfig(shellDir, token);
@@ -841,6 +886,7 @@ async function startNodeMode() {
   if (await warnIfPanelRunning()) return false;
   setEnvValues(envPath, napcatDisablePairs());
   buildFrontendIfNeeded();
+  if (!ensureCoreDeps()) return false;
   log('');
   log('==============================================');
   log(` 面板:   http://localhost:${PANEL_PORT}`);
@@ -999,4 +1045,6 @@ module.exports = {
   resetAdmin,
   portOpen,
   warnIfPanelRunning,
+  coreDepsPresent,
+  ensureCoreDeps,
 };

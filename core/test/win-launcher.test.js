@@ -99,6 +99,15 @@ test('findShellDir 只在 napcat.mjs 存在时返回目录', () => {
   assert.strictEqual(launcher.findShellDir(dir), flat);
 });
 
+test('coreDepsPresent 只在 express 装好时返回 true', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qqfarm-deps-'));
+  assert.equal(launcher.coreDepsPresent(dir), false, '空目录应判定为缺失');
+  fs.mkdirSync(path.join(dir, 'node_modules', 'express'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'node_modules', 'express', 'package.json'), '{"name":"express"}', 'utf8');
+  assert.equal(launcher.coreDepsPresent(dir), true, 'express 存在即视为已就绪');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('shellDownloadUrls 优先自定义源并包含镜像回退', () => {
   const saved = process.env.FARM_NAPCAT_SHELL_URL;
   process.env.FARM_NAPCAT_SHELL_URL = 'https://example.com/napcat.zip';

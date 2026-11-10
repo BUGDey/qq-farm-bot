@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.10'
+export const APP_VERSION = '2.16.11'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.11',
+    date: '2026-11-10',
+    items: [
+      'Windows 完整部署包内置后端依赖，解压双击 start.bat 即可，不再报 Cannot find module',
+      '启动器在依赖缺失时自动补装（pnpm 失败自动改用 npm）',
+      'NapCat 下载兜底修好：PowerShell 启用 TLS 1.2，半截的 zip 自动删掉重下',
+    ],
+  },
   {
     version: '2.16.10',
     date: '2026-11-10',
