@@ -124,12 +124,29 @@ jobs:
           ref: ${{ needs.prepare.outputs.tag }}
           fetch-depth: 1
 
-      - name: 下载前端产物
+      # 61MB 的产物同时被两个 full 任务拉取时偶发失败，这里用 gh 自己下载并重试
+      - name: 下载前端产物（带重试）
         if: matrix.flavor == 'full'
-        uses: actions/download-artifact@v4
-        with:
-          name: web-dist
-          path: web/dist
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          for i in 1 2 3 4 5; do
+            rm -rf web/dist
+            mkdir -p web/dist
+            if gh run download "${RUN_ID}" -n web-dist -D web/dist 2>&1; then
+              if [ -f web/dist/index.html ]; then
+                echo "前端产物已获取（第 ${i} 次尝试）"
+                exit 0
+              fi
+            fi
+            echo "::warning::第 ${i} 次下载前端产物失败，10 秒后重试"
+            sleep 10
+          done
+          echo "::error::下载前端产物连续 5 次失败"
+          exit 1
 
       - name: 组装发布目录
         shell: bash

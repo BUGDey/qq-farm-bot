@@ -55,6 +55,8 @@ flowchart TB
 
 **测试**：`core/test/win-launcher.test.js` 新增 `coreDepsPresent` 用例，该文件 15 pass；全量 673 pass。
 
+**CI**：61MB 的前端产物被两个 \ull\ 任务并发拉取时偶发失败，改为用 \gh run download\ 自己下载并重试 5 次。
+
 ### v2.16.10 · 示例数据脱敏（2026-11-10）
 
 **问题**：`account-identity.js` 的注释与两个测试用例里，把某个真实 QQ 号与真实昵称当成了示例值，随代码一起进了公开仓库。用户数据目录 `core/data/` 本身一直在 `.gitignore` 里（`git ls-files core/data` 为空，`accounts.json` 从未被提交），但**示例值**这层漏了。
