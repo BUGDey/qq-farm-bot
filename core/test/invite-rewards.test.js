@@ -68,7 +68,7 @@ test('绑定挂机账号后才给双方发奖', () => {
   assert.strictEqual(summary.pendingCount, 1);
   assert.strictEqual(summary.earnedDays, 0);
 
-  const bound = invite.markInviteeBound('carol', store, invite.identityFromAccount({ platform: 'qq', uin: '171576763' }));
+  const bound = invite.markInviteeBound('carol', store, invite.identityFromAccount({ platform: 'qq', uin: '10001000' }));
   assert.strictEqual(bound.settled, 1);
   assert.deepStrictEqual(store.granted, [
     { username: 'carol', days: 2, reason: 'invite' },
@@ -84,7 +84,7 @@ test('同一个挂机账号不能被不同账号重复领奖', () => {
   resetState();
   const store = fakeUserStore();
   const code = invite.ensureCodeFor('alice');
-  const identity = invite.identityFromAccount({ platform: 'qq', uin: '171576763' });
+  const identity = invite.identityFromAccount({ platform: 'qq', uin: '10001000' });
 
   invite.handleRegistration({ inviteCode: code, invitee: 'erin', ip: '2.2.2.2', userStore: store });
   assert.strictEqual(invite.markInviteeBound('erin', store, identity).settled, 1);

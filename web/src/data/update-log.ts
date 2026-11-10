@@ -11,9 +11,17 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.16.9'
+export const APP_VERSION = '2.16.10'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.16.10',
+    date: '2026-11-10',
+    items: [
+      '代码与测试里的示例账号改为占位符（不包含任何真实 QQ 号或昵称）',
+      '用户数据目录 core/data 始终不进入版本库，账号、统计、邀请记录都只留在本机',
+    ],
+  },
   {
     version: '2.16.9',
     date: '2026-11-10',
