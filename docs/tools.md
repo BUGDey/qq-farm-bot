@@ -74,16 +74,20 @@ Gitee 社区版对发行版附件有硬限制：**单个附件 ≤ 100MB、每�
 
 ```bash
 # 只同步最新一版
-GITEE_TOKEN=<你的令牌> node tools/sync-gitee-releases.js --latest
+node tools/sync-gitee-releases.js --latest
 
 # 全部同步（已存在的会更新说明）
-GITEE_TOKEN=<你的令牌> node tools/sync-gitee-releases.js
+node tools/sync-gitee-releases.js
 
 # 只打印不提交
 node tools/sync-gitee-releases.js --dry-run
 ```
 
 令牌到 <https://gitee.com/profile/personal_access_tokens> 生成，勾选 `projects` 即可。
+脚本会先读环境变量 `GITEE_TOKEN`，没有就从 git 凭证库（`credential.https://gitee.com.helper`
+配成 `store`、且成功 push 过一次之后写入的 `~/.git-credentials`）里自动取，所以配好双推以后
+通常直接敲上面三条命令就行，只在临时用别人的令牌时才需要显式传 `GITEE_TOKEN=`。
+
 每次打完 tag、GitHub Actions 发完版之后跑一次，Gitee 的版本记录就跟上了。
 
 ## 五、写脚本的几条约定

@@ -21,14 +21,41 @@ const { execFileSync } = require('node:child_process');
 const GH_REPO = 'BUGDey/qq-farm-bot';
 const GITEE_REPO = 'bugdey/qq-farm-bot';
 const GITEE_API = 'https://gitee.com/api/v5';
-const TOKEN = process.env.GITEE_TOKEN;
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const ONLY_LATEST = args.includes('--latest');
 
+/**
+ * 取 Gitee 令牌：优先环境变量，其次从 git 凭证库读。
+ * 这样 push 配好的凭据（credential.helper=store）能被直接复用，不用每次手动传。
+ */
+function resolveToken() {
+  if (process.env.GITEE_TOKEN) return process.env.GITEE_TOKEN.trim();
+  try {
+    const out = execFileSync('git', ['credential', 'fill'], {
+      input: 'protocol=https\nhost=gitee.com\n\n',
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'ignore'],
+    });
+    const line = out.split('\n').find((l) => l.startsWith('password='));
+    if (line) return line.slice('password='.length).trim();
+  } catch {
+    /* 凭证库里没有，落到下面的报错 */
+  }
+  return '';
+}
+
+const TOKEN = resolveToken();
+
 if (!TOKEN && !DRY_RUN) {
-  console.error('缺少 GITEE_TOKEN 环境变量。到 https://gitee.com/profile/personal_access_tokens 生成（勾选 projects）后重试。');
+  console.error(
+    '找不到 Gitee 令牌。任选其一：\n' +
+      '  1) 环境变量：GITEE_TOKEN=xxx node tools/sync-gitee-releases.js\n' +
+      '  2) 让 git 记住：git config --global credential.https://gitee.com.helper store\n' +
+      '     （成功 push 一次后会写入 ~/.git-credentials，本脚本会自动读取）\n' +
+      '  令牌到 https://gitee.com/profile/personal_access_tokens 生成，勾选 projects。'
+  );
   process.exit(1);
 }
 

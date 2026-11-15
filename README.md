@@ -164,7 +164,10 @@ cd core && node scripts/reset-admin-password.js 你的新密码   # 通用
 ### 把农场跑起来
 
 ```bash
-git clone https://github.com/BUGDey/qq-farm-bot.git   # 或 gitee.com/bugdey/qq-farm-bot.git
+# GitHub（国外/直连）
+git clone https://github.com/BUGDey/qq-farm-bot.git
+# Gitee（国内更快，二选一）
+# git clone https://gitee.com/bugdey/qq-farm-bot.git
 cd qq-farm-bot
 
 corepack enable
@@ -186,7 +189,10 @@ pnpm dev:web
 项目根目录的 `start.sh` 是统一入口，会自动装依赖、构建前端并启动服务：
 
 ```bash
-git clone https://github.com/BUGDey/qq-farm-bot.git   # 或 gitee.com/bugdey/qq-farm-bot.git
+# GitHub（国外/直连）
+git clone https://github.com/BUGDey/qq-farm-bot.git
+# Gitee（国内更快，二选一）
+# git clone https://gitee.com/bugdey/qq-farm-bot.git
 cd qq-farm-bot
 ./start.sh
 ```
@@ -210,7 +216,10 @@ cd qq-farm-bot
 > 更省事的做法是直接 `./start.sh`，它会自动生成随机密码并写入 `.env`。
 
 ```bash
-git clone https://github.com/BUGDey/qq-farm-bot.git   # 或 gitee.com/bugdey/qq-farm-bot.git
+# GitHub（国外/直连）
+git clone https://github.com/BUGDey/qq-farm-bot.git
+# Gitee（国内更快，二选一）
+# git clone https://gitee.com/bugdey/qq-farm-bot.git
 cd qq-farm-bot
 cp .env.compose.example .env    # 然后编辑 .env，填入 FARM_ADMIN_PASSWORD
 docker compose up -d --build
