@@ -64,6 +64,27 @@ node tools/audit-capture-compatibility.js <capture-dir>
 | `core/scripts/reset-admin-password.js` | 重置管理员密码：`node scripts/reset-admin-password.js <新密码> [用户名]` |
 | `core/scripts/inspect-tsdk-update.js` | 对比官方 TSDK 版本与 sha256，决定要不要换 wasm |
 | `core/scripts/find-cdn-resource.js` | 按资源名反查 CDN 地址 |
+| `tools/sync-gitee-releases.js` | 把 GitHub Releases 的版本记录与说明镜像到 Gitee（只同步文字，不同步安装包） |
+
+### 关于 Gitee 发行版同步
+
+Gitee 社区版对发行版附件有硬限制：**单个附件 ≤ 100MB、每仓库附件总量 ≤ 1G**。
+本项目每个安装包 216~286MB，一版四个包合计约 1GB，无法上传到 Gitee，
+所以 Gitee 侧只建「版本记录 + 说明文字 + 指向 GitHub 下载」的发行版：
+
+```bash
+# 只同步最新一版
+GITEE_TOKEN=<你的令牌> node tools/sync-gitee-releases.js --latest
+
+# 全部同步（已存在的会更新说明）
+GITEE_TOKEN=<你的令牌> node tools/sync-gitee-releases.js
+
+# 只打印不提交
+node tools/sync-gitee-releases.js --dry-run
+```
+
+令牌到 <https://gitee.com/profile/personal_access_tokens> 生成，勾选 `projects` 即可。
+每次打完 tag、GitHub Actions 发完版之后跑一次，Gitee 的版本记录就跟上了。
 
 ## 五、写脚本的几条约定
 

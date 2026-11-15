@@ -61,9 +61,9 @@
 
 ## 📦 发行版安装（免编译，推荐）
 
-不想装 Git、pnpm，也不想自己构建前端？直接下载打包好的发行版就行，包在 Releases 页面：[GitHub Releases](https://github.com/BUGDey/qq-farm-bot/releases) · [Gitee Releases](https://gitee.com/bugdey/qq-farm-bot/releases)。
+不想装 Git、pnpm，也不想自己构建前端？直接下载打包好的发行版就行，安装包在 [GitHub Releases](https://github.com/BUGDey/qq-farm-bot/releases) 页面。
 
-> Gitee 与 GitHub 的发版内容一致；国内网络访问 Gitee 更快。
+> Gitee 也建了[发行版页](https://gitee.com/bugdey/qq-farm-bot/releases)，但只放版本记录和说明文字——Gitee 限制单个附件 ≤ 100MB、每仓库附件总量 ≤ 1G，本项目的安装包每个 216~286MB，传不上去。**安装包只从 GitHub 下载。**
 
 每个版本提供 4 个包，功能完全一致，区别只有「前端是否已经构建好」：
 
@@ -103,9 +103,7 @@
 
 ### Linux
 
-在服务器上一条命令取最新版本、下载、解压并启动。
-
-GitHub（海外网络）：
+在服务器上一条命令取最新版本、下载、解压并启动：
 
 ```bash
 V=$(curl -fsSL https://api.github.com/repos/BUGDey/qq-farm-bot/releases/latest | sed -n 's/.*"tag_name" *: *"v\([^"]*\)".*/\1/p')
@@ -114,14 +112,12 @@ unzip -q qq-farm-bot.zip && cd "qq-farm-bot-v${V}-linux-x64-full"
 chmod +x start.sh && ./start.sh
 ```
 
-Gitee（国内网络更快）：
-
-```bash
-V=$(curl -fsSL "https://gitee.com/api/v5/repos/bugdey/qq-farm-bot/releases/latest" | sed -n 's/.*"tag_name" *: *"v\([^"]*\)".*/\1/p')
-curl -fL -o qq-farm-bot.zip "https://gitee.com/bugdey/qq-farm-bot/releases/download/v${V}/qq-farm-bot-v${V}-linux-x64-full.zip"
-unzip -q qq-farm-bot.zip && cd "qq-farm-bot-v${V}-linux-x64-full"
-chmod +x start.sh && ./start.sh
-```
+> 服务器访问 GitHub 慢的话，改用 Gitee 克隆源码后本地构建（Gitee 上没有安装包）：
+>
+> ```bash
+> git clone https://gitee.com/bugdey/qq-farm-bot.git
+> cd qq-farm-bot && chmod +x start.sh && ./start.sh
+> ```
 
 - 想装源码包：把文件名里的 `full` 换成 `source`；
 - 完整包已内置前端产物：启动时**不会重新构建前端**（`./start.sh 1` 检测到 Docker 时，镜像构建也会直接复用包内 `web/dist`）；只有 `source` 包才会在首次启动时构建；
