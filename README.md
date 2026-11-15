@@ -8,6 +8,10 @@
 
 [能做什么](#-能做什么) · [双端扫码](#-QQ微信扫码登录) · [开始种田](#-开始种田) · [Docker 部署](#-docker-部署) · [已部署更新](#-已部署环境更新) · [更新记录](docs/CHANGELOG.md) · [使用文档](#-使用文档) · [支持项目](#-支持项目)
 
+**仓库地址**：[GitHub](https://github.com/BUGDey/qq-farm-bot) · [Gitee](https://gitee.com/bugdey/qq-farm-bot)
+
+两个平台同步维护，代码与提交记录保持一致，任选一个克隆即可。
+
 </div>
 
 > [!WARNING]
@@ -57,7 +61,9 @@
 
 ## 📦 发行版安装（免编译，推荐）
 
-不想装 Git、pnpm，也不想自己构建前端？直接下载打包好的发行版就行，包在 [Releases](https://github.com/BUGDey/qq-farm-bot/releases) 页面。
+不想装 Git、pnpm，也不想自己构建前端？直接下载打包好的发行版就行，包在 Releases 页面：[GitHub Releases](https://github.com/BUGDey/qq-farm-bot/releases) · [Gitee Releases](https://gitee.com/bugdey/qq-farm-bot/releases)。
+
+> Gitee 与 GitHub 的发版内容一致；国内网络访问 Gitee 更快。
 
 每个版本提供 4 个包，功能完全一致，区别只有「前端是否已经构建好」：
 
@@ -97,11 +103,22 @@
 
 ### Linux
 
-在服务器上一条命令取最新版本、下载、解压并启动：
+在服务器上一条命令取最新版本、下载、解压并启动。
+
+GitHub（海外网络）：
 
 ```bash
 V=$(curl -fsSL https://api.github.com/repos/BUGDey/qq-farm-bot/releases/latest | sed -n 's/.*"tag_name" *: *"v\([^"]*\)".*/\1/p')
 curl -fL -o qq-farm-bot.zip "https://github.com/BUGDey/qq-farm-bot/releases/download/v${V}/qq-farm-bot-v${V}-linux-x64-full.zip"
+unzip -q qq-farm-bot.zip && cd "qq-farm-bot-v${V}-linux-x64-full"
+chmod +x start.sh && ./start.sh
+```
+
+Gitee（国内网络更快）：
+
+```bash
+V=$(curl -fsSL "https://gitee.com/api/v5/repos/bugdey/qq-farm-bot/releases/latest" | sed -n 's/.*"tag_name" *: *"v\([^"]*\)".*/\1/p')
+curl -fL -o qq-farm-bot.zip "https://gitee.com/bugdey/qq-farm-bot/releases/download/v${V}/qq-farm-bot-v${V}-linux-x64-full.zip"
 unzip -q qq-farm-bot.zip && cd "qq-farm-bot-v${V}-linux-x64-full"
 chmod +x start.sh && ./start.sh
 ```
@@ -151,7 +168,7 @@ cd core && node scripts/reset-admin-password.js 你的新密码   # 通用
 ### 把农场跑起来
 
 ```bash
-git clone https://github.com/BUGDey/qq-farm-bot.git
+git clone https://github.com/BUGDey/qq-farm-bot.git   # 或 gitee.com/bugdey/qq-farm-bot.git
 cd qq-farm-bot
 
 corepack enable
@@ -173,7 +190,7 @@ pnpm dev:web
 项目根目录的 `start.sh` 是统一入口，会自动装依赖、构建前端并启动服务：
 
 ```bash
-git clone https://github.com/BUGDey/qq-farm-bot.git
+git clone https://github.com/BUGDey/qq-farm-bot.git   # 或 gitee.com/bugdey/qq-farm-bot.git
 cd qq-farm-bot
 ./start.sh
 ```
@@ -197,7 +214,7 @@ cd qq-farm-bot
 > 更省事的做法是直接 `./start.sh`，它会自动生成随机密码并写入 `.env`。
 
 ```bash
-git clone https://github.com/BUGDey/qq-farm-bot.git
+git clone https://github.com/BUGDey/qq-farm-bot.git   # 或 gitee.com/bugdey/qq-farm-bot.git
 cd qq-farm-bot
 cp .env.compose.example .env    # 然后编辑 .env，填入 FARM_ADMIN_PASSWORD
 docker compose up -d --build
