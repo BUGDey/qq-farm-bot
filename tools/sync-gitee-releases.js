@@ -57,12 +57,20 @@ function rewriteBody(rel) {
 }
 
 function ghReleases() {
-  const out = execFileSync(
-    'gh',
-    ['api', `repos/${GH_REPO}/releases?per_page=100`, '--paginate'],
-    { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
-  );
-  return JSON.parse(out);
+  // 逐页取，避免 gh --paginate 把多页数组拼接成非法的 JSON
+  const all = [];
+  for (let page = 1; page <= 20; page += 1) {
+    const out = execFileSync(
+      'gh',
+      ['api', `repos/${GH_REPO}/releases?per_page=100&page=${page}`],
+      { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
+    );
+    const batch = JSON.parse(out);
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    all.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return all;
 }
 
 async function giteeFetch(path, init) {
