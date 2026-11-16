@@ -41,7 +41,11 @@ message GameFriend {
 // ============ 请求/回复 ============
 
 // --- 获取所有好友 ---
-message GetAllRequest {}
+message GetAllRequest {
+    // 官方客户端每次都发 field1=1（抓包实测：请求体 0801）。
+    // 缺这个字段时服务端只回极少量好友，加了才给全量。
+    uint32 sync_flag = 1;
+}
 
 message GetAllReply {
     repeated GameFriend game_friends = 1;
@@ -52,18 +56,34 @@ message GetAllReply {
 // --- 获取指定游戏好友 (通过GID列表) ---
 message GetGameFriendsRequest {
     repeated int64 gids = 1;
+    // 官方客户端每次都带 1（抓包实测：f1=gids, f2=1）。
+    uint32 sync_flag = 2;
+}
+
+// ============ 推荐好友（服务端可能随 SyncAll 一起下发） ============
+message RecommendedFriend {
+    int64 gid = 1;
+    string name = 2;
+    string avatar_url = 3;
+    int64 level = 4;
+    int64 updated_at = 5;
+    string open_id = 6;
 }
 
 // --- 同步好友 (带 open_ids) ---
 message SyncAllRequest {
     // field 1 reserved
     repeated string open_ids = 2;
+    // 官方客户端每次 SyncAll 都带 1（抓包实测：275 个 open_id + field3=1）。
+    // 含义未公开，但对端据此决定「这是不是一次完整同步」，缺了它只回极少条目。
+    uint32 sync_flag = 3;
 }
 
 message SyncAllReply {
     repeated GameFriend game_friends = 1;
     // repeated Invitation invitations = 2;  // 略
     int64 application_count = 3;
+    repeated RecommendedFriend recommended_friends = 5;
 }
 
 // ============ 好友申请 (微信同玩) ============

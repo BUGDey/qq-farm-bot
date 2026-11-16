@@ -5,7 +5,9 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 import CollectionsPanel from '@/components/illustrated/CollectionsPanel.vue'
 import IllustratedItemCard from '@/components/illustrated/IllustratedItemCard.vue'
 import MutationCatalogPanel from '@/components/illustrated/MutationCatalogPanel.vue'
+import RanchBookCard from '@/components/illustrated/RanchBookCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import api from '@/api'
 import { useAccountStore } from '@/stores/account'
 import { useIllustratedStore } from '@/stores/illustrated'
 import { useToastStore } from '@/stores/toast'
@@ -189,6 +191,43 @@ watch([currentAccountId, illustratedType], () => {
   refreshList(false)
 })
 
+// ========== 农场 / 牧场 图鉴切换 ==========
+// 牧场图鉴是纯本地配置（ItemInfo.json 里 type=105 的 24 种动物），
+// 游戏侧没有抓到牧场图鉴协议，所以这里只做静态展示：头像、名称、解锁等级、金券价格。
+type GameSpace = 'farm' | 'ranch'
+
+const gameSpace = ref<GameSpace>('farm')
+const isRanchBook = computed(() => gameSpace.value === 'ranch')
+
+const spaceTabs: Array<{ value: GameSpace, label: string }> = [
+  { value: 'farm', label: '农场' },
+  { value: 'ranch', label: '牧场' },
+]
+
+const ranchItems = ref<any[]>([])
+const ranchLoading = ref(false)
+const ranchError = ref('')
+
+async function loadRanchBook() {
+  ranchLoading.value = true
+  ranchError.value = ''
+  try {
+    const { data } = await api.get('/api/illustrated/ranch')
+    ranchItems.value = data?.data?.items || []
+  }
+  catch (err: any) {
+    ranchError.value = err?.response?.data?.error || err?.message || '牧场图鉴加载失败'
+  }
+  finally {
+    ranchLoading.value = false
+  }
+}
+
+watch(gameSpace, (space) => {
+  if (space === 'ranch')
+    loadRanchBook()
+})
+
 onMounted(() => {
   refreshList(false)
 })
@@ -205,7 +244,7 @@ onMounted(() => {
               图鉴
             </h1>
           </div>
-          <div v-if="isIllustratedMode" class="flex flex-wrap items-center gap-2 text-sm">
+          <div v-if="isIllustratedMode && !isRanchBook" class="flex flex-wrap items-center gap-2 text-sm">
             <span class="h-8 flex items-center rounded-lg bg-emerald-50 px-3 text-xs text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
               {{ summary.unlocked }}/{{ summary.total }} 已解锁
             </span>
@@ -222,7 +261,20 @@ onMounted(() => {
         </div>
 
         <div class="flex flex-wrap items-center gap-2 xl:shrink-0">
+          <!-- 农场 / 牧场 图鉴切换 -->
           <div class="h-9 max-w-full inline-flex overflow-x-auto border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
+            <button
+              v-for="item in spaceTabs"
+              :key="item.value"
+              class="min-w-14 rounded-md px-2.5 text-sm font-medium transition sm:min-w-16 sm:px-3"
+              :class="segmentedButtonClasses(gameSpace === item.value)"
+              :style="gameSpace === item.value ? { backgroundColor: 'var(--theme-primary)' } : {}"
+              @click="gameSpace = item.value"
+            >
+              {{ item.label }}
+            </button>
+          </div>
+          <div v-if="!isRanchBook" class="h-9 max-w-full inline-flex overflow-x-auto border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
             <button
               v-for="item in viewTabs"
               :key="item.value"
@@ -234,7 +286,7 @@ onMounted(() => {
               {{ item.label }}
             </button>
           </div>
-          <template v-if="isIllustratedMode">
+          <template v-if="isIllustratedMode && !isRanchBook">
             <div class="h-9 max-w-full inline-flex overflow-x-auto border border-gray-200 rounded-lg bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800">
               <button
                 v-for="item in filterTabs"
@@ -254,10 +306,46 @@ onMounted(() => {
               刷新
             </BaseButton>
           </template>
+          <template v-if="isRanchBook">
+            <BaseButton class="w-24" variant="primary" :loading="ranchLoading" @click="loadRanchBook">
+              刷新
+            </BaseButton>
+          </template>
         </div>
       </div>
 
-      <template v-if="isIllustratedMode">
+      <!-- 牧场动物图鉴：本地配置 + 内置头像，不需要账号在线 -->
+      <template v-if="isRanchBook">
+        <div v-if="ranchError" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+          {{ ranchError }}
+        </div>
+
+        <div v-if="ranchLoading && ranchItems.length === 0" class="rounded-lg bg-gray-50 p-8 text-center text-sm text-gray-500 dark:bg-gray-900/40 dark:text-gray-400">
+          正在加载牧场图鉴...
+        </div>
+
+        <div v-else class="space-y-4">
+          <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span class="h-8 flex items-center rounded-lg bg-emerald-50 px-3 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+              共 {{ ranchItems.length }} 种牧场动物
+            </span>
+            <span class="h-8 flex items-center rounded-lg bg-amber-50 px-3 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+              金券购买
+            </span>
+            <span>数据来自本地物品配置，不含游戏内实时持有状态。</span>
+          </div>
+
+          <div class="grid grid-cols-[repeat(auto-fill,minmax(156px,1fr))] gap-3">
+            <RanchBookCard
+              v-for="item in ranchItems"
+              :key="item.id"
+              :item="item"
+            />
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="isIllustratedMode">
         <div v-if="error" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
           {{ error }}
         </div>
@@ -291,8 +379,8 @@ onMounted(() => {
       </template>
     </div>
 
-    <CollectionsPanel v-if="viewMode === 'collections'" />
-    <MutationCatalogPanel v-else-if="viewMode === 'mutations'" />
+    <CollectionsPanel v-if="!isRanchBook && viewMode === 'collections'" />
+    <MutationCatalogPanel v-else-if="!isRanchBook && viewMode === 'mutations'" />
 
     <ConfirmModal
       :show="showConfirm"

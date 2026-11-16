@@ -10,6 +10,9 @@ export default defineConfig({
     },
   },
   shortcuts: {
+    // carbon 图标集里没有「牧场/牲畜」图标（cattle/cow/farm 均不存在），
+    // 沿用本文件既有做法：把语义名映射到 fa-solid 里实际存在的爪印图标。
+    'i-carbon-cattle': 'i-fas-paw',
     'i-carbon-list-blocked': 'i-fas-ban',
     'i-carbon-user-offline': 'i-fas-user-slash',
     'i-carbon-leaf': 'i-fas-leaf',

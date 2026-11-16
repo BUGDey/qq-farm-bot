@@ -110,6 +110,13 @@ function createDataProvider(deps) {
         return callWorkerApi(accountId, 'getDecorationDiagnostics');
     }
 
+    /** 牧场栏舍详情（只读，按账号合并并发） */
+    function getRanchDetail(ref, hostGid = 0) {
+        const accountId = resolveAccountId(ref);
+        const key = `ranch:${String(accountId || '')}:${String(hostGid)}`;
+        return callWorkerReadOnce(key, accountId, 'getRanchDetail', hostGid);
+    }
+
     /** 向全部 worker 广播消息（活动插件宿主装载/卸载用） */
     function sendToWorkers(message) {
         for (const worker of Object.values(workers || {})) {
@@ -237,7 +244,6 @@ function createDataProvider(deps) {
         getFriends: (ref, force = false) => callWorkerApi(resolveAccountId(ref), 'getFriends', force,
             force ? FRIEND_TIMEOUT : undefined),
         clearFriendsCache: (ref) => callWorkerApi(resolveAccountId(ref), 'clearFriendsCache'),
-        syncFriendsByOpenIds: (ref, openIds, options) => callWorkerApi(resolveAccountId(ref), 'syncFriendsByOpenIds', openIds, options || {}, { _timeoutMs: 180000 }),
         getInteractRecords: (ref) => callWorkerApi(resolveAccountId(ref), 'getInteractRecords'),
         getFriendLands: (ref, gid) => callWorkerApi(resolveAccountId(ref), 'getFriendLands', gid),
         doFriendOp: (ref, gid, op) => callWorkerApi(resolveAccountId(ref), 'doFriendOp', gid, op),
@@ -315,6 +321,17 @@ function createDataProvider(deps) {
         equipDecoration,
         getDecorationDiagnostics,
 
+        // ========== Ranch（牧场 / 栏舍动物） ==========
+        getRanchDetail,
+        ranchPlaceAnimal: (ref, ranchInstId, animalId, giantCubItemId) => callWorkerApi(resolveAccountId(ref), 'ranchPlaceAnimal', ranchInstId, animalId, giantCubItemId),
+        ranchTriggerProduce: (ref, ranchInstId, slotIndex) => callWorkerApi(resolveAccountId(ref), 'ranchTriggerProduce', ranchInstId, slotIndex),
+        harvestRanch: (ref, mode) => callWorkerApi(resolveAccountId(ref), 'harvestRanch', mode),
+        feedAnimal: (ref, ranchInstId, animalInstId, count) => callWorkerApi(resolveAccountId(ref), 'feedAnimal', ranchInstId, animalInstId, count),
+        getRanchOpTimes: (ref) => callWorkerApi(resolveAccountId(ref), 'getRanchOpTimes'),
+        strokeAnimal: (ref, hostGid, ranchInstId, slotIndex) => callWorkerApi(resolveAccountId(ref), 'strokeAnimal', hostGid, ranchInstId, slotIndex),
+        cleanAllRanch: (ref, hostGid) => callWorkerApi(resolveAccountId(ref), 'cleanAllRanch', hostGid),
+        addFeed: (ref, instanceId, addCount, useGold, hostGid) => callWorkerApi(resolveAccountId(ref), 'addFeed', instanceId, addCount, useGold, hostGid),
+
         // ========== Career ==========
         getCareerInfo: (ref, gid) => callWorkerApi(resolveAccountId(ref), 'getCareerInfo', gid),
 
@@ -344,6 +361,7 @@ function createDataProvider(deps) {
                 fertilizerBuyNormalCount: s.fertilizerBuyNormalCount,
                 fertilizerBuyNormalThresholdHours: s.fertilizerBuyNormalThresholdHours,
                 fertilizerBuyCheckIntervalMinutes: s.fertilizerBuyCheckIntervalMinutes,
+                ranchCheckIntervalMinutes: s.ranchCheckIntervalMinutes,
                 goldenBugKeepCount: s.goldenBugKeepCount,
                 goldenBugRoundLimit: s.goldenBugRoundLimit,
                 autoAcceptFriendMinLevel: s.autoAcceptFriendMinLevel,
@@ -369,6 +387,7 @@ function createDataProvider(deps) {
                 fertilizerBuyNormalCount: store.getFertilizerBuyNormalCount(id),
                 fertilizerBuyNormalThresholdHours: store.getFertilizerBuyNormalThresholdHours(id),
                 fertilizerBuyCheckIntervalMinutes: store.getFertilizerBuyCheckIntervalMinutes(id),
+                ranchCheckIntervalMinutes: store.getRanchCheckIntervalMinutes(id),
                 goldenBugKeepCount: store.getConfigSnapshot(id).goldenBugKeepCount,
                 goldenBugRoundLimit: store.getConfigSnapshot(id).goldenBugRoundLimit,
                 autoAcceptFriendMinLevel: store.getAutoAcceptFriendMinLevel(id),

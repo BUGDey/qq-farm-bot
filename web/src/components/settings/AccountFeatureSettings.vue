@@ -11,7 +11,7 @@ import BaseSwitch from '@/components/ui/BaseSwitch.vue'
 import { CHARITY_FLOWER_ACTIVITY_WINDOW, isWithinActivityWindowMs, MILK_TEA_ACTIVITY_WINDOW, MILK_TEA_BUSINESS_WINDOW, PET_DIARY_ACTIVITY_WINDOW, RAIN_POEM_ACTIVITY_WINDOW, SHARE_REWARD_ACTIVITY_WINDOW, WISH_SIGN_ACTIVITY_WINDOW } from '@/constants/activity-windows'
 import { usePetStore } from '@/stores/pet'
 
-type ModuleKey = 'planting' | 'fertilizer' | 'friends' | 'steal' | 'merchant' | 'activity'
+type ModuleKey = 'planting' | 'fertilizer' | 'ranch' | 'friends' | 'steal' | 'merchant' | 'activity'
 
 const props = defineProps<{
   currentAccountName: string | null
@@ -129,6 +129,7 @@ const showShareRewardActivity = computed(() => isWithinActivityWindowMs(SHARE_RE
 const moduleInfo: Record<ModuleKey, { title: string, description: string, icon: string, image: string, tone: string }> = {
   planting: { title: '种植与收获', description: '选种、收获、出售和巡田节奏', icon: 'i-carbon-sprout', image: '/game-config/module_icons/planting.png', tone: 'emerald' },
   fertilizer: { title: '土地与施肥', description: '土地升级、施肥和化肥补充', icon: 'i-carbon-soil-moisture', image: '/game-config/module_icons/fertilizer.png', tone: 'amber' },
+  ranch: { title: '牧场', description: '栏舍动物的收获、投喂与牧草', icon: 'i-carbon-cattle', image: '/game-config/module_icons/planting.png', tone: 'lime' },
   friends: { title: '好友', description: '帮助、捣乱和好友申请', icon: 'i-carbon-user-multiple', image: '/game-config/module_icons/friends-friendship.png', tone: 'sky' },
   steal: { title: '偷菜', description: '巡查频率和操作延迟', icon: 'i-carbon-crop-health', image: '/game-config/module_icons/steal.png', tone: 'lime' },
   merchant: { title: '神秘商人', description: '商品购买和货币范围', icon: 'i-carbon-store', image: '/game-config/module_icons/merchant.png', tone: 'orange' },
@@ -199,6 +200,14 @@ function summaryTags(key: ModuleKey) {
       automation.value.automation.fertilizer_buy_organic || automation.value.automation.fertilizer_buy_normal ? '自动补肥' : '不补肥',
     ]
   }
+  if (key === 'ranch') {
+    return [
+      automation.value.automation.ranch_harvest ? '一键收获' : '不自动收获',
+      automation.value.automation.ranch_feed ? '投喂罐头桶' : '不自动投喂',
+      automation.value.automation.ranch_add_feed ? '加牧草' : '不加牧草',
+      `间隔 ${automation.value.ranchCheckIntervalMinutes || 30} 分钟`,
+    ]
+  }
   if (key === 'friends') {
     return [
       automation.value.automation.friend_help ? '帮助好友' : '不帮助',
@@ -244,6 +253,8 @@ function moduleEnabled(key: ModuleKey) {
     return automation.value.automation.farm
   if (key === 'fertilizer')
     return automation.value.automation.fertilizer !== 'none' || automation.value.automation.land_upgrade
+  if (key === 'ranch')
+    return automation.value.automation.ranch_harvest || automation.value.automation.ranch_feed || automation.value.automation.ranch_add_feed
   if (key === 'friends')
     return automation.value.automation.friend
   if (key === 'steal')
@@ -259,6 +270,11 @@ function setModuleEnabled(key: ModuleKey, enabled: boolean) {
   }
   else if (key === 'fertilizer') {
     automation.value.automation.fertilizer = enabled ? (automation.value.automation.fertilizer === 'none' ? 'normal' : automation.value.automation.fertilizer) : 'none'
+  }
+  else if (key === 'ranch') {
+    automation.value.automation.ranch_harvest = enabled
+    automation.value.automation.ranch_feed = enabled
+    automation.value.automation.ranch_add_feed = enabled
   }
   else if (key === 'friends') {
     automation.value.automation.friend = enabled
@@ -571,6 +587,23 @@ watch(() => props.currentAccountId, loadQixiFriends)
                     <BaseInput v-if="automation.automation.fertilizer_buy_normal" v-model.number="automation.fertilizerBuyNormalThresholdHours" label="无机肥触发阈值（小时）" type="number" min="1" />
                     <BaseInput v-model.number="automation.fertilizerBuyCheckIntervalMinutes" label="检测间隔（分钟）" type="number" min="1" />
                   </div>
+                </section>
+              </div>
+
+              <div v-else-if="activeModule === 'ranch'" class="space-y-5">
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
+                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                    牧场自动化
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.ranch_harvest" label="一键收获栏舍" />
+                    <BaseSwitch v-model="automation.automation.ranch_feed" label="自动投喂罐头桶" />
+                    <BaseSwitch v-model="automation.automation.ranch_add_feed" label="自动加牧草" />
+                    <BaseInput v-model.number="automation.ranchCheckIntervalMinutes" label="检测间隔（分钟）" type="number" min="1" />
+                  </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    定时扫描栏舍：有可收获产物时一键收获、罐头桶余量低时投喂、牧草不足时加草。仅自动执行有成功抓包样本的操作。
+                  </p>
                 </section>
               </div>
 

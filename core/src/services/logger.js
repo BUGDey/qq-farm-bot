@@ -61,6 +61,50 @@ function startLogCleanup(logDir) {
 }
 
 /**
+ * 校正轮转状态文件里的 auditLog 字段。
+ *
+ * file-stream-rotator 读取状态文件后会照着里面的 auditLog 字段继续写：
+ * 老版本迁移过来的文件里存的是**上一份部署的绝对路径**，不改写的话
+ * 每次启动/轮转都会把那个老目录（例如以前的 main-project）重新建出来。
+ */
+function normalizeAuditFile(targetPath) {
+  const resolved = path.resolve(targetPath);
+  try {
+    if (!fs.existsSync(resolved)) return;
+    const raw = fs.readFileSync(resolved, 'utf8');
+    let data = null;
+    if (raw.trim()) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = null;
+      }
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      // 内容坏掉就删掉，库会按当前配置重建
+      fs.rmSync(resolved, { force: true });
+      return;
+    }
+    const keep = data.keep && typeof data.keep === 'object'
+      ? data.keep
+      : { days: true, amount: 3 };
+    // 只保留仍然存在的日志文件，避免历史路径一直堆在状态里
+    const files = Array.isArray(data.files)
+      ? data.files.filter(entry => entry && typeof entry.name === 'string' && fs.existsSync(entry.name))
+      : [];
+    const next = {
+      keep,
+      auditLog: resolved,
+      files,
+      hashType: typeof data.hashType === 'string' && data.hashType ? data.hashType : 'sha256'
+    };
+    fs.writeFileSync(resolved, JSON.stringify(next, null, 4), 'utf8');
+  } catch {
+    /* 状态文件不可写时忽略，日志功能不受影响 */
+  }
+}
+
+/**
  * 把老版本写在 logs 目录里的轮转状态文件搬到新目录。
  * 同盘直接 rename，跨盘（FARM_LOG_DIR 指向别的盘）退化 copy + unlink。
  */
@@ -75,6 +119,7 @@ function migrateLegacyAuditFile(logDir, targetPath, legacyName) {
       fs.copyFileSync(legacyPath, targetPath);
       fs.unlinkSync(legacyPath);
     }
+    normalizeAuditFile(targetPath);
   } catch {}
 }
 
@@ -199,6 +244,9 @@ function getRootLogger() {
   // 老版本把状态文件写在 logs 目录里的隐藏文件，这里顺手迁移一次
   migrateLegacyAuditFile(logDir, combinedAuditFile, '.combined-log-audit.json');
   migrateLegacyAuditFile(logDir, errorAuditFile, '.error-log-audit.json');
+  // 已经迁移过的老状态文件里可能还留着上一份部署的绝对路径，启动时校正
+  normalizeAuditFile(combinedAuditFile);
+  normalizeAuditFile(errorAuditFile);
 
   const level = String(process.env.LOG_LEVEL || 'info').toLowerCase();
   const { combine, timestamp, errors, json, colorize, printf } = winston.format;

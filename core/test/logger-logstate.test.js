@@ -10,14 +10,35 @@ const logDir = path.join(tmpRoot, 'logs');
 const stateDir = path.join(tmpRoot, 'logstate');
 
 fs.mkdirSync(logDir, { recursive: true });
-// 模拟老版本遗留的隐藏状态文件
+
+// 老版本遗留的隐藏状态文件：内容是真实的 file-stream-rotator 结构，
+// 其中 auditLog 指向**上一份部署**的绝对路径（这是会重建老目录的元凶）
+const legacyCombinedLog = path.join(logDir, 'combined-2026-11-01-08.log');
+const legacyErrorLog = path.join(logDir, 'error-2026-11-01-08.log');
+fs.writeFileSync(legacyCombinedLog, '{}\n');
+fs.writeFileSync(legacyErrorLog, '{}\n');
+
+const staleDir = path.join(tmpRoot, 'old-deployment', 'main-project', 'core', 'data', 'logs');
+const staleCombinedAudit = path.join(staleDir, '.combined-log-audit.json');
+const staleErrorAudit = path.join(staleDir, '.error-log-audit.json');
+
 fs.writeFileSync(
   path.join(logDir, '.combined-log-audit.json'),
-  JSON.stringify({ hashType: 'sha256', hash: 'legacy-combined', file: 'logs/combined-2026-11-01-08.log' })
+  JSON.stringify({
+    keep: { days: true, amount: 3 },
+    auditLog: staleCombinedAudit,
+    files: [{ date: Date.now(), name: legacyCombinedLog, hash: 'legacy-combined' }],
+    hashType: 'sha256',
+  })
 );
 fs.writeFileSync(
   path.join(logDir, '.error-log-audit.json'),
-  JSON.stringify({ hashType: 'sha256', hash: 'legacy-error', file: 'logs/error-2026-11-01-08.log' })
+  JSON.stringify({
+    keep: { days: true, amount: 3 },
+    auditLog: staleErrorAudit,
+    files: [{ date: Date.now(), name: legacyErrorLog, hash: 'legacy-error' }],
+    hashType: 'sha256',
+  })
 );
 
 process.env.FARM_DATA_DIR = tmpRoot;
@@ -39,7 +60,20 @@ test('轮转状态文件迁移到 logstate 目录', async () => {
   assert.ok(fs.existsSync(errorAudit), 'error 状态文件应在新目录');
 
   const migrated = JSON.parse(fs.readFileSync(combinedAudit, 'utf8'));
-  assert.strictEqual(migrated.hash, 'legacy-combined', '应保留老状态内容，避免轮转断档');
+  assert.strictEqual(migrated.auditLog, combinedAudit, 'auditLog 应改写为当前状态文件路径');
+  assert.ok(
+    migrated.files.some(entry => entry.hash === 'legacy-combined'),
+    '仍存在的日志记录应保留，避免轮转断档'
+  );
+  assert.ok(
+    migrated.files.every(entry => fs.existsSync(entry.name)),
+    '状态文件里不应留下已被删掉的日志路径'
+  );
+
+  assert.ok(
+    !fs.existsSync(staleDir),
+    '不应按照老状态文件里的 auditLog 把上一份部署的目录重新建出来'
+  );
 
   assert.ok(
     !fs.existsSync(path.join(logDir, '.combined-log-audit.json')),

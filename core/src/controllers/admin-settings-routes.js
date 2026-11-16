@@ -137,6 +137,11 @@ function buildSettingsPayload(store, accountId, currentUser) {
       typeof store.getFertilizerBuyCheckIntervalMinutes === "function"
         ? store.getFertilizerBuyCheckIntervalMinutes(accountId)
         : 30,
+    ranchCheckIntervalMinutes:
+      accountId &&
+      typeof store.getRanchCheckIntervalMinutes === "function"
+        ? store.getRanchCheckIntervalMinutes(accountId)
+        : 30,
     goldenBugKeepCount: Number(accountConfig.goldenBugKeepCount) || 0,
     goldenBugRoundLimit: Number(accountConfig.goldenBugRoundLimit) || 24,
     autoAcceptFriendMinLevel:

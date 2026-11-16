@@ -75,6 +75,13 @@ export const menuRoutes: MenuItem[] = [
     component: () => import('@/views/Illustrated.vue'),
   },
   {
+    path: 'ranch',
+    name: 'ranch',
+    label: '牧场',
+    icon: 'i-carbon-cattle',
+    component: () => import('@/views/Ranch.vue'),
+  },
+  {
     path: 'analytics',
     name: 'analytics',
     label: '分析',

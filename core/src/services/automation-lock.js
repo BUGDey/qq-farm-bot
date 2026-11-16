@@ -66,11 +66,14 @@ function takeTurn(lock, timeoutMs, name) {
             fn(value);
         };
         waiter.resolve = () => finish(resolve);
+        // 超时值要先归一化再用：调用方可能没传 timeout（undefined/NaN），
+        // 直接拿原值做文案会打出「超时（NaNs）」这种鬼话。
+        const waitMs = Math.max(50, Number(timeoutMs) || DEFAULT_LOCK_TIMEOUT_MS);
         waiter.timer = setTimeout(() => {
             const index = lock.waiters.indexOf(waiter);
             if (index >= 0) lock.waiters.splice(index, 1);
-            reject(new AutomationBusyError(`等待自动任务锁超时（${Math.round(timeoutMs / 1000)}s），本轮跳过`));
-        }, Math.max(50, Number(timeoutMs) || DEFAULT_LOCK_TIMEOUT_MS));
+            reject(new AutomationBusyError(`等待自动任务锁超时（${Math.round(waitMs / 1000)}s），本轮跳过`));
+        }, waitMs);
         // 不阻止进程退出
         if (waiter.timer.unref) waiter.timer.unref();
         lock.waiters.push(waiter);

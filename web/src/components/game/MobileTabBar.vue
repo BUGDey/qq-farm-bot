@@ -10,6 +10,7 @@ const userStore = useUserStore()
 const primaryItems = [
   { path: '/', label: '首页', icon: 'i-fas-home' },
   { path: '/personal', label: '农场', icon: 'i-carbon-sprout' },
+  { path: '/ranch', label: '牧场', icon: 'i-carbon-cattle' },
   { path: '/friends', label: '朋友', icon: 'i-carbon-user-multiple' },
   { path: '/activity', label: '活动', icon: 'i-carbon-gift' },
 ].filter((item) => {
@@ -20,7 +21,7 @@ const primaryItems = [
 // 「我的账户 / 设置 / 管理后台」已从更多菜单移除：设置改为底部独立 tab，
 // 我的账号与管理后台在设置页内有入口。
 const moreItems = menuRoutes
-  .filter(item => !['dashboard', 'personal', 'friends', 'activity', 'account', 'Settings', 'adminPanel'].includes(item.name))
+  .filter(item => !['dashboard', 'personal', 'ranch', 'friends', 'activity', 'account', 'Settings', 'adminPanel'].includes(item.name))
   // 受限入口按角色隔离（与侧边栏行为一致）：adminOnly 仅管理员、superOnly 仅超管
   .filter(item => (!item.adminOnly || userStore.isAdmin) && (!item.superOnly || userStore.isSuperAdmin))
   .map(item => ({

@@ -10,7 +10,8 @@ const {
     getAutomation,
     getFriendBlacklist,
     getConfigSnapshot,
-    applyConfigSnapshot
+    applyConfigSnapshot,
+    getRanchCheckIntervalMinutes
 } = require('../models/store');
 const {
     checkAndClaimEmails,
@@ -223,6 +224,8 @@ function isTransientNetworkError(err) {
 
 let farmTaskRunning = false;
 let nextFarmRunAt = 0;
+let ranchTaskRunning = false;
+let nextRanchRunAt = 0;
 let lastStatusHash = '';
 let lastStatusSentAt = 0;
 let onSellGain = null;
@@ -1188,6 +1191,8 @@ function resetUnifiedSchedule() {
     nextFarmRunAt = now + farmDelay;
     nextHelpRunAt = now + helpDelay;
     nextStealRunAt = now + stealDelay;
+    // 牧场首轮立即执行（有开关时），之后由 runRanchTick 自带的间隔控制节奏。
+    nextRanchRunAt = now;
 }
 
 // ==================== 农场 Tick ====================
@@ -1242,6 +1247,74 @@ async function runFarmTick(autoConfig) {
     } catch { } finally {
         nextFarmRunAt = Date.now() + nextDelay;
         farmTaskRunning = false;
+    }
+}
+
+// ==================== 牧场 Tick ====================
+
+async function runRanchTick(autoConfig) {
+    if (ranchTaskRunning || friendSyncPaused) return;
+    if (!autoConfig.ranch_harvest && !autoConfig.ranch_feed && !autoConfig.ranch_add_feed) {
+        nextRanchRunAt = Date.now() + Math.max(60000, getRanchCheckIntervalMinutes() * 60 * 1000);
+        return;
+    }
+    // 网关健康由 runUnifiedTick 的 shouldSkipBusinessForGateway 统一把关，
+    // 这里不重复调用 getBusinessDeferMs，避免推进农场自己的退避状态。
+    ranchTaskRunning = true;
+
+    const nextDelay = Math.max(60000, Number(getRanchCheckIntervalMinutes()) * 60 * 1000);
+
+    try {
+        await runWithRequestPriority('farm', async () => {
+            const ranch = require('../services/ranch');
+            const detail = await ranch.getRanchDetail(0);
+            const ranches = Array.isArray(detail?.ranches) ? detail.ranches : [];
+            const animals = [];
+            for (const r of ranches) {
+                for (const a of (Array.isArray(r?.animals) ? r.animals : [])) {
+                    animals.push({ ...a, ranch_inst_id: a.ranch_inst_id ?? r.ranch_inst_id });
+                }
+            }
+
+            if (autoConfig.ranch_harvest && animals.some(a => Number(a.can_harvest) > 0)) {
+                const rep = await ranch.harvestRanch(1);
+                log('牧场', `一键收获完成，栏舍 ${rep?.ranches?.length ?? 0} 个`, {
+                    module: 'ranch', event: '牧场收获'
+                });
+            }
+
+            if (autoConfig.ranch_feed) {
+                let fed = 0;
+                for (const a of animals) {
+                    if (Number(a.can_feed) > 0 && Number(a.animal_inst_id) > 0) {
+                        await ranch.feedAnimal(a.ranch_inst_id, a.animal_inst_id, 1);
+                        fed++;
+                    }
+                }
+                if (fed > 0) {
+                    log('牧场', `罐头桶投喂 ${fed} 只`, { module: 'ranch', event: '牧场投喂' });
+                }
+            }
+
+            if (autoConfig.ranch_add_feed) {
+                try {
+                    await ranch.addFeed(10002, 100, 0, 0);
+                    log('牧场', '牧草机加牧草 100', { module: 'ranch', event: '牧场加牧草' });
+                } catch (feedErr) {
+                    // 牧草机已满（code=1045136）是正常状态，不是故障，别刷错误日志
+                    if (!/牧草机已满|1045136/.test(feedErr.message)) throw feedErr;
+                }
+            }
+        });
+    } catch (err) {
+        if (!isTransientNetworkError(err)) {
+            log('牧场', `牧场巡查执行失败: ${err.message}`, {
+                module: 'ranch', event: '牧场巡查', result: 'error'
+            });
+        }
+    } finally {
+        nextRanchRunAt = Date.now() + nextDelay;
+        ranchTaskRunning = false;
     }
 }
 
@@ -1330,8 +1403,9 @@ async function runUnifiedTick() {
     const shouldFarm = now >= nextFarmRunAt;
     const shouldHelp = now >= nextHelpRunAt;
     const shouldSteal = now >= nextStealRunAt;
+    const shouldRanch = now >= nextRanchRunAt;
 
-    if (!shouldFarm && !shouldHelp && !shouldSteal) return;
+    if (!shouldFarm && !shouldHelp && !shouldSteal && !shouldRanch) return;
 
     // 网关不健康时跳过本轮，并把下次 tick 推后（退避），避免越卡越发、越发越卡
     if (shouldSkipBusinessForGateway()) {
@@ -1339,6 +1413,7 @@ async function runUnifiedTick() {
         if (shouldFarm) nextFarmRunAt = retryAt;
         if (shouldHelp) nextHelpRunAt = retryAt;
         if (shouldSteal) nextStealRunAt = retryAt;
+        if (shouldRanch) nextRanchRunAt = retryAt;
         return;
     }
 
@@ -1350,6 +1425,7 @@ async function runUnifiedTick() {
             if (shouldFarm) await runFarmTick(autoConfig);
             if (shouldHelp) await runHelpTick(autoConfig);
             if (shouldSteal) await runStealTick(autoConfig);
+            if (shouldRanch) await runRanchTick(autoConfig);
         });
     } finally {
         releaseTaskPermit(permit);
@@ -1376,7 +1452,8 @@ function scheduleUnifiedNextTick() {
     const nearest = Math.min(
         Number(nextFarmRunAt) || now + 3000,
         Number(nextHelpRunAt) || now + 30000,
-        Number(nextStealRunAt) || now + 25000
+        Number(nextStealRunAt) || now + 25000,
+        Number(nextRanchRunAt) || now + 30000
     );
     const waitMs = Math.max(100, nearest - now);
 
@@ -1397,6 +1474,7 @@ function stopUnifiedScheduler() {
     farmTaskRunning = false;
     helpTaskRunning = false;
     stealTaskRunning = false;
+    ranchTaskRunning = false;
     workerScheduler.clear('unified_next_tick');
 }
 
@@ -1765,21 +1843,6 @@ async function startBot(config) {
                         module: 'friend', event: 'QQ好友GID引导同步', result: 'error'
                     });
                 }
-
-                // 用游戏回包里攒到的 open_id 自动补 GID（不需要人工粘贴）
-                try {
-                    const openIds = require('../services/friend-openids').getOpenIds();
-                    if (openIds.length > 0) {
-                        const result = await require('../services/friend-api').syncFriendsFromOpenIds(openIds);
-                        log('好友', `用 open_id 自动补 GID：提交 ${result.requested}，换回 ${result.returned}`, {
-                            module: 'friend', event: 'open_id自动补GID', result: 'ok'
-                        });
-                    }
-                } catch (err) {
-                    log('好友', `open_id 自动补 GID 失败: ${err.message}`, {
-                        module: 'friend', event: 'open_id自动补GID', result: 'error'
-                    });
-                }
             });
         }
 
@@ -1973,9 +2036,6 @@ async function handleApiCallInternal(msg) {
                 break;
             case 'getFriends':
                 result = await getFriendsList(args[0] === true);
-                break;
-            case 'syncFriendsByOpenIds':
-                result = await require('../services/friend-api').syncFriendsFromOpenIds(args[0] || [], args[1] || {});
                 break;
             case 'getDiamondBalance':
                 result = await require('../services/pay').getDiamondBalance();
@@ -2400,6 +2460,52 @@ async function handleApiCallInternal(msg) {
                     });
                     result = { removed: occupiedLands.length };
                 }
+                break;
+            }
+            // ===== 牧场（栏舍动物）=====
+            case 'getRanchDetail': {
+                const { getRanchDetail } = require('../services/ranch');
+                result = await getRanchDetail(args[0] || 0);
+                break;
+            }
+            case 'ranchPlaceAnimal': {
+                const { placeAnimal } = require('../services/ranch');
+                result = await placeAnimal(args[0], args[1], args[2] || 0);
+                break;
+            }
+            case 'ranchTriggerProduce': {
+                const { triggerProduce } = require('../services/ranch');
+                result = await triggerProduce(args[0] || 0, args[1] || 0);
+                break;
+            }
+            case 'harvestRanch': {
+                const { harvestRanch } = require('../services/ranch');
+                result = await harvestRanch(args[0] || 1);
+                break;
+            }
+            case 'feedAnimal': {
+                const { feedAnimal } = require('../services/ranch');
+                result = await feedAnimal(args[0], args[1], args[2] || 1);
+                break;
+            }
+            case 'getRanchOpTimes': {
+                const { getRanchOpTimes } = require('../services/ranch');
+                result = await getRanchOpTimes();
+                break;
+            }
+            case 'strokeAnimal': {
+                const { strokeAnimal } = require('../services/ranch');
+                result = await strokeAnimal(args[0] || 0, args[1], args[2]);
+                break;
+            }
+            case 'cleanAllRanch': {
+                const { cleanAllRanch } = require('../services/ranch');
+                result = await cleanAllRanch(args[0] || 0);
+                break;
+            }
+            case 'addFeed': {
+                const { addFeed } = require('../services/ranch');
+                result = await addFeed(args[0], args[1] || 100, args[2] || 0, args[3] || 0);
                 break;
             }
             default: {

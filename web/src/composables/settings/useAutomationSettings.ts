@@ -84,6 +84,9 @@ const defaultAutomation = {
   mystery_shop_allow_gold_bean: false,
   fertilizer: 'none',
   skip_own_weed_bug: false,
+  ranch_harvest: false,
+  ranch_feed: false,
+  ranch_add_feed: false,
   fertilizer_multi_season: false,
   fertilizer_land_types: [...allFertilizerLandTypes],
   fertilizer_smart_seconds: 300,
@@ -110,6 +113,7 @@ export function useAutomationSettings({
     fertilizerBuyNormalCount: 10,
     fertilizerBuyNormalThresholdHours: 10,
     fertilizerBuyCheckIntervalMinutes: 30,
+    ranchCheckIntervalMinutes: 30,
     goldenBugKeepCount: 0,
     goldenBugRoundLimit: 24,
   })
@@ -179,6 +183,7 @@ export function useAutomationSettings({
       localAutomationSettings.value.fertilizerBuyNormalCount = settings.value.fertilizerBuyNormalCount ?? 10
       localAutomationSettings.value.fertilizerBuyNormalThresholdHours = settings.value.fertilizerBuyNormalThresholdHours ?? 10
       localAutomationSettings.value.fertilizerBuyCheckIntervalMinutes = settings.value.fertilizerBuyCheckIntervalMinutes ?? 30
+      localAutomationSettings.value.ranchCheckIntervalMinutes = settings.value.ranchCheckIntervalMinutes ?? 30
       localAutomationSettings.value.goldenBugKeepCount = settings.value.goldenBugKeepCount ?? 0
       localAutomationSettings.value.goldenBugRoundLimit = settings.value.goldenBugRoundLimit ?? 24
       localAutoCodeRefresh.value = {
@@ -221,6 +226,7 @@ export function useAutomationSettings({
         fertilizerBuyNormalCount: localAutomationSettings.value.fertilizerBuyNormalCount,
         fertilizerBuyNormalThresholdHours: localAutomationSettings.value.fertilizerBuyNormalThresholdHours,
         fertilizerBuyCheckIntervalMinutes: localAutomationSettings.value.fertilizerBuyCheckIntervalMinutes,
+        ranchCheckIntervalMinutes: localAutomationSettings.value.ranchCheckIntervalMinutes,
         goldenBugKeepCount: localAutomationSettings.value.goldenBugKeepCount,
         goldenBugRoundLimit: localAutomationSettings.value.goldenBugRoundLimit,
       }

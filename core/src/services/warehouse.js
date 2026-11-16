@@ -186,6 +186,11 @@ async function batchUseItems(entries) {
 
 // ---- 数据解析 ----
 
+// 牧草（7001）是牧场牧草机的口粮，虽然能在农场种植，但不属于「可出售果实」。
+// 目前它既不在 Plant.json 的 fruit 列表里（果实 id 从 40001 起）、sells 也是 null，
+// 所以本来就卖不掉；这里再显式拦一道，避免以后配置变动后自动出售把它清空。
+const RANCH_GRASS_ITEM_ID = 7001;
+
 function isFruitItemId(id) {
   return !!getPlantByFruitId(Number(id));
 }
@@ -568,6 +573,8 @@ async function sellAllFruits() {
     for (const item of items) {
       const id = toNum(item.id);
       const count = toNum(item.count);
+      // 牧草留给牧场牧草机，永不参与自动出售
+      if (id === RANCH_GRASS_ITEM_ID) continue;
       const reservedForTea = require('./activity-milk-tea').reserveMilkTeaFruit(id, isAutomationOn('milk_tea_craft'), getServerTimeSec());
       // 活动插件可注册果实保留谓词（如奶茶营业期保护活动果实不被自动卖）
       const reservedByPlugin = require('../plugins/worker-host-bridge').reserveFruit(id, {

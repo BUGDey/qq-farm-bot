@@ -1,0 +1,248 @@
+syntax = "proto3";
+
+// 牧场（栏舍动物）协议。
+// 字段号与 wire type 全部来自官方小程序 mcboot/game.js 的 protobuf 生成代码
+// （evidence: official-generated-code），并与 TSDK 解密抓包的字段号逐项交叉验证。
+// 见 docs/ranch-protocol-analysis.md。字段名仅作可读用途，线上只认字段号+wire。
+package gamepb.animalpb;
+
+// ============ 公共数据结构 ============
+
+// 一只栏舍动物。官方 decoder @412986（23 字段）
+message RanchAnimal {
+    int64 ranch_inst_id = 1;
+    int32 slot_index = 2;
+    int32 animal_inst_id = 3;
+    int64 animal_id = 4;
+    int32 stage = 5;
+    int32 produce_count = 6;
+    int32 can_harvest = 7;
+    int64 grow_ready_at_ms = 10;
+    int64 produce_ready_at_ms = 11;
+    int32 grass_blocked = 12;
+    int64 infant_ready_at_ms = 14;
+    int32 producing = 15;
+    int32 can_deliver = 16;
+    int64 delivering_until_ms = 17;
+    int32 can_feed = 18;
+    int32 limited_can_used = 19;
+    int32 can_donate = 20;
+    int64 expected_harvest_exp = 21;
+    repeated SellLot expected_harvest_sells = 22;
+    int64 expected_produce_exp = 23;
+    repeated SellLot expected_produce_sells = 24;
+    int64 mature_ready_at_ms = 25;
+    RanchMutation mutation = 30;
+}
+
+// 期望收获/产物里的可售物 {item_id, count}（解密抓包 field22/24 子结构）
+message SellLot {
+    int64 item_id = 1;
+    int32 count = 2;
+}
+
+// 动物变异信息。官方 decoder @417035（8 字段）
+message RanchMutation {
+    int32 mutation_type = 1;
+    int32 source = 2;
+    int32 weight_display_x10 = 3;
+    int32 scale_bp = 4;
+    int32 weight_final_x10 = 5;
+    int32 tier = 6;
+    int64 became_at_ms = 7;
+    int32 strokable = 8;
+}
+
+// 产物批次。官方 decoder @419056（6 字段）
+message ProduceLot {
+    int64 item_id = 1;
+    int64 base_num = 2;
+    int64 remain_num = 3;
+    int64 stolen_num = 4;
+    int64 animal_id = 5;
+    int32 can_steal = 6;
+}
+
+// 栏舍槽位（产物收取用）。官方 decoder @420722（5 字段）
+message RanchSlot {
+    int32 slot_index = 1;
+    repeated ProduceLot lots = 2;
+    int64 total_remain = 3;
+    int32 can_collect = 4;
+    int32 can_steal = 5;
+}
+
+// 一个栏舍。官方 decoder @410055（8 字段）
+message Ranch {
+    int64 ranch_inst_id = 1;
+    int32 capacity = 2;
+    int32 animal_count = 3;
+    repeated RanchAnimal animals = 4;
+    bytes grass = 5;          // 子消息（如 {field1: 100}），保留 bytes 避免误判
+    int32 husbandry_type = 6;
+    bytes shelves = 7;
+    bytes hazards = 8;
+}
+
+// 牧草机状态。官方 decoder @895723（field 1,2,4,7,8）
+message FeedState {
+    int32 feed_count = 1;
+    int32 consume_rate = 2;
+    int32 remaining_secs = 4;
+    int32 is_owner = 7;
+    int32 status = 8;
+}
+
+// 使坏次数条目。官方 decoder @438878（1,2,3,4）；抓包值为 {1:op_id,2:count,4:limit}
+message RanchOpTimes {
+    int64 op_id = 1;
+    int64 count = 2;
+    int64 limit = 4;
+}
+
+// 批量操作结果通用条目。解密抓包 op_results 子项为 field 1/2/3（varint）+ 10/11（bytes）。
+message BatchOpResult {
+    int64 ranch_inst_id = 1;
+    int64 op_type = 2;
+    int64 result = 3;
+    bytes detail10 = 10;
+    bytes detail11 = 11;
+}
+
+// ============ 操作目标 ============
+
+// 动物目标。官方 decoder @407233（1,2）
+message AnimalTarget {
+    int64 ranch_inst_id = 1;
+    int32 animal_inst_id = 2;
+}
+
+// 槽位目标。官方 decoder @407944（1,2）
+message SlotTarget {
+    int64 ranch_inst_id = 1;
+    int32 slot_index = 2;
+}
+
+// 入栏目标（3 字段）。官方 decoder @422629：ranch_inst_id/animal_id/giant_cub_item_id
+message PlaceTarget {
+    int64 ranch_inst_id = 1;
+    int64 animal_id = 2;
+    int64 giant_cub_item_id = 3;
+}
+
+// 空消息（请求里作为占位 wire2 len0）
+message EmptyTarget {}
+
+// ============ AnimalService ============
+
+service AnimalService {
+    rpc GetRanchDetail(GetRanchDetailRequest) returns (GetRanchDetailReply);
+    rpc PlaceAnimal(PlaceAnimalRequest) returns (PlaceAnimalReply);
+    rpc TriggerProduce(TriggerProduceRequest) returns (TriggerProduceReply);
+    rpc HarvestRanch(HarvestRanchRequest) returns (HarvestRanchReply);
+    rpc FeedAnimal(FeedAnimalRequest) returns (FeedAnimalReply);
+}
+
+message GetRanchDetailRequest {
+    int64 host_gid = 1;        // 客态 >0；主态省略
+    EmptyTarget target = 2;    // 主态仅此字段，空消息
+}
+
+message GetRanchDetailReply {
+    repeated Ranch ranches = 1;
+    int64 reserved = 2;
+}
+
+message PlaceAnimalRequest {
+    PlaceTarget target = 1;
+}
+
+message PlaceAnimalReply {
+    repeated Ranch ranches = 1;
+    repeated BatchOpResult op_results = 3;
+}
+
+message TriggerProduceRequest {
+    SlotTarget target = 2;     // 空 = 一键
+}
+
+message TriggerProduceReply {
+    repeated Ranch ranches = 1;
+    repeated BatchOpResult op_results = 3;
+}
+
+message HarvestRanchRequest {
+    EmptyTarget target = 2;
+    int32 mode = 3;
+    SlotTarget slot = 4;       // 变体字段
+}
+
+message HarvestRanchReply {
+    repeated Ranch ranches = 1;
+    repeated BatchOpResult op_results = 5;
+}
+
+message FeedAnimalRequest {
+    AnimalTarget target = 1;
+    int32 count = 2;
+}
+
+message FeedAnimalReply {
+    repeated Ranch ranches = 1;
+    int64 deduct_secs = 2;
+    int64 bucket_remain_secs = 4;
+    repeated BatchOpResult op_results = 5;
+}
+
+// ============ RanchService ============
+
+service RanchService {
+    rpc GetRanchOpTimes(GetRanchOpTimesRequest) returns (GetRanchOpTimesReply);
+    rpc StrokeAnimal(StrokeAnimalRequest) returns (StrokeAnimalReply);
+    rpc CleanAllRanch(CleanAllRanchRequest) returns (CleanAllRanchReply);
+}
+
+message GetRanchOpTimesRequest {
+    EmptyTarget target = 1;
+}
+
+message GetRanchOpTimesReply {
+    repeated RanchOpTimes op_times = 1;
+}
+
+message StrokeAnimalRequest {
+    int64 host_gid = 1;
+    SlotTarget target = 2;
+}
+
+message StrokeAnimalReply {
+    repeated Ranch ranches = 1;
+    bytes info = 2;
+    int64 field3 = 3;
+    int64 remaining_times = 4;
+}
+
+message CleanAllRanchRequest {
+    int64 host_gid = 1;
+    EmptyTarget target = 2;
+}
+
+message CleanAllRanchReply {
+    repeated Ranch ranches = 1;
+    repeated BatchOpResult op_results = 2;
+}
+
+// ============ 加牧草（FeedMachineService） ============
+// RPC 服务名为 gamepb.homesteadpb.FeedMachineService.AddFeed，
+// 消息字段号来自官方 decoder @897821（请求）/@895723（回复），wire 与 package 无关。
+
+message AddFeedRequest {
+    int32 instance_id = 1;
+    int32 add_count = 2;
+    int32 use_gold = 3;
+    int32 host_gid = 4;
+}
+
+message AddFeedReply {
+    FeedState state = 1;
+}

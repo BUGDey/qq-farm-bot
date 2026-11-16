@@ -342,7 +342,11 @@ const DEFAULT_AUTOMATION = {
     fertilizer_land_types: [...DEFAULT_FERTILIZER_LAND_TYPES],
     fertilizer_smart_seconds: 300,
     skip_own_weed_bug: true,
-    golden_bug_clear: true
+    golden_bug_clear: true,
+    // 牧场自动化（有成功抓包样本的操作）
+    ranch_harvest: false,
+    ranch_feed: false,
+    ranch_add_feed: false
 };
 
 // 已从前端隐藏的限时活动。即使旧配置或客户端提交 true，也必须在配置边界
@@ -517,6 +521,7 @@ const DEFAULT_ACCOUNT_CONFIG = {
     fertilizerBuyNormalCount: 1,
     fertilizerBuyNormalThresholdHours: 10,
     fertilizerBuyCheckIntervalMinutes: 60,
+    ranchCheckIntervalMinutes: 30,
     bagSeedPriority: [],
     bagSeedKnownIds: [],
     bagSeedFallbackStrategy: 'level',
@@ -884,6 +889,7 @@ function cloneAccountConfig(config = DEFAULT_ACCOUNT_CONFIG) {
         fertilizerBuyNormalCount: Math.max(0, Math.min(999, Number(config.fertilizerBuyNormalCount) || 1)),
         fertilizerBuyNormalThresholdHours: Math.max(0, Math.min(720, Number(config.fertilizerBuyNormalThresholdHours) || 10)),
         fertilizerBuyCheckIntervalMinutes: Math.max(1, Math.min(1440, Number(config.fertilizerBuyCheckIntervalMinutes) || 60)),
+        ranchCheckIntervalMinutes: Math.max(1, Math.min(1440, Number(config.ranchCheckIntervalMinutes) || 30)),
         autoAcceptFriendMinLevel: Math.max(0, Math.min(200, Number(config.autoAcceptFriendMinLevel) || 0)),
         goldenBugKeepCount: Math.max(0, Math.min(9999, Number(config.goldenBugKeepCount) || 0)),
         goldenBugRoundLimit: Math.max(1, Math.min(100, Number(config.goldenBugRoundLimit) || 24)),
@@ -1077,6 +1083,9 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
     }
     if (input.fertilizerBuyCheckIntervalMinutes !== undefined && input.fertilizerBuyCheckIntervalMinutes !== null) {
         cfg.fertilizerBuyCheckIntervalMinutes = Math.max(1, Math.min(1440, Number(input.fertilizerBuyCheckIntervalMinutes) || 60));
+    }
+    if (input.ranchCheckIntervalMinutes !== undefined && input.ranchCheckIntervalMinutes !== null) {
+        cfg.ranchCheckIntervalMinutes = Math.max(1, Math.min(1440, Number(input.ranchCheckIntervalMinutes) || 30));
     }
 
     // 自动接受好友最低等级
@@ -1514,6 +1523,7 @@ function getConfigSnapshot(accountId) {
         fertilizerBuyNormalCount: Math.max(0, Math.min(999, Number(cfg.fertilizerBuyNormalCount) || 1)),
         fertilizerBuyNormalThresholdHours: Math.max(0, Math.min(720, Number(cfg.fertilizerBuyNormalThresholdHours) || 10)),
         fertilizerBuyCheckIntervalMinutes: Math.max(1, Math.min(1440, Number(cfg.fertilizerBuyCheckIntervalMinutes) || 60)),
+        ranchCheckIntervalMinutes: Math.max(1, Math.min(1440, Number(cfg.ranchCheckIntervalMinutes) || 30)),
         goldenBugKeepCount: Math.max(0, Math.min(9999, Number(cfg.goldenBugKeepCount) || 0)),
         goldenBugRoundLimit: Math.max(1, Math.min(100, Number(cfg.goldenBugRoundLimit) || 24)),
         bagSeedPriority: [...cfg.bagSeedPriority || []],
@@ -1625,6 +1635,9 @@ function applyConfigSnapshot(patch = {}, opts = {}) {
     }
     if (patch.fertilizerBuyCheckIntervalMinutes !== undefined && patch.fertilizerBuyCheckIntervalMinutes !== null) {
         cfg.fertilizerBuyCheckIntervalMinutes = Math.max(1, Math.min(1440, Number(patch.fertilizerBuyCheckIntervalMinutes) || 60));
+    }
+    if (patch.ranchCheckIntervalMinutes !== undefined && patch.ranchCheckIntervalMinutes !== null) {
+        cfg.ranchCheckIntervalMinutes = Math.max(1, Math.min(1440, Number(patch.ranchCheckIntervalMinutes) || 30));
     }
     if (patch.autoAcceptFriendMinLevel !== undefined && patch.autoAcceptFriendMinLevel !== null) {
         cfg.autoAcceptFriendMinLevel = Math.max(0, Math.min(200, Number(patch.autoAcceptFriendMinLevel) || 0));
@@ -1805,6 +1818,10 @@ function getFertilizerBuyNormalThresholdHours(accountId) {
 
 function getFertilizerBuyCheckIntervalMinutes(accountId) {
     return Math.max(1, Math.min(1440, Number(getAccountConfigSnapshot(accountId).fertilizerBuyCheckIntervalMinutes) || 60));
+}
+
+function getRanchCheckIntervalMinutes(accountId) {
+    return Math.max(1, Math.min(1440, Number(getAccountConfigSnapshot(accountId).ranchCheckIntervalMinutes) || 30));
 }
 
 function getPlantBlacklist(accountId) {
@@ -2491,6 +2508,7 @@ module.exports = {
     getFertilizerBuyNormalCount,
     getFertilizerBuyNormalThresholdHours,
     getFertilizerBuyCheckIntervalMinutes,
+    getRanchCheckIntervalMinutes,
     getUI,
     setUITheme,
     getUsersSeeAllAccounts,
