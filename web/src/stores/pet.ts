@@ -60,14 +60,18 @@ export const usePetStore = defineStore('pet', () => {
   }
   async function fetchAutoFeed(accountId: string) {
     const { data } = await api.get('/api/dog/auto-feed', { headers: headers(accountId) })
-    if (data?.ok)
-      autoFeed.value = data.data
+    if (data?.ok && data.data)
+      autoFeed.value = { enabled: !!data.data.enabled, keepDays: Number(data.data.keepDays) || 10 }
   }
   async function saveAutoFeed(accountId: string, config: PetAutoFeed) {
     const { data } = await api.post('/api/dog/auto-feed', config, { headers: headers(accountId) })
     if (!data?.ok)
       throw new Error(data?.error || '保存失败')
-    autoFeed.value = data.data.autoFeed
+    const next = data.data?.autoFeed ?? data.data;
+    if (next && next.enabled !== undefined)
+      autoFeed.value = { enabled: !!next.enabled, keepDays: Number(next.keepDays) || 10 }
+    else
+      autoFeed.value = { enabled: !!config.enabled, keepDays: Number(config.keepDays) || 10 }
   }
   async function runAutoFeed(accountId: string) {
     const { data } = await api.post('/api/dog/auto-feed/run', {}, { headers: headers(accountId), timeout: 60000 })

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useGameSpaceStore } from '@/stores/game-space'
+import RanchPersonal from '@/views/RanchPersonal.vue'
+
+const gameSpace = useGameSpaceStore()
 import { ref } from 'vue'
 import BagPanel from '@/components/BagPanel.vue'
 import FarmPanel from '@/components/FarmPanel.vue'
@@ -8,7 +12,8 @@ const currentTab = ref<'farm' | 'bag' | 'task'>('farm')
 </script>
 
 <template>
-  <div class="h-full flex flex-col p-2 pt-1 sm:p-4 sm:pt-1">
+  <RanchPersonal v-if="gameSpace.isRanch" />
+  <div v-else class="h-full flex flex-col p-2 pt-1 sm:p-4 sm:pt-1">
     <div class="mb-1.5 flex space-x-2">
       <button
         class="rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:px-4 sm:text-base"

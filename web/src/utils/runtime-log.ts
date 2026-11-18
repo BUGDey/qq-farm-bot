@@ -59,9 +59,11 @@ export function normalizeRuntimeLog(input: any, isAccountLog = false): RuntimeLo
   const source = inferSource(raw, isAccountLog)
   const meta = raw.meta && typeof raw.meta === 'object' ? raw.meta : {}
   const action = String(raw.action || '')
+  // 农场/牧场业务日志若未显式带 tag，按 module 补上场景标识，便于在混合日志里区分来源。
+  const sceneTag = meta.module === 'farm' ? '农场' : meta.module === 'ranch' ? '牧场' : '';
   const tag = isAccountLog
     ? (level === 'error' ? '错误' : level === 'warn' ? '警告' : '系统')
-    : String(raw.tag || (level === 'error' ? '错误' : '系统'))
+    : String(raw.tag || sceneTag || (level === 'error' ? '错误' : '系统'))
   const msg = String(raw.reason && !String(raw.msg || '').includes(String(raw.reason))
     ? `${raw.msg || ''}（${raw.reason}）`
     : raw.msg || '')

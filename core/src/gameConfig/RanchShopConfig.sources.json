@@ -1,0 +1,15 @@
+{
+  "outputSha256": "90a7ac9a68ab18bb16ad892cb014fa55ace36910d5d8460efdb33619ee6498f0",
+  "tables": [
+    {
+      "name": "MCShop",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/24/24eccb8b-bdd4-4f70-9435-c7559a42456a.3c5fd.json",
+      "sha256": "b76ab240371b7e209ac9ef12be188809aa136540596b0fcf48ef66db855d08c5"
+    },
+    {
+      "name": "MCGoods",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/31/3128ccaf-05a5-4d90-9b61-23a6694d7d5d.37cb7.json",
+      "sha256": "524daf731f8511a353d10aac1d61fe24e89998779816aaec67b8979ab00e8da6"
+    }
+  ]
+}

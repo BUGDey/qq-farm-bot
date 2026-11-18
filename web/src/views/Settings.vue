@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import api from '@/api'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import AccountFeatureSettings from '@/components/settings/AccountFeatureSettings.vue'
+import RanchSettings from '@/components/settings/RanchSettings.vue'
 import AccountSettingsTab from '@/components/settings/AccountSettingsTab.vue'
 import AutoCodeRefreshCard from '@/components/settings/AutoCodeRefreshCard.vue'
 import ChangePasswordCard from '@/components/settings/ChangePasswordCard.vue'
@@ -237,6 +238,7 @@ async function saveCurrentAccountSettings(_module?: string, quiet = false) {
     const result = await settingStore.saveSettings(String(currentAccountId.value), buildCurrentAccountConfig())
     if (!result.ok)
       throw new Error(result.error || '保存失败')
+    window.dispatchEvent(new CustomEvent('automation-updated', { detail: { accountId: currentAccountId.value, automation: { ...localAutomationSettings.value.automation } } }))
     if (!quiet)
       showAlert('账号设置已保存')
   }
@@ -440,8 +442,10 @@ onMounted(async () => {
           @confirm-clear-stopped="confirmClearStopped"
         />
 
+        <div v-else-if="activeTab === 'account-config'" class="space-y-6">
+          <section class="space-y-4" aria-labelledby="farm-settings-title">
+            <h2 id="farm-settings-title" class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100"><span class="i-carbon-sprout text-[var(--theme-primary)]" />农场</h2>
         <AccountFeatureSettings
-          v-else-if="activeTab === 'account-config'"
           v-model:strategy="localStrategySettings"
           v-model:automation="localAutomationSettings"
           :current-account-name="currentAccountName"
@@ -456,6 +460,12 @@ onMounted(async () => {
           :fertilizer-options="fertilizerOptions"
           @save="saveCurrentAccountSettings"
         />
+          </section>
+          <section class="space-y-4" aria-labelledby="ranch-settings-title">
+            <h2 id="ranch-settings-title" class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100"><span class="i-carbon-wheat text-[var(--theme-primary)]" />牧场</h2>
+            <RanchSettings :readonly="!isCurrentAccountEditable" />
+          </section>
+        </div>
 
         <div v-else-if="activeTab === 'notification'" class="space-y-4">
           <div class="flex items-center justify-between">

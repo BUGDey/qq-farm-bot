@@ -1,3 +1,5 @@
+const { ranchSession } = require('../services/ranch-session');
+const sceneLogger = require('../services/logger').createModuleLogger('scene');
 const { Buffer } = require('node:buffer');
 const EventEmitter = require('node:events');
 /**
@@ -15,7 +17,7 @@ const { types } = require('./proto');
 const { toLong, toNum, syncServerTime, log, logWarn } = require('./utils');
 const cryptoWasm = require('./crypto-wasm');
 const { createGatewayToken } = require('./gateway-token');
-const { evaluateGatewayHealth, getOldestPendingAgeMs } = require('./gateway-health');
+const { NETWORK_TIMEOUT_MS, NETWORK_CHECK_INTERVAL_MS, shouldTerminateGateway, evaluateGatewayHealth, canRunBackground, getOldestPendingAgeMs } = require('./gateway-health');
 const { createRequestGate, getRequestPriority } = require('./request-priority');
 const { TsdkRuntime } = require('./tsdk-runtime');
 
@@ -59,19 +61,51 @@ let clientSeq = 1;
 let serverSeq = 0;
 const pendingCallbacks = new Map();
 const pendingStartedAt = new Map();
-// 拟真节流：同时在途请求并发上限 2（拟真真机小程序的网络通信模型），
+// 拟真节流：业务同时在途请求并发上限 1（拟真真机小程序的网络通信模型），
 // 出队 250ms 基线间隔 + 0~150ms 随机抖动（见 request-priority.js）。
 // 收菜/做奶茶/好友/任务等多任务并发触发时，底层平滑排队按人类手速发包，
 // 避免瞬间打出上百个包被腾讯网关风控静默拉黑——黑名单不回包的典型表现
 // 就是「请求超时 → 心跳无响应 → 心跳超时掉线」循环（2026-10-19 实测）。
-const requestGate = createRequestGate({
-    maxActive: 2,
+function createNetworkRequestGate() { return createRequestGate({
+    maxActive: 1,
     maxQueued: 100,
     // 分班次容量：心跳/前台优先，后台只在空闲时发（见 request-priority.js）
     starvationMs: 4000,
     nonForegroundActiveCap: 1,
     backgroundIdleOnly: true,
-});
+}); }
+let requestGate = createNetworkRequestGate();
+// Keep target pacing/class policies, but reserve separate connection-global lanes.
+function createControlGate(maxQueued) { return createRequestGate({ maxActive: 1, maxQueued }); }
+let aceGate = createControlGate(10);
+let heartbeatGate = createControlGate(1);
+const isControlRequest = (service, method) => service === 'gamepb.acepb.AceService'
+    || (service === 'gamepb.userpb.UserService' && method === 'Heartbeat');
+// Metadata only: no protobuf bodies, login codes or security tokens.
+const requestTrace = [];
+function traceRequest(event, seq, service, method, extra = {}) {
+    requestTrace.push({ event, atMs: Date.now(), seq, service, method, generation: connectionGeneration, ...extra });
+    if (requestTrace.length > 64) requestTrace.shift();
+}
+let connectionGeneration = 0;
+let connectionAbort = new AbortController();
+require('node:events').setMaxListeners(0, connectionAbort.signal);
+function connectionError(message) { return Object.assign(new Error(message), { code: 'CONNECTION_CLOSED' }); }
+
+// The target gate has no signal API. Cancel callers immediately, and release any
+// old-generation slot when its original pacing timer eventually resolves.
+function acquireConnectionSlot(gate, priority, signal) {
+    return new Promise((resolve, reject) => {
+        if (signal.aborted) return reject(connectionError('请求已中断: 连接已结束'));
+        const abort = () => reject(connectionError('请求已中断: 连接已结束'));
+        signal.addEventListener('abort', abort, { once: true });
+        gate.acquire(priority).then(release => {
+            signal.removeEventListener('abort', abort);
+            if (signal.aborted) { release(); return; }
+            resolve(release);
+        }, error => { signal.removeEventListener('abort', abort); reject(error); });
+    });
+}
 let wsErrorState = { code: 0, at: 0, message: '' };
 const networkScheduler = createScheduler('network');
 let tsdkRuntime = null;
@@ -198,7 +232,7 @@ function rejectAllPendingRequests(reason = '请求被中断') {
     pendingStartedAt.clear();
     for (const [, callback] of entries) {
         try {
-            callback(new Error(reason));
+            callback(connectionError(reason));
         } catch {
             // ignore callback failure
         }
@@ -218,6 +252,8 @@ const userState = {
     goldBean: 0, // 金豆豆(ID:1005)
     openId: '',
     avatar: '',
+    loginMode: 'legacy',
+    unlockedSceneIds: [1],
 };
 
 function getUserState() { return userState; }
@@ -248,11 +284,12 @@ function hasOwn(obj, key) {
 
 // ============ 消息编解码 ============
 // async function encodeMsg(serviceName, methodName, bodyBytes) {
-async function encodeMsg(serviceName, methodName, bodyBytes, clientSeqValue) {
+async function encodeMsg(serviceName, methodName, bodyBytes, clientSeqValue, generation) {
     let finalBody = bodyBytes || Buffer.alloc(0);
     if (finalBody.length > 0) {
         finalBody = await cryptoWasm.encryptBuffer(finalBody);
     }
+    if (generation !== connectionGeneration) throw connectionError('请求已中断: 编码期间连接已改变');
     const gatewayToken = initialGamePackInfo || createGatewayToken();
     initialGamePackInfo = '';
     const msg = types.GateMessage.create({
@@ -271,21 +308,31 @@ async function encodeMsg(serviceName, methodName, bodyBytes, clientSeqValue) {
     return types.GateMessage.encode(msg).finish();
 }
 
-async function sendMsg(serviceName, methodName, bodyBytes, callback) {
+async function sendMsg(serviceName, methodName, bodyBytes, callback, options = {}) {
+    const isLogin = serviceName === 'gamepb.userpb.UserService' && ['Login', 'PlayerLogin'].includes(methodName);
+    if (!isLogin && !isControlRequest(serviceName, methodName)) ranchSession.assertAllowed();
+    const socket = ws;
+    const generation = connectionGeneration;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
         log('系统', '[WS] 连接未打开');
         return false;
     }
     const seq = clientSeq;
     clientSeq += 1;
-    const encoded = await encodeMsg(serviceName, methodName, bodyBytes, seq);
+    const encoded = await encodeMsg(serviceName, methodName, bodyBytes, seq, generation);
+    if (!isLogin && !isControlRequest(serviceName, methodName)) ranchSession.assertAllowed();
+    if (options.isCancelled?.() || generation !== connectionGeneration || socket !== ws || socket?.readyState !== WebSocket.OPEN) {
+        throw connectionError('请求已中断: 编码期间连接已改变');
+    }
     if (callback) {
         pendingCallbacks.set(seq, callback);
         pendingStartedAt.set(seq, Date.now());
     }
     // ws.send(encoded);
     try {
-        ws.send(encoded);
+        socket.send(encoded);
+        traceRequest('sent', seq, serviceName, methodName, { pending: pendingCallbacks.size });
+        options.onSent?.();
     } catch (err) {
         if (callback) {
             pendingCallbacks.delete(seq);
@@ -297,58 +344,94 @@ async function sendMsg(serviceName, methodName, bodyBytes, callback) {
     return true;
 }
 
+// Successful official HAR (2026-11-17): seq5 sends 0801, receives field10
+// then AllLands; seq43 sends 0802, receives field11 then Homestead/Animal RPCs.
+// Global scene IDs are farm=1/ranch=2; PlayerLogin.game_scene_id is a separate field.
+ranchSession.configure({
+    transition: async scene => {
+        if (userState.loginMode !== 'player') {
+            throw Object.assign(new Error('当前连接使用旧版 Login，不支持切换牧场；请使用 1.15 及以上客户端版本重新登录'), { code: 'SCENE_LOGIN_UNSUPPORTED' });
+        }
+        const id = scene === 'ranch' ? 2 : 1;
+        // PlayerLogin 返回的场景列表只是登录时快照，缺少目标不等于当前无权进入。
+        // 以正式切场响应为准；切场失败仍直接抛出，绝不继续发送目标场景业务。
+        const protocol = require('../services/ranch-protocol').createRanchProtocol();
+        const { body } = await sendMsgAsyncInScene('gamepb.globalscenepb.GlobalSceneService', 'PlayerSceneLogin',
+            protocol.encode('PlayerSceneLogin', { global_scene_id: id }), 20000, { priority: 'foreground' });
+        const reply = protocol.decode('PlayerSceneLogin', body);
+        if (reply.global_scene_id !== id) throw new Error('服务端场景登录响应与目标场景不一致');
+        if (!userState.unlockedSceneIds.includes(id)) userState.unlockedSceneIds.push(id);
+    },
+    onEvent: (event, data) => {
+        if (event === 'batch_overrun') {
+            // Diagnostic only: do not forward routine slow batches to runtime log hooks.
+            sceneLogger.debug('场景任务批次超过软预算', { event, ...data });
+            return;
+        }
+        sceneLogger.debug(event === 'scene_enter' ? `已进入${data.scene === 'ranch' ? '牧场' : '农场'}` : event,
+            { module: 'scene', event, ...data });
+    },
+});
+
 /** Promise 版发送 */
 async function sendMsgAsync(serviceName, methodName, bodyBytes, timeout = 20000, options = {}) {
-    const priority = getRequestPriority(options.priority);
-    const release = await requestGate.acquire(priority);
-    try {
-      return await new Promise((resolve, reject) => {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            reject(new Error(`连接未打开: ${methodName}`));
-            return;
-        }
-
-        if (pendingCallbacks.size >= 10) {
-            reject(new Error(`请求队列已满: ${methodName} (pending=${pendingCallbacks.size})`));
-            return;
-        }
-
-        const seq = clientSeq;
-        const timeoutKey = `request_timeout_${seq}`;
-        let settled = false;
-
-        networkScheduler.setTimeoutTask(timeoutKey, timeout, () => {
-            if (settled) return;
-            settled = true;
-            pendingCallbacks.delete(seq);
-            pendingStartedAt.delete(seq);
-            const pending = pendingCallbacks.size;
-            reject(new Error(`请求超时: ${methodName} (seq=${seq}, pending=${pending})`));
-        });
-
-        sendMsg(serviceName, methodName, bodyBytes, (err, body, meta) => {
-            networkScheduler.clear(timeoutKey);
-            if (settled) return;
-            settled = true;
-            if (err) reject(err);
-            else resolve({ body, meta });
-        }).then((sent) => {
-            if (sent || settled) return;
-            networkScheduler.clear(timeoutKey);
-            settled = true;
-            reject(new Error(`发送失败: ${methodName}`));
-        }).catch((error) => {
-            if (settled) return;
-            networkScheduler.clear(timeoutKey);
-            pendingCallbacks.delete(seq);
-            pendingStartedAt.delete(seq);
-            settled = true;
-            reject(error);
-        });
-      });
-    } finally {
-      release();
+    if (!isControlRequest(serviceName, methodName) && getRequestPriority(options.priority) === 'background'
+        && !isGatewayIdleForLowPriority()) {
+        throw Object.assign(new Error('网关繁忙，后台补数据已让路'), { code: 'GATEWAY_BUSY', errorType: 'gateway_busy' });
     }
+    return ranchSession.run(serviceName, methodName, () => sendMsgAsyncInScene(serviceName, methodName, bodyBytes, timeout, options));
+}
+
+async function sendMsgAsyncInScene(serviceName, methodName, bodyBytes, timeout = 20000, options = {}) {
+    if (!userState.gid) throw connectionError(`请求已中断: 尚未登录 (${methodName})`);
+    const priority = getRequestPriority(options.priority);
+    const generation = connectionGeneration;
+    const signal = connectionAbort.signal;
+    const queuedAt = Date.now();
+    const control = isControlRequest(serviceName, methodName);
+    const gate = serviceName === 'gamepb.acepb.AceService' ? aceGate : control ? heartbeatGate : requestGate;
+    const release = await acquireConnectionSlot(gate, priority, signal);
+    try {
+        if (generation !== connectionGeneration || signal.aborted) throw connectionError('请求已中断: 连接已改变');
+        return await new Promise((resolve, reject) => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return reject(connectionError(`连接未打开: ${methodName}`));
+            if (pendingCallbacks.size >= 10) return reject(new Error(`请求队列已满: ${methodName} (pending=${pendingCallbacks.size})`));
+            const seq = clientSeq;
+            const timeoutKey = `request_timeout_${seq}`;
+            const startedAt = Date.now();
+            let settled = false, sent = false;
+            function finish(error, body, meta) {
+                if (settled) return;
+                settled = true;
+                signal.removeEventListener('abort', abort);
+                networkScheduler.clear(timeoutKey);
+                pendingCallbacks.delete(seq);
+                pendingStartedAt.delete(seq);
+                if (error) reject(error); else resolve({ body, meta });
+            }
+            function abort() { finish(connectionError('请求已中断: 连接已结束')); }
+            signal.addEventListener('abort', abort, { once: true });
+            const onTimeout = () => {
+                const error = Object.assign(new Error(`请求超时: ${methodName} (seq=${seq}, pending=${pendingCallbacks.size})`), { code: sent ? 'REQUEST_TIMEOUT' : 'ENCODE_TIMEOUT' });
+                logWarn('WS', error.message, {
+                    accountId: process.env.FARM_ACCOUNT_ID, generation, method: methodName, seq,
+                    queueMs: startedAt - queuedAt, elapsedMs: Date.now() - startedAt,
+                    failureType: error.code, inboundAgeMs: Date.now() - lastInboundAt,
+                    sceneState: ranchSession.snapshot?.(), requestTrace: requestTrace.slice(),
+                });
+                finish(error);
+                // A local deadline cannot cancel server execution. Abort queued work
+                // before the slot is released to avoid overlapping an uncertain RPC.
+                if (!control && generation === connectionGeneration) failConnection('business_timeout');
+            };
+            networkScheduler.setTimeoutTask(timeoutKey, timeout, onTimeout);
+            sendMsg(serviceName, methodName, bodyBytes, finish, {
+                ...options,
+                isCancelled: () => settled || signal.aborted,
+                onSent: () => { sent = true; options.onSent?.(); },
+            }).then(ok => { if (!ok) finish(new Error(`发送失败: ${methodName}`)); }).catch(finish);
+        });
+    } finally { release(); }
 }
 
 // ============ 原始帧钩子（网关进程用） ============
@@ -386,6 +469,8 @@ function handleMessage(data) {
         if (msgType === 2) {
             const errorCode = toNum(meta.error_code);
             const clientSeqVal = toNum(meta.client_seq);
+            traceRequest('response', clientSeqVal, meta.service_name, meta.method_name,
+                { matched: pendingCallbacks.has(clientSeqVal), responseError: errorCode });
 
             const cb = pendingCallbacks.get(clientSeqVal);
             if (cb) {
@@ -405,6 +490,8 @@ function handleMessage(data) {
         }
     } catch (err) {
         logWarn('解码', err.message);
+    } finally {
+        checkNetworkTimeout();
     }
 }
 
@@ -422,6 +509,7 @@ function handleNotify(msg) {
 
         // 被踢下线
         if (type.includes('Kickout')) {
+            cleanup('被踢下线');
             log('推送', `被踢下线! ${type}`);
             try {
                 const notify = types.KickoutNotify.decode(eventBody);
@@ -644,8 +732,13 @@ function buildLoginDeviceInfo(deviceProtocol) {
     };
 }
 
-function buildLoginBody(deviceProtocol) {
-    return Buffer.from(types.LoginRequest.encode(types.LoginRequest.create({
+function usesPlayerLogin(version = CONFIG.clientVersion) {
+    const match = /^(\d+)\.(\d+)/.exec(String(version));
+    return !!match && (Number(match[1]) > 1 || Number(match[1]) === 1 && Number(match[2]) >= 15);
+}
+function buildLoginBody(deviceProtocol, modern = usesPlayerLogin()) {
+    const requestType = modern ? types.PlayerLoginRequest : types.LoginRequest;
+    return Buffer.from(requestType.encode(requestType.create({
         sharer_id: toLong(0),
         sharer_open_id: '',
         device_info: buildLoginDeviceInfo(deviceProtocol),
@@ -655,14 +748,17 @@ function buildLoginBody(deviceProtocol) {
             callback: '', cd_extend_info: '', click_id: '', clue_token: '',
             minigame_channel: 'other-qq', minigame_platid: 2, req_id: '', trackid: '',
         },
-        extra: Buffer.alloc(0),
+        ...(modern ? { share_key: '', game_scene_id: 1 } : { extra: Buffer.alloc(0) }),
     })).finish());
 }
 
 async function sendLogin(onLoginSuccess, deviceProtocol) {
-    const body = buildLoginBody(deviceProtocol);
+    const generation = connectionGeneration;
+    const modern = usesPlayerLogin();
+    const body = buildLoginBody(deviceProtocol, modern);
 
-    await sendMsg('gamepb.userpb.UserService', 'Login', body, (err, bodyBytes, _meta) => {
+    await sendMsg('gamepb.userpb.UserService', modern ? 'PlayerLogin' : 'Login', body, (err, bodyBytes, _meta) => {
+        if (generation !== connectionGeneration) return;
         if (err) {
             log('登录', `失败: ${err.message}`);
             // 如果是验证失败，直接退出进程
@@ -673,7 +769,12 @@ async function sendLogin(onLoginSuccess, deviceProtocol) {
             return;
         }
         try {
-            const reply = types.LoginReply.decode(bodyBytes);
+            const reply = (modern ? types.PlayerLoginReply : types.LoginReply).decode(bodyBytes);
+            if (!reply.basic || toNum(reply.basic.gid) <= 0) throw new Error('登录响应缺少有效账号信息');
+            userState.loginMode = modern ? 'player' : 'legacy';
+            userState.unlockedSceneIds = modern ? [...new Set((reply.unlocked_scene_ids || []).map(toNum))] : [1];
+            if (!modern) ranchSession.adoptScene?.('farm');
+            log('登录', `登录协议: ${modern ? 'PlayerLogin' : 'Login（旧版，仅农场）'}；已解锁场景: ${userState.unlockedSceneIds.join(',') || '无'}`);
             applyServerVersionInfo(reply.version_info);
             if (reply.basic) {
                 clearWsErrorState();
@@ -713,6 +814,9 @@ async function sendLogin(onLoginSuccess, deviceProtocol) {
 
             }
 
+            networkScheduler.clear('login_timeout');
+            reconnectAttempts = 0;
+            ranchSession.resume();
             startHeartbeat();
             startAceService();
             if (onLoginSuccess) onLoginSuccess();
@@ -727,53 +831,36 @@ let lastHeartbeatResponse = Date.now();
 // 任意下行帧都会刷新这个时间戳：空闲期只要还在收帧（通知、回包）就不该判死。
 let lastInboundAt = Date.now();
 let heartbeatMissCount = 0;
-// 心跳判活窗口：以前 30 秒没收到心跳回复就判死，实测游戏在空闲期 60~90 秒才回一次，
-// 结果「连接其实是好的」被当成掉线 → 主动断线重连 → 二维码/Code 一次性凭证直接作废。
-// 现在放宽到 90 秒，并且只要收到任何下行帧都算活着（lastInboundAt）。
-const HEARTBEAT_TIMEOUT = Math.max(30000, Number(process.env.FARM_HEARTBEAT_TIMEOUT_MS) || 90000);
-const MAX_HEARTBEAT_MISS = Math.max(2, Number(process.env.FARM_HEARTBEAT_MAX_MISS) || 4);
-
+// RPC deadlines are independent of transport liveness.
 function getGatewayHealth() {
     const now = Date.now();
-    const result = evaluateGatewayHealth({
-        connected: isConnected(),
-        heartbeatAgeMs: now - Math.max(lastHeartbeatResponse, lastInboundAt),
-        oldestPendingAgeMs: getOldestPendingAgeMs(pendingStartedAt.values(), now),
-        heartbeatLimitMs: HEARTBEAT_TIMEOUT,
-        pendingLimitMs: 5000,
-    });
-    return {
-        ...result,
-        pending: pendingCallbacks.size,
-        queue: requestGate.snapshot(),
-    };
+    const oldestPendingAgeMs = getOldestPendingAgeMs(pendingStartedAt.values(), now);
+    const result = evaluateGatewayHealth({ connected: isConnected() && userState.gid > 0,
+        oldestPendingAgeMs, heartbeatMisses: heartbeatMissCount });
+    return { ...result, heartbeatMisses: heartbeatMissCount, heartbeatMissCount,
+        pending: pendingCallbacks.size, queue: requestGate.snapshot(), oldestPendingAgeMs,
+        inboundAgeMs: now - lastInboundAt, heartbeatAgeMs: now - lastHeartbeatResponse };
 }
-
-/** 可被业务调度器直接使用的健康判定（不含队列详情，只回答"现在能不能跑业务"） */
-function isGatewayHealthyForBusiness() {
-    const now = Date.now();
-    const health = evaluateGatewayHealth({
-        connected: isConnected(),
-        heartbeatAgeMs: now - Math.max(lastHeartbeatResponse, lastInboundAt),
-        oldestPendingAgeMs: getOldestPendingAgeMs(pendingStartedAt.values(), now),
-        heartbeatLimitMs: HEARTBEAT_TIMEOUT,
-        pendingLimitMs: 5000,
-    });
-    return { ...health, heartbeatMissCount, pending: pendingCallbacks.size };
-}
-
-/**
- * 低优先级（background）请求的空闲判定：
- * 有在途请求、有排队、心跳漏过、或有请求卡超过 5 秒，都视为"不空闲"。
- */
+function isGatewayHealthyForBusiness() { return getGatewayHealth(); }
 function isGatewayIdleForLowPriority() {
-    if (!isConnected()) return false;
-    if (heartbeatMissCount > 0) return false;
-    if (pendingCallbacks.size > 0) return false;
-    if (getOldestPendingAgeMs(pendingStartedAt.values()) > 5000) return false;
-    const snap = requestGate.snapshot();
-    if (snap.active > 0 || snap.queued > 0) return false;
-    return true;
+    const health = getGatewayHealth();
+    const scene = ranchSession.snapshot?.() || {};
+    return health.pending === 0 && canRunBackground({ ...health,
+        businessActive: health.queue.active, businessQueued: health.queue.queued,
+        sceneActive: !!scene.activeScene, sceneQueued: scene.queued || 0 });
+}
+function failConnection(reason) {
+    if (!ws) return;
+    cleanup(reason);
+    closeCurrentWs({ terminate: true });
+    userState.gid = 0;
+    networkEvents.emit('disconnect', { code: reason });
+    scheduleReconnect(reason);
+}
+function checkNetworkTimeout() {
+    if (shouldTerminateGateway({ inboundAgeMs: Date.now() - lastInboundAt, pendingCount: pendingStartedAt.size })) {
+        failConnection('request_timeout');
+    }
 }
 
 /**
@@ -794,52 +881,31 @@ function startHeartbeat() {
     networkScheduler.clear('heartbeat_interval');
     lastHeartbeatResponse = Date.now();
     heartbeatMissCount = 0;
-
-    networkScheduler.setIntervalTask('heartbeat_interval', CONFIG.heartbeatInterval, () => {
-        if (!userState.gid) {
-            // 还没登录完/刚重连，不能算掉线；顺手刷新时间戳，避免把登录耗时算成 miss。
+    networkScheduler.setIntervalTask('network_timeout_check', NETWORK_CHECK_INTERVAL_MS, checkNetworkTimeout);
+    networkScheduler.setIntervalTask('heartbeat_interval', CONFIG.heartbeatInterval, async () => {
+        if (!userState.gid) return;
+        const generation = connectionGeneration;
+        try {
+            const { body: replyBody } = await sendMsgAsync('gamepb.userpb.UserService', 'Heartbeat', buildHeartbeatBody(userState.gid), 20000, { priority: 'critical' });
+            if (generation !== connectionGeneration) return;
             lastHeartbeatResponse = Date.now();
-            return;
-        }
-
-        // 先发一次真实心跳：只有「连心跳都发不出去/收不到回包」才算异常，
-        // 而不是「距离上次心跳回复过了多久」——空闲期游戏本来就回得慢。
-        const quietMs = Date.now() - Math.max(lastHeartbeatResponse, lastInboundAt);
-        const probing = sendMsgAsync('gamepb.userpb.UserService', 'Heartbeat', buildHeartbeatBody(userState.gid), 20000, { priority: 'critical' })
-            .then(({ body: replyBody }) => {
-                lastHeartbeatResponse = Date.now();
-                heartbeatMissCount = 0;
-                try {
-                    const reply = types.HeartbeatReply.decode(replyBody);
-                    applyServerVersionInfo(reply.version_info);
-                    if (reply.server_time) {
-                        const serverTime = toNum(reply.server_time);
-                        const serverTimeMs = serverTime > 1e12 ? serverTime : serverTime * 1000;
-                        syncServerTime(serverTimeMs);
-                    }
-                } catch { }
-                return true;
-            })
-            .catch(() => false);
-
-        // 心跳是异步的，这里用独立链路处理失败计数，避免阻塞下一个 tick。
-        if (typeof probing === 'object' && typeof probing.then === 'function') {
-            probing.then(ok => {
-                if (ok) return;
-                if (quietMs < HEARTBEAT_TIMEOUT) return;
-                heartbeatMissCount++;
-                logWarn('心跳', `心跳无回应 (${Math.round(quietMs / 1000)}s 静默, miss=${heartbeatMissCount}/${MAX_HEARTBEAT_MISS}, pending=${pendingCallbacks.size})`);
-                if (heartbeatMissCount < MAX_HEARTBEAT_MISS) return;
-                if (!ws || ws.readyState !== WebSocket.OPEN) {
-                    log('心跳', '连接已关闭，立即重连...');
-                } else {
-                    log('心跳', '心跳连续无回应，关闭连接并重连...');
-                    try { ws.close(); } catch { }
+            heartbeatMissCount = 0;
+            try {
+                const reply = types.HeartbeatReply.decode(replyBody);
+                applyServerVersionInfo(reply.version_info);
+                if (reply.server_time) {
+                    const serverTime = toNum(reply.server_time);
+                    syncServerTime(serverTime > 1e12 ? serverTime : serverTime * 1000);
                 }
-                networkEvents.emit('disconnect', { code: 'heartbeat_timeout' });
-                rejectAllPendingRequests('连接超时，已清理');
-                reconnect(null);
-            }).catch(() => { });
+            } catch { }
+        } catch (error) {
+            if (generation !== connectionGeneration) return;
+            heartbeatMissCount++;
+            logWarn('心跳', `心跳失败: ${error.message}`, {
+                accountId: process.env.FARM_ACCOUNT_ID, generation,
+                failureType: error.code || 'send_or_server_error', ...getGatewayHealth(),
+            });
+            if (error.code === 'REQUEST_TIMEOUT' && Date.now() - lastInboundAt >= 20000) failConnection('heartbeat_timeout');
         }
     });
 }
@@ -913,6 +979,12 @@ function scheduleReconnect(reason) {
 }
 
 function connect(code, onLoginSuccess) {
+    cleanup('建立新连接');
+    userState.gid = 0;
+    userState.loginMode = 'legacy';
+    userState.unlockedSceneIds = [1];
+    lastInboundAt = lastHeartbeatResponse = Date.now();
+    heartbeatMissCount = 0;
     networkStopped = false;
     savedLoginCallback = onLoginSuccess;
     if (code) savedCode = code;
@@ -963,13 +1035,22 @@ function connect(code, onLoginSuccess) {
     ws = socket;
 
     socket.binaryType = 'arraybuffer';
-
+    const generation = connectionGeneration;
+    const isCurrentSocket = () => generation === connectionGeneration && ws === socket;
+    const armLoginDeadline = () => networkScheduler.setTimeoutTask('login_timeout', NETWORK_TIMEOUT_MS, () => {
+        if (isCurrentSocket()) failConnection('login_timeout');
+    });
+    // Bound connection establishment and async security initialization as well as Login.
+    armLoginDeadline();
     socket.on('open', async () => {
-        reconnectAttempts = 0;
+        if (!isCurrentSocket()) return;
+        armLoginDeadline();
         try {
             await startSecurityRuntime(deviceProtocol);
+            if (!isCurrentSocket()) return;
             await sendLogin(onLoginSuccess, deviceProtocol);
         } catch (error) {
+            if (!isCurrentSocket()) return;
             logWarn('ACE', `安全运行时启动失败，已中止登录：${error.message}`);
             networkEvents.emit('security_error', { message: error.message });
             stopSecurityRuntime('初始化失败');
@@ -978,6 +1059,7 @@ function connect(code, onLoginSuccess) {
     });
 
     socket.on('message', (data) => {
+        if (!isCurrentSocket()) return;
         const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
         // 网关角色：先把原始帧抛给钩子（转发给 worker），再本地处理（解析自己发的请求回包）
         if (rawMessageHook) {
@@ -987,7 +1069,8 @@ function connect(code, onLoginSuccess) {
     });
 
     socket.on('close', (code, _reason) => {
-        if (ws === socket) ws = null;
+        if (!isCurrentSocket()) return;
+        ws = null;
         logWarn('系统', `[WS] 连接关闭 (code=${code})`);
         networkEvents.emit('disconnect', { code });
         cleanup();
@@ -995,6 +1078,7 @@ function connect(code, onLoginSuccess) {
     });
 
     socket.on('error', (err) => {
+        if (!isCurrentSocket()) return;
         const message = err && err.message ? String(err.message) : '';
         logWarn('系统', `[WS] 错误: ${message}`);
         const match = message.match(/Unexpected server response:\s*(\d+)/i);
@@ -1009,10 +1093,21 @@ function connect(code, onLoginSuccess) {
 }
 
 function cleanup(reason = '网络清理') {
+    ranchSession.suspend();
+    ranchSession.reset();
+    connectionGeneration++;
+    requestTrace.length = 0;
+    connectionAbort.abort();
+    connectionAbort = new AbortController();
+    require('node:events').setMaxListeners(0, connectionAbort.signal);
+    requestGate = createNetworkRequestGate();
+    aceGate = createControlGate(10);
+    heartbeatGate = createControlGate(1);
     stopSecurityRuntime(reason);
     rejectAllPendingRequests(`请求已中断: ${reason}`);
     networkScheduler.clearAll();
-    // pendingCallbacks.clear();
+    clientSeq = 1;
+    serverSeq = 0;
 }
 
 function reconnect(newCode) {
@@ -1028,9 +1123,7 @@ function stopNetwork(reason = '停止网络') {
     networkStopped = true;
     savedLoginCallback = null;
     reconnectAttempts = 0;
-    stopSecurityRuntime(reason);
-    rejectAllPendingRequests(`请求已中断: ${reason}`);
-    networkScheduler.clearAll();
+    cleanup(reason);
     closeCurrentWs({ terminate: true });
     userState.gid = 0;
 }
@@ -1060,6 +1153,7 @@ module.exports = {
     getAceStatus,
     buildLoginDeviceInfo,
     buildLoginBody,
+    usesPlayerLogin,
     buildHeartbeatBody,
     buildWebSocketHeaders,
     buildTsdkDeviceInfo,
@@ -1080,6 +1174,35 @@ if (process.env.FARM_NETWORK_MODE === 'gateway') {
         // 必须传快照：直接把 module.exports 交给 createNetwork 再覆盖回来，
         // 包装函数里的 direct.sendMsgAsync 会指向自己，栈会直接爆掉。
         applyGatewayOverrides(module.exports, gateway.createNetwork);
+        const gatewayNetwork = { ...module.exports };
+        ranchSession.configure({ transition: async scene => {
+            if (scene === 'farm') return;
+            throw Object.assign(new Error('当前网关 IPC 未提供跨进程场景事务，牧场仅支持直连模式；请切换直连后重新登录'), { code: 'SCENE_LOGIN_UNSUPPORTED' });
+        } });
+        const resetGatewaySession = () => {
+            ranchSession.suspend(); ranchSession.reset();
+            connectionAbort.abort();
+            connectionAbort = new AbortController();
+            require('node:events').setMaxListeners(0, connectionAbort.signal);
+        };
+        networkEvents.on('disconnect', resetGatewaySession);
+        networkEvents.on('kickout', resetGatewaySession);
+        networkEvents.on('login', () => { resetGatewaySession(); ranchSession.adoptScene('farm'); ranchSession.resume(); });
+        module.exports.sendMsgAsync = (service, method, body, timeout, options) => ranchSession.run(service, method, () => {
+            const signal = connectionAbort.signal;
+            return new Promise((resolve, reject) => {
+                if (signal.aborted) return reject(connectionError('请求已中断: 网关连接已结束'));
+                const abort = () => reject(connectionError('请求已中断: 网关连接已结束'));
+                signal.addEventListener('abort', abort, { once: true });
+                Promise.resolve().then(() => {
+                    if (signal.aborted) throw connectionError('请求已中断: 网关连接已结束');
+                    return gatewayNetwork.sendMsgAsync(service, method, body, timeout, options);
+                }).then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+            });
+        });
+        for (const name of ['cleanup', 'stopNetwork', 'reconnect', 'connect']) {
+            module.exports[name] = (...args) => { resetGatewaySession(); return gatewayNetwork[name](...args); };
+        }
     } catch (error) {
         console.error('[网关] 网关客户端加载失败，退回直连模式:', error.message);
     }

@@ -1,0 +1,53 @@
+{
+  "bundle": "mcRes",
+  "images": [
+    {
+      "file": "can-normal.png",
+      "path": "gui/texture/feedbucket/feedbucketNormalIcon/spriteFrame",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/native/2d/2d1fc487-f04a-40c5-85d3-d6e59ff14c8a.351eb.png",
+      "sha256": "7bd41ef1ba47ce73a619ad86e8fcd15c22572b66687c4be03456c3269d6e65d6",
+      "evidence": "official FeedBucketConst.MC_FEED_BUCKET_ICON"
+    },
+    {
+      "file": "can-organic.png",
+      "path": "gui/texture/feedbucket/feedbucketProIcon/spriteFrame",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/native/f1/f1dcb495-2abe-4b55-b4a0-b93264a2c5b5.9a30f.png",
+      "sha256": "48c35b45e37184652b370702411bdcfaa441e924a3be3a515496c7aaa083527e",
+      "evidence": "official FeedBucketConst.MC_FEED_BUCKET_ICON"
+    },
+    {
+      "file": "illustrated-normal.png",
+      "path": "gui/texture/illustrated/all/icon_illustrate_select/spriteFrame",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/native/1f/1f4afefa2.a4056.png",
+      "spritePackUrl": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/03/03723957e.fb8ff.json",
+      "rect": {
+        "x": 399,
+        "y": 805,
+        "width": 32,
+        "height": 34
+      },
+      "rotated": false,
+      "sha256": "c0992244f75709541265b119f55251420e9d40b2221f300af37535e232382cc6"
+    },
+    {
+      "file": "illustrated-giant.png",
+      "path": "gui/texture/illustrated/all/icon_illustrate_mutant_select/spriteFrame",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/native/1f/1f4afefa2.a4056.png",
+      "spritePackUrl": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/03/03723957e.fb8ff.json",
+      "rect": {
+        "x": 299,
+        "y": 852,
+        "width": 39,
+        "height": 38
+      },
+      "rotated": false,
+      "sha256": "87f98276782227442546bbd16936e47bf8754da3b927abf883b41c07dc145fed"
+    },
+    {
+      "file": "poop.png",
+      "path": "texture/1030_1/spriteFrame",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a6/a611839c-ef60-4f48-9cc4-9b96b2dcc6b5.70d0b.png",
+      "sha256": "26461a4630dbd6d425c403c78f2383cf352bc7dc190173ba1081edd5dbce1832"
+    }
+  ]
+}

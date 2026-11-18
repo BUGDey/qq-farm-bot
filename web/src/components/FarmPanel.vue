@@ -368,7 +368,7 @@ onUnmounted(() => {
               :style="farmStageStyle"
               @fertilize="handleLandFertilize"
               @remove="handleLandRemove"
-              @select="openLandDetail"
+              @land="openLandDetail"
             />
           </div>
         </div>

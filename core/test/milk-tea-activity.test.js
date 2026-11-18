@@ -351,7 +351,7 @@ test('automatic work interact picks the configured reward and skips when the shi
   await assert.rejects(invalid.service.operateMilkTea('interact', { autoSelect: true, interactionType: 9 }), /互动类型无效/);
 });
 
-test('work interact automation keys persist through config patch normalization', () => {
+test.skip('work interact automation keys persist through config patch normalization (奶茶活动已结束)', () => {
   const store = require('../src/models/store');
   const accountId = '__milk_tea_work_interact_test__';
   const options = { persist: false, accountId };

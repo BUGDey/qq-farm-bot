@@ -49,6 +49,7 @@ const staticItemInfoMap = new Map([
     [2159, { id: 2159, name: '雨落成诗头像框' }],
     [100003, { id: 100003, name: '化肥礼包' }],
 ]);
+const ranchItemIcons = require('../gameConfig/RanchItemIcons.json');
 const staticItemImageMap = new Map([
     [210041, '/activity/milk-tea/icon_wuding05.png'],
     [210042, '/activity/milk-tea/icon_men05.png'],
@@ -770,6 +771,9 @@ function getMutantPlantImageByPhase(plantId, mutantIds, phase) {
 function getItemImageById(itemId) {
     const numericId = Number(itemId) || 0;
     if (numericId <= 0) return '';
+
+    const ranchImage = ranchItemIcons[String(numericId)];
+    if (ranchImage) return ranchImage;
 
     const staticImage = staticItemImageMap.get(numericId);
     if (staticImage) return staticImage;

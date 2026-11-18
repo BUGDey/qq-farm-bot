@@ -66,14 +66,14 @@ function close() {
 <template>
   <Teleport to="body">
     <div
-      class="fixed inset-0 z-[1200] flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm"
+      class="fixed inset-0 z-[1200] flex items-center justify-center bg-white/20 p-3 backdrop-blur-md dark:bg-black/40"
       @click.self="close"
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="土地详情"
-        class="max-h-[calc(100dvh-32px)] w-[min(480px,calc(100vw-24px))] overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800"
+        class="max-h-[calc(100dvh-32px)] w-[min(480px,calc(100vw-24px))] overflow-y-auto rounded-2xl bg-white/70 p-5 shadow-2xl backdrop-blur-xl backdrop-saturate-150 dark:bg-gray-900/70"
       >
         <div class="mb-3 flex items-start justify-between gap-3">
           <h3 class="text-base text-gray-800 font-bold dark:text-gray-100">

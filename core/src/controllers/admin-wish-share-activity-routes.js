@@ -1,5 +1,8 @@
 const { getAuthorizedAccountId, requireConnectedAccount } = require('./admin-activity-route-helpers');
 
+// 允许的牧歌初启写操作（与 services/muge-activity.js 的 OPERATIONS 保持一致）。
+const MUGE_ACTIONS = ['claimCelebration', 'claimFriends', 'claimTask', 'claimHandbook', 'saveAnswers', 'settle', 'claimShare'];
+
 function registerAdminWishShareActivityRoutes({ app, provider, getAccountIdFromRequest, canAccessAccount, sendProviderError }) {
   app.get('/api/activity/solar-terms', async (req, res) => {
     const accountId = getAuthorizedAccountId(req, res, { getAccountIdFromRequest, canAccessAccount });
@@ -33,6 +36,25 @@ function registerAdminWishShareActivityRoutes({ app, provider, getAccountIdFromR
     } catch (error) { sendProviderError(res, error); }
   });
   const context = { getAccountIdFromRequest, canAccessAccount };
+  // 牧歌初启（muge）：读快照 + 串行写操作。协议来自 muge.proto，字段均有官方定义。
+  app.get('/api/activity/muge', async (req, res) => {
+    const accountId = getAuthorizedAccountId(req, res, { getAccountIdFromRequest, canAccessAccount });
+    if (!accountId) return;
+    try {
+      if (!requireConnectedAccount(res, provider, accountId, '获取活动失败: 账号未运行')) return;
+      res.json({ ok: true, activity: await provider.getMugeActivity(accountId) });
+    } catch (error) { sendProviderError(res, error); }
+  });
+  app.post('/api/activity/muge/operate', async (req, res) => {
+    const accountId = getAuthorizedAccountId(req, res, { getAccountIdFromRequest, canAccessAccount });
+    if (!accountId) return;
+    const action = String(req.body?.action || '');
+    if (!MUGE_ACTIONS.includes(action)) return res.status(400).json({ ok: false, error: '活动操作无效' });
+    try {
+      if (!requireConnectedAccount(res, provider, accountId, '活动操作失败: 账号未运行')) return;
+      res.json({ ok: true, ...(await provider.operateMugeActivity(accountId, action, req.body?.params || {})) });
+    } catch (error) { sendProviderError(res, error); }
+  });
   for (const [slug, getter, operator, actions] of [
     ['wish-sign', 'getWishSignActivity', 'operateWishSign', ['draw', 'claim']],
     ['share-reward', 'getShareRewardActivity', 'operateShareReward', ['daily', 'share', 'milestones']],

@@ -387,8 +387,7 @@ async function syncKnownFriendGidsFromRecentVisitorsOnce(retryEmpty = false) {
 
 /**
  * Best-effort QQ friend GID bootstrap for login flows that do not provide
- * platform openids (notably NapCat QR login). Every source is independent so
- * one unavailable legacy RPC does not prevent visitor/application discovery.
+ * platform openids (notably NapCat QR login), using applications and visitors.
  */
 async function bootstrapQqFriendGids() {
   if (CONFIG.platform !== 'qq') return { skipped: true, reason: 'not_qq' };
@@ -396,16 +395,8 @@ async function bootstrapQqFriendGids() {
   hasBootstrappedQqFriendGids = true;
 
   const discovered = [];
-  const sourceCounts = { legacy: 0, applications: 0, visitors: 0 };
+  const sourceCounts = { applications: 0, visitors: 0 };
   const errors = [];
-
-  try {
-    const friends = dedupeFriendsByGid(await fetchQqFriendsByLegacyMethod());
-    sourceCounts.legacy = friends.length;
-    discovered.push(...friends.map(friend => toNum(friend && friend.gid)));
-  } catch (err) {
-    errors.push(`legacy: ${err.message}`);
-  }
 
   try {
     const reply = await getApplications();
@@ -633,182 +624,13 @@ async function fetchQqFriendsByKnownGids() {
   return dedupeFriendsByGid(allFriends);
 }
 
-/** Fetch QQ friends via legacy methods: SyncAll first, then GetAll as fallback. */
-/**
- * 手工按 protobuf 线上格式把 GetAll 回包里的 f1 子消息解出来。
- * 用途：官方 GetAll 回包字段比我们本地 proto 多（f9/f10/f12/f13/f14 等），
- * 一旦某个字段和我们声明的类型冲突，标准 decode 会整体失败，
- * 这里退化成「只认 f1 里的 gid/open_id/name/avatar/level/gold」，避免一条解析失败丢掉全部好友。
- */
-function decodeFriendsByWire(body) {
-  const out = [];
-  const readVarintAt = (buf, i) => {
-    let v = 0, shift = 0, x;
-    do {
-      if (i >= buf.length) throw new Error('varint 越界');
-      x = buf[i++];
-      v |= (x & 0x7f) << shift;
-      shift += 7;
-    } while (x & 0x80);
-    return [v >>> 0, i];
-  };
-
-  const readSubMessage = (sub) => {
-    const item = { gid: '', openId: '', name: '', avatarUrl: '', level: 0, gold: 0 };
-    let i = 0;
-    while (i < sub.length) {
-      let tag;
-      [tag, i] = readVarintAt(sub, i);
-      const field = tag >>> 3;
-      const wire = tag & 7;
-      if (wire === 0) {
-        let v;
-        [v, i] = readVarintAt(sub, i);
-        if (field === 1) item.gid = String(v);
-        else if (field === 6) item.level = v;
-        else if (field === 7) item.gold = v;
-      } else if (wire === 2) {
-        let len;
-        [len, i] = readVarintAt(sub, i);
-        const slice = sub.subarray(i, i + len);
-        i += len;
-        if (field === 2) item.openId = slice.toString('utf8');
-        else if (field === 3) item.name = slice.toString('utf8');
-        else if (field === 4) item.avatarUrl = slice.toString('utf8');
-      } else if (wire === 5) i += 4;
-      else if (wire === 1) i += 8;
-      else break;
-    }
-    return item;
-  };
-
-  let i = 0;
-  while (i < body.length) {
-    let tag;
-    [tag, i] = readVarintAt(body, i);
-    const field = tag >>> 3;
-    const wire = tag & 7;
-    if (wire === 2) {
-      let len;
-      [len, i] = readVarintAt(body, i);
-      const slice = body.subarray(i, i + len);
-      i += len;
-      if (field === 1) {
-        try {
-          const item = readSubMessage(slice);
-          if (item.gid) out.push(item);
-        } catch (err) {
-          // 单条坏了不影响其它
-        }
-      }
-    } else if (wire === 0) {
-      let v;
-      [v, i] = readVarintAt(body, i);
-    } else if (wire === 5) i += 4;
-    else if (wire === 1) i += 8;
-    else break;
-  }
-  return out;
-}
-
-async function fetchQqFriendsByLegacyMethod() {
-  const errors = [];
-  const collected = [];
-
-  // 1) SyncAll：官方客户端就是拿它一次性拉全部好友的
-  try {
-    const SyncAllReq = types.SyncAllRequest || types.SyncAllFriendsRequest;
-    const SyncAllRep = types.SyncAllReply || types.SyncAllFriendsReply;
-    if (!SyncAllReq || !SyncAllRep) throw new Error('SyncAll 接口类型未加载');
-
-    // 官方客户端抓包里 SyncAll 同时带 open_ids(275 个) 与 field3=1；
-    // 我们这边只知道少量 open_id，所以先试「空 open_ids + sync_flag=1」能不能让对端回全量。
-    for (const flag of [1, 0]) {
-      try {
-        const payload = SyncAllReq.encode(SyncAllReq.create({ open_ids: [], sync_flag: flag })).finish();
-        const { body } = await sendMsgAsync(
-          'gamepb.friendpb.FriendService',
-          'SyncAll',
-          payload
-        );
-        const reply = SyncAllRep.decode(body);
-        const got = extractReplyFriends(reply);
-        log('好友', `SyncAll(sync_flag=${flag}) → ${got.length} 位好友`);
-        collected.push(...got);
-      } catch (err) {
-        errors.push(`SyncAll(flag=${flag}): ${err.message}`);
-      }
-    }
-  } catch (err) {
-    errors.push(`SyncAll: ${err.message}`);
-  }
-
-  // 1.5) 官方客户端在 FriendService 之前会先做一次场景登录（GlobalSceneService.PlayerSceneLogin），
-  // 抓包里紧随其后就是 GetAll。先补上这一步，再请求全量好友，避免服务端因「场景未就绪」拒绝。
-  try {
-    const { body: sceneBody } = await sendMsgAsync(
-      'gamepb.globalscenepb.GlobalSceneService',
-      'PlayerSceneLogin',
-      Buffer.from('0801', 'hex')
-    );
-    log('好友', `场景登录完成（回包 ${sceneBody.length}B）`);
-  } catch (err) {
-    log('好友', `场景登录失败：${err.message}`);
-  }
-
-  // 2) GetAll：不依赖 open_id 的全量好友列表
-  try {
-    if (!types.GetAllFriendsRequest || !types.GetAllFriendsReply) {
-      throw new Error('GetAll 接口类型未加载');
-    }
-    const payload = types.GetAllFriendsRequest.encode(
-      types.GetAllFriendsRequest.create({ sync_flag: 1 })
-    ).finish();
-    const { body } = await sendMsgAsync(
-      'gamepb.friendpb.FriendService',
-      'GetAll',
-      payload
-    );
-    let allList = [];
-    try {
-      const allReply = types.GetAllFriendsReply.decode(body);
-      allList = extractReplyFriends(allReply);
-      log('好友', `GetAll(sync_flag=1) → ${allList.length} 位好友（回包 ${body.length}B）`);
-    } catch (decodeErr) {
-      allList = decodeFriendsByWire(body);
-      log('好友',
-        `GetAll 标准解码失败（${decodeErr.message}），按字段结构兜底解析出 ${allList.length} 位好友（回包 ${body.length}B）`
-      );
-    }
-    collected.push(...allList);
-    if (allList.length === 0) {
-      errors.push(`GetAll: 回包 ${body.length}B 解析出 0 位好友`);
-    }
-  } catch (err) {
-    errors.push(`GetAll: ${err.message}`);
-    log('好友', `GetAll 失败：${err.message}`);
-    // 注意：**不要**在这里补发 PlayerLogin。它是登录类 RPC，会让当前 Code 失效
-    // （实测下一次启动直接 ws_400，得重新扫码）。
-
-  }
-
-  if (collected.length === 0 && errors.length > 0) {
-    throw new Error(errors.join(' | '));
-  }
-  return dedupeFriendsByGid(collected);
-}
-
-/**
- * Get all friends. For QQ platform, try GetGameFriends first (with known GIDs),
- * then fall back to legacy methods. For WeChat, use GetAll directly.
- */
+/** Get QQ friends by known GIDs; WeChat uses its normal GetAll endpoint. */
 async function getAllFriends(forceRefresh = false) {
   const isQQ = CONFIG.platform === 'qq';
 
   if (isQQ) {
     await syncKnownFriendGidsFromRecentVisitorsOnce(forceRefresh);
 
-    // 两个来源都要问：GetGameFriends 只认已知 GID，SyncAll/GetAll 才是服务端的全量名单
     const knownFriends = await fetchQqFriendsByKnownGids().catch((err) => {
       logWarn('好友', `GetGameFriends 失败: ${err.message}`, {
         module: 'friend', event: '好友列表接口', result: 'error', method: 'GetGameFriends',
@@ -816,34 +638,15 @@ async function getAllFriends(forceRefresh = false) {
       return [];
     });
 
-    let legacyFriends = [];
-    try {
-      legacyFriends = dedupeFriendsByGid(await fetchQqFriendsByLegacyMethod());
-    } catch (err) {
-      if (knownFriends.length === 0 && getEffectiveKnownQqFriendGids().length === 0) {
-        throw new Error(
-          `QQ 好友列表获取失败，请先在好友页维护已知好友 GID 列表。${err.message}`
-        );
-      }
-      logWarn('好友', `SyncAll/GetAll 失败: ${err.message}`, {
-        module: 'friend', event: '好友列表接口', result: 'error', method: 'SyncAll/GetAll',
-      });
-    }
-
-    const merged = dedupeFriendsByGid([...knownFriends, ...legacyFriends]);
-    if (merged.length > 0) {
-      syncKnownFriendGidsFromFriends(merged);
-      log('好友', `好友来源：已知 GID ${knownFriends.length} / SyncAll-GetAll ${legacyFriends.length} → 合并 ${merged.length}`, {
-        module: 'friend', event: '好友列表接口', result: 'ok',
-        knownCount: knownFriends.length, legacyCount: legacyFriends.length, mergedCount: merged.length,
-      });
+    if (knownFriends.length > 0) {
+      syncKnownFriendGidsFromFriends(knownFriends);
     } else if (getEffectiveKnownQqFriendGids().length === 0) {
       logWarn('好友',
         'QQ 好友列表为空；若近期接口已切到 GetGameFriends，请先在好友页维护已知好友 GID 列表',
         { module: 'friend', event: '好友列表接口', result: 'empty' }
       );
     }
-    return buildFriendReply(merged);
+    return buildFriendReply(knownFriends);
   }
 
   // WeChat platform: direct GetAll
@@ -1042,15 +845,9 @@ function clearAllInvalidKnownFriendGidCooldown() {
   invalidKnownFriendGidCooldownUntil.clear();
 }
 
-// ===== 好友探针（诊断用，只读） =====
+// ===== Explicit open_id import =====
 
-/**
- * 逐条探测好友数据来源，把每一路的真实结果原样报给面板。
- *
- * 只读：不写已知 GID、不移除失效好友、不改缓存。
- * 目的是回答「这个号到底有没有好友」以及「哪一路接口能拿到」，
- * 所以失败也要把错误码带回去，而不是折叠成一句「获取失败」。
- */
+/** Resolve caller-supplied open_ids; never used as an empty-list discovery probe. */
 async function syncFriendsFromOpenIds(openIds, options = {}) {
   const Req = types.SyncAllRequest || types.SyncAllFriendsRequest;
   const Rep = types.SyncAllReply || types.SyncAllFriendsReply;

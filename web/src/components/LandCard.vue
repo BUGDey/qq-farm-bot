@@ -24,6 +24,7 @@ const emit = defineEmits<{
   (e: 'fertilize', land: any): void
   (e: 'remove', land: any): void
   (e: 'select', land: any): void
+  (e: 'land', land: any): void
 }>()
 
 const land = computed(() => props.land)
@@ -607,6 +608,19 @@ function getIsometricBubbleClass(targetLand: any) {
           <span v-if="land.needWeed" class="rounded-full bg-green-100 px-2 py-0.5 text-green-700">需要除草</span>
           <span v-if="land.needBug" class="rounded-full bg-red-100 px-2 py-0.5 text-red-700">需要除虫</span>
         </div>
+
+        <button
+          type="button"
+          class="mt-2 w-full flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white/80 px-2.5 py-2 text-left transition hover:bg-white dark:border-gray-600 dark:bg-gray-900/60 dark:hover:bg-gray-900"
+          :aria-label="`查看土地 #${land.id} 详情`"
+          @click.stop="emit('land', land)"
+        >
+          <span class="flex items-center gap-2 text-xs text-gray-600 font-medium dark:text-gray-300">
+            <span class="i-carbon-grid text-sm" />土地
+            <span class="text-[10px] text-gray-400 font-normal">{{ land.level ? `Lv.${land.level}` : '详情' }}</span>
+          </span>
+          <span class="i-carbon-chevron-right text-sm text-gray-400" />
+        </button>
 
         <div v-if="isFertilizable || isRemovable" class="grid grid-cols-2 mt-2 gap-2">
           <button type="button" class="bubble-action border-emerald-600 text-emerald-700 dark:text-emerald-300" :disabled="!isFertilizable" @click="handleBubbleAction('fertilize')">

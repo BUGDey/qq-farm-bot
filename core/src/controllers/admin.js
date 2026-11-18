@@ -606,6 +606,7 @@ function startAdminServer(dataProvider) {
     app,
     provider,
     adminLogger,
+    store,
     getAccountIdFromRequest,
     canAccessAccount,
     sendProviderError,

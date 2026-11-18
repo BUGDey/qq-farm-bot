@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import RanchShop from '@/views/RanchShop.vue'
 import DecorationGoodsCard from '@/components/shop/DecorationGoodsCard.vue'
 import MallGoodsCard from '@/components/shop/MallGoodsCard.vue'
 import MysteryGoodsCard from '@/components/shop/MysteryGoodsCard.vue'
@@ -15,12 +16,14 @@ import ShopEmptyState from '@/components/shop/ShopEmptyState.vue'
 import ShopTabToolbar from '@/components/shop/ShopTabToolbar.vue'
 import { createShopAvailability } from '@/composables/shop/useShopAvailability'
 import { useAccountStore } from '@/stores/account'
+import { useGameSpaceStore } from '@/stores/game-space'
 import { useShopStore } from '@/stores/shop'
 import { useStatusStore } from '@/stores/status'
 import { useToastStore } from '@/stores/toast'
 import { formatCouponAmount, formatCurrencyAmountByLabel } from '@/utils/number-format'
 import { purchaseMaxCount } from '@/utils/purchase-count'
 
+const { isRanch } = storeToRefs(useGameSpaceStore())
 const accountStore = useAccountStore()
 const shopStore = useShopStore()
 const statusStore = useStatusStore()
@@ -200,13 +203,13 @@ function closeQuantityModal() {
 }
 
 async function refreshAll() {
-  if (!currentAccountId.value)
+  if (isRanch.value || !currentAccountId.value)
     return
   await shopStore.refreshAll(currentAccountId.value)
 }
 
 async function refreshMysteryAutoBuyStatus() {
-  if (!currentAccountId.value) {
+  if (isRanch.value || !currentAccountId.value) {
     mysteryAutoBuyEnabled.value = false
     return
   }
@@ -215,12 +218,12 @@ async function refreshMysteryAutoBuyStatus() {
     const { data } = await api.get('/api/settings', {
       headers: { 'x-account-id': requestedAccountId },
     })
-    if (String(currentAccountId.value || '') !== requestedAccountId)
+    if (isRanch.value || String(currentAccountId.value || '') !== requestedAccountId)
       return
     mysteryAutoBuyEnabled.value = data?.data?.automation?.mystery_shop_auto_buy === true
   }
   catch {
-    if (String(currentAccountId.value || '') === requestedAccountId)
+    if (!isRanch.value && String(currentAccountId.value || '') === requestedAccountId)
       mysteryAutoBuyEnabled.value = false
   }
 }
@@ -236,7 +239,7 @@ function syncTabFromRouteQuery() {
 }
 
 async function buyGoods(item: any, quantity = 1) {
-  if (!currentAccountId.value)
+  if (isRanch.value || !currentAccountId.value)
     return
   const result = await shopStore.buyGoods(currentAccountId.value, item.id, quantity, item.price)
   if (result?.ok) {
@@ -249,7 +252,7 @@ async function buyGoods(item: any, quantity = 1) {
 }
 
 async function buyMallGoods(item: any, quantity = 1) {
-  if (!currentAccountId.value)
+  if (isRanch.value || !currentAccountId.value)
     return
   try {
     const result = await shopStore.buyMallGoods(currentAccountId.value, item.goodsId, quantity)
@@ -268,7 +271,7 @@ async function buyMallGoods(item: any, quantity = 1) {
 }
 
 async function buyMysteryGoods(item: any) {
-  if (!currentAccountId.value)
+  if (isRanch.value || !currentAccountId.value)
     return
   const result = await shopStore.buyMysteryShopGoods(currentAccountId.value, item.npcId)
   if (result?.ok) {
@@ -293,7 +296,7 @@ function confirmBuyMysteryGoods(item: any) {
 }
 
 async function abandonMysteryMerchant() {
-  if (!currentAccountId.value)
+  if (isRanch.value || !currentAccountId.value)
     return
   const result = await shopStore.abandonMysteryShop(currentAccountId.value)
   if (result?.ok) {
@@ -384,7 +387,12 @@ function confirmBuyMallGoods(item: any) {
   )
 }
 
-watch(currentAccountId, () => {
+watch([currentAccountId, isRanch], () => {
+  showConfirm.value = false
+  pendingAction.value = null
+  quantityModal.value.show = false
+  quantityModal.value.item = null
+  mysteryAutoBuyEnabled.value = false
   shopStore.clearShopData()
   refreshAll()
   refreshMysteryAutoBuyStatus()
@@ -411,7 +419,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="space-y-4">
+  <RanchShop v-if="isRanch" />
+  <section v-else class="space-y-4">
     <div class="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
       <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <ShopAccountHeader

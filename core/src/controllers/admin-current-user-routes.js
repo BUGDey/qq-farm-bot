@@ -12,6 +12,14 @@ function registerRankingRoute({ app, requireAdminToken, store }) {
     try {
       const period = ['daily', 'weekly', 'monthly', 'total'].includes(String(req.query.period || '')) ? String(req.query.period) : 'daily';
       const type = ['earn', 'steal'].includes(String(req.query.type || '')) ? String(req.query.type) : 'earn';
+      const space = String(req.query.space || 'farm');
+      if (!['farm', 'ranch'].includes(space)) {
+        return res.status(400).json({ ok: false, error: '不支持的排行场景' });
+      }
+      // 当前 rank 文件仅由农场统计生成；牧场尚无独立累计，不能复用农场值。
+      if (space === 'ranch') {
+        return res.json({ ok: true, data: { period, type, space, available: false, list: [], reason: '牧场尚未提供独立收益和偷取统计，暂无牧场排行数据' } });
+      }
 
       const dataDir = process.env.FARM_DATA_DIR || path.join(__dirname, '../../data');
       const statsDir = path.join(dataDir, 'stats');
@@ -58,7 +66,7 @@ function registerRankingRoute({ app, requireAdminToken, store }) {
       }
 
       rows.sort((a, b) => (Number(b[type]) || 0) - (Number(a[type]) || 0));
-      res.json({ ok: true, data: { period, type, list: rows.slice(0, 50) } });
+      res.json({ ok: true, data: { period, type, space, available: true, list: rows.slice(0, 50) } });
     } catch (error) {
       res.status(500).json({ ok: false, error: error.message });
     }

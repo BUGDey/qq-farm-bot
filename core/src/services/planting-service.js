@@ -1,6 +1,6 @@
 const { sendMsgAsync, getUserState, getWsErrorState } = require('../utils/network');
 const { types } = require('../utils/proto');
-const { toNum, toLong, toTimeSec, getServerTimeSec, log, logWarn, sleep } = require('../utils/utils');
+const { toNum, toLong, toTimeSec, getServerTimeSec, log, logDebug, logWarn, sleep } = require('../utils/utils');
 const { compareBagSeedGameOrder } = require('../utils/bag-seed-order');
 const { getPlantNameBySeedId, getPlantGrowTime, formatGrowTime, getAllSeeds, getPlantBySeedId, getPlantById, isEventSeedId } = require('../config/gameConfig');
 const {
@@ -1088,7 +1088,7 @@ async function plantFromShop(landIds, userState, overrideStrategy, accountId = g
   const footprint = plantSize * plantSize;
   const hasShopData = toNum(bestSeed.goodsId) > 0; // 来自真实商店数据才走购买流程
 
-  log('商店', `最佳种子: ${plantName} (${bestSeed.seedId})${hasShopData ? ` 价格=${bestSeed.price}金币` : ' (本地回退)'}${growTimeStr}`, {
+  logDebug('商店', `最佳种子: ${plantName} (${bestSeed.seedId})${hasShopData ? ` 价格=${bestSeed.price}金币` : ' (本地回退)'}${growTimeStr}`, {
     module: 'warehouse', event: '选择种子', seedId: bestSeed.seedId, price: bestSeed.price, fromShop: hasShopData
   });
 

@@ -138,6 +138,9 @@ function previewRewards(items?: HeluDrawReward[]) {
           <div class="line-clamp-2 mt-2 text-[11px] text-gray-500 leading-5 dark:text-gray-400">
             {{ T.reward }}: {{ rewardSummary(term.rewards) }}
           </div>
+          <p v-if="(term as any).description" class="line-clamp-3 mt-1 whitespace-pre-line text-[11px] text-emerald-700/80 leading-5 dark:text-emerald-300/80">
+            {{ (term as any).description }}
+          </p>
 
           <div v-if="!term.claimable" class="mt-auto rounded-lg bg-gray-100 px-3 py-2 text-center text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">
             {{ term.statusLabel || T.unavailable }}

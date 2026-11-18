@@ -1,6 +1,6 @@
 {
-  "source": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/import/47/4793f84e-8a04-481c-8608-dde5f9df6647.5e94d.json",
-  "updatedAt": "2026-10-15",
+  "source": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/import/47/4793f84e-8a04-481c-8608-dde5f9df6647.5e94d.json + 上游 solar-calendar 冬季节令文案",
+  "updatedAt": "2026-11-17",
   "terms": [
     {
       "id": 101,
@@ -53,6 +53,33 @@
     {
       "id": 402,
       "name": "霜降"
+    },
+    {
+      "id": 403,
+      "name": "立冬",
+      "description": "农历 九月廿九\n木叶半疏，薄霜初覆\n负菜穿林，藏一篓冬甜",
+      "question": "立冬这天，北方很多地方会吃什么？",
+      "answer": "A.饺子;B.粽子;C.月饼;D.汤圆",
+      "answerIndex": 0,
+      "errorTips": "立冬是秋冬之交，老话讲“交子之时”，吃的这个东西名字正好和“交子”谐音。"
+    },
+    {
+      "id": 404,
+      "name": "小雪",
+      "description": "农历 十月十四\n天地闭塞，生意未绝\n拨雪而视，犹见一点青",
+      "question": "小雪节气，民间常会开始忙什么？",
+      "answer": "A.下地插秧;B.腌腊肉、做香肠;C.采春茶;D.晒谷子",
+      "answerIndex": 1,
+      "errorTips": "小雪后天气又冷又干，正好腌腊肉存起来过冬，老话叫「冬腊风腌，蓄以御冬」。"
+    },
+    {
+      "id": 405,
+      "name": "大雪",
+      "description": "农历 十月廿九\n至此雪盛，万物归藏\n一滚一立，堆一冬欢喜",
+      "question": "「大雪」这个节气名字，说的是什么？",
+      "answer": "A.当天一定会下大雪;B.当天雪下得最大;C.积雪从此不化;D.天气更冷、下雪的可能性更大",
+      "answerIndex": 3,
+      "errorTips": "节气名说的是气候趋势，不是当天雪有多大；小雪、大雪都是讲降雪的程度和概率。"
     }
   ]
 }

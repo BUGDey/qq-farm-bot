@@ -1,0 +1,41 @@
+{
+  "client": "1112386029_3_8cb9dd605c485052d82e312af96b1a90",
+  "outputSha256": "c7eda16657b061f25930f95d71af1deacccf3cdc968035fb5593ece616b8dd95",
+  "tables": [
+    {
+      "name": "MCItemInfo",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/0a/0ab6db8e-8a41-41fc-9ae0-741a98b0515d.9e121.json",
+      "sha256": "d1efc96030e97c5fee27adff58e9daca2d433d0f5fc4316b91ef89a7bc1b3551"
+    },
+    {
+      "name": "MCCanConfig",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/56/56f092ed-af5c-43aa-8315-86fc31eb803b.f9f4c.json",
+      "sha256": "56064e5df5df492d7385685095959a26c621ef5bc735f717fa8e336a18f8f1cb"
+    },
+    {
+      "name": "MCRanchOperation",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/6f/6f59a75b-0dfa-4699-bba2-9582b4e1aca3.3d30d.json",
+      "sha256": "344d4b15fca7bcffd54ea726d575ff6c4545d24eb609dace10114db30d447cda"
+    },
+    {
+      "name": "MCOrder",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/71/718e6138-7ee0-463f-b2b8-f52a36aec42c.a9879.json",
+      "sha256": "a3ee6c0bfae45dad4b70e840e47b8536192a287d42358de9dff3a455327520b7"
+    },
+    {
+      "name": "MCAnimalConfig",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/81/817becc8-b0cd-4719-8c93-6cc760fe9019.6fdde.json",
+      "sha256": "9bd310c1eab2e463276df4ff6ceb8c8d1e82ff0c42d3697fa92de6bc1c6019fd"
+    },
+    {
+      "name": "MCItemTab",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/f2/f2c4d797-8fc6-4cc5-b64a-35ccec283e12.071fe.json",
+      "sha256": "42eee250191202c0a087a2c9ad2c6666195e624351c6145f5e628101b026f224"
+    },
+    {
+      "name": "MCFacilityConfig",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/mcRes/import/f8/f85a714d-ea62-4a5b-91be-f2b95ca1d7bc.86f0f.json",
+      "sha256": "779760cca770cbfd9ef0ed5e847f05268e6492fe245c0c55ef5a45cb61c2eefb"
+    }
+  ]
+}

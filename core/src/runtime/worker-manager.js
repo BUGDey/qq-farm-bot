@@ -56,8 +56,16 @@ function createWorkerManager(deps) {
         milkTeaRecords: 90000,
         getPetDiary: 90000,
         operatePetDiary: 180000,
+        // 牧歌初启一次操作 = 读快照 → 提交 → 再读快照，10 秒默认值会误判超时。
+        getMugeActivity: 90000,
+        operateMugeActivity: 180000,
         getPetDiaryRecords: 30000,
         getPetDiaryFriend: 30000,
+        ranchResource: 120000,
+        ranchStatus: 120000,
+        ranchConnect: 120000,
+        ranchDisconnect: 120000,
+        ranchAction: 120000,
     };
     const WATCHDOG_MAX_RESTARTS = 3;
     // 微信账号下线提醒的延迟确认窗口：自动刷新 Code（含重启 Worker）实测约需 10 秒上下，

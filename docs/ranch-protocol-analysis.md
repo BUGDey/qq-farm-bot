@@ -1,4 +1,6 @@
-# 牧场（Animal/Ranch）协议接入分析
+# 牧场（Animal/Ranch）协议接入分析（历史归档）
+
+> 本文记录 2026-11-16 的旧版局部协议分析，已由 404 上游 `ranch.proto` 和独立 `ranch-protocol.js` 替代，不再作为现行业务字段依据。旧表中 `FeedAnimal` 字段 2 实际为 `bucket_type`，不是数量；部分所谓 target 实际为 repeated 列表。保留本文用于追溯抓包证据，现行迁移范围见 [404 牧场迁移说明](ranch-404-migration.md)。
 
 > 证据来源：QQ 小程序缓存 `game.js`（官方生成代码）+ Reqable HAR 经 TSDK 解密后的明文请求/响应。
 > 生成时间：2026-11-16。本文只记录**已证实**的字段号/wire type；语义名带 `【推断】` 的仅表示人类可读命名，

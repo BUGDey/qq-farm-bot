@@ -77,9 +77,6 @@ export interface AutomationConfig {
   friend_help_exp_limit?: boolean
   golden_bug_clear?: boolean
   skip_own_weed_bug?: boolean
-  ranch_harvest?: boolean
-  ranch_feed?: boolean
-  ranch_add_feed?: boolean
 }
 
 export interface IntervalsConfig {
@@ -158,7 +155,6 @@ export interface SettingsState {
   fertilizerBuyNormalCount: number
   fertilizerBuyNormalThresholdHours: number
   fertilizerBuyCheckIntervalMinutes: number
-  ranchCheckIntervalMinutes: number
   goldenBugKeepCount: number
   goldenBugRoundLimit: number
 }
@@ -218,7 +214,6 @@ export const useSettingStore = defineStore('setting', () => {
     fertilizerBuyNormalCount: 10,
     fertilizerBuyNormalThresholdHours: 10,
     fertilizerBuyCheckIntervalMinutes: 30,
-    ranchCheckIntervalMinutes: 30,
     goldenBugKeepCount: 0,
     goldenBugRoundLimit: 24,
   })
@@ -252,7 +247,6 @@ export const useSettingStore = defineStore('setting', () => {
       fertilizerBuyNormalCount: 10,
       fertilizerBuyNormalThresholdHours: 10,
       fertilizerBuyCheckIntervalMinutes: 30,
-      ranchCheckIntervalMinutes: 30,
       goldenBugKeepCount: 0,
       goldenBugRoundLimit: 24,
     }
@@ -295,7 +289,6 @@ export const useSettingStore = defineStore('setting', () => {
         settings.value.fertilizerBuyNormalCount = d.fertilizerBuyNormalCount ?? 10
         settings.value.fertilizerBuyNormalThresholdHours = d.fertilizerBuyNormalThresholdHours ?? 10
         settings.value.fertilizerBuyCheckIntervalMinutes = d.fertilizerBuyCheckIntervalMinutes ?? 30
-        settings.value.ranchCheckIntervalMinutes = d.ranchCheckIntervalMinutes ?? 30
         settings.value.goldenBugKeepCount = d.goldenBugKeepCount ?? 0
         settings.value.goldenBugRoundLimit = d.goldenBugRoundLimit ?? 24
         settings.value.bagSeedPriority = d.bagSeedPriority ?? []
@@ -330,7 +323,6 @@ export const useSettingStore = defineStore('setting', () => {
         fertilizerBuyNormalCount: newSettings.fertilizerBuyNormalCount ?? 10,
         fertilizerBuyNormalThresholdHours: newSettings.fertilizerBuyNormalThresholdHours ?? 10,
         fertilizerBuyCheckIntervalMinutes: newSettings.fertilizerBuyCheckIntervalMinutes ?? 30,
-        ranchCheckIntervalMinutes: newSettings.ranchCheckIntervalMinutes ?? 30,
         goldenBugKeepCount: newSettings.goldenBugKeepCount ?? 0,
         goldenBugRoundLimit: newSettings.goldenBugRoundLimit ?? 24,
       }

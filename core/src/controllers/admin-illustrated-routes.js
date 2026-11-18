@@ -9,45 +9,6 @@ const {
   registerAdminIllustratedPurchaseRoutes,
 } = require("./admin-illustrated-purchase-routes");
 const { getNongmePlantData } = require("../services/nongme-plant-data");
-const fs = require("fs");
-const path = require("path");
-const { getResourcePath } = require("../config/runtime-paths");
-const { getItemImageById } = require("../config/gameConfig");
-
-/** 价格字段形如 "1007:540"（货币 ID:数量），1007 = 金券。 */
-function parseSellsPrice(sells) {
-  const text = String(sells || "").trim();
-  if (!text) return 0;
-  const parts = text.split(":");
-  const price = Number(parts[1]);
-  if (Number.isFinite(price)) return price;
-  const only = Number(parts[0]);
-  return Number.isFinite(only) ? only : 0;
-}
-
-/**
- * 牧场动物图鉴（静态配置）：ItemInfo.json 里 type=105 就是牧场动物，共 24 种。
- * 游戏侧没有抓到牧场图鉴的协议样本，所以这里不请求任何 RPC，
- * 只用本地配置 + 内置头像素材做「图鉴/商店」式展示：名称、解锁等级、金券价格。
- */
-function buildRanchBook() {
-  const itemInfoPath = path.join(getResourcePath("gameConfig"), "ItemInfo.json");
-  const all = JSON.parse(fs.readFileSync(itemInfoPath, "utf8"));
-  const items = all
-    .filter(item => Number(item.type) === 105)
-    .map(item => ({
-      id: Number(item.id) || 0,
-      name: String(item.name || `动物 #${item.id}`),
-      image: getItemImageById(item.id) || "",
-      level: Number(item.level) || 0,
-      price: parseSellsPrice(item.sells),
-      currency: "金券",
-      desc: String(item.desc || ""),
-      rarity_color: String(item.rarity_color || ""),
-    }))
-    .sort((a, b) => (a.level - b.level) || (a.id - b.id));
-  return { items, total: items.length };
-}
 
 function getAuthorizedAccountId(req, res, { getAccountIdFromRequest, canAccessAccount }) {
   const accountId = getAccountIdFromRequest(req);
@@ -143,21 +104,6 @@ function registerAdminIllustratedRoutes({
       res.json({ ok: true, data: getMutationCatalog() });
     } catch (err) {
       adminLogger.error("获取变异宝典失败", {
-        error: err.message,
-        stack: err.stack,
-      });
-      res.status(500).json({ ok: false, error: err.message });
-    }
-  });
-
-  // 牧场动物图鉴：纯本地配置，不需要账号在线，也不发游戏 RPC
-  let ranchBookCache = null;
-  app.get("/api/illustrated/ranch", (req, res) => {
-    try {
-      if (!ranchBookCache) ranchBookCache = buildRanchBook();
-      res.json({ ok: true, data: ranchBookCache });
-    } catch (err) {
-      adminLogger.error("获取牧场图鉴失败", {
         error: err.message,
         stack: err.stack,
       });

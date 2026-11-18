@@ -2,7 +2,8 @@ const process = require('node:process');
 
 // 跟随官方客户端版本；resolveClientVersion() 保证只升不降，
 // 服务端下发更旧的版本时会回落到这里。
-const DEFAULT_CLIENT_VERSION = '1.16.3.8_20261028';
+// 2026-11-17 成功牧场 HAR：WebSocket ver 与 PlayerLogin device_info 一致。
+const DEFAULT_CLIENT_VERSION = '1.17.0.4_20261117';
 
 function parseClientVersion(value) {
     const match = String(value || '').trim().match(/^(\d+(?:\.\d+){2,4})_(\d{8})$/);

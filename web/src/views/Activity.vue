@@ -20,7 +20,9 @@ import { useActivityStore } from '@/stores/activity'
 import { useToastStore } from '@/stores/toast'
 import { useUserStore } from '@/stores/user'
 
+const FriendRecallPanel = defineAsyncComponent(() => import('@/components/activity/FriendRecallPanel.vue'))
 const MilkTeaActivityPanel = defineAsyncComponent(() => import('@/components/activity/MilkTeaActivityPanel.vue'))
+const MugeActivityPanel = defineAsyncComponent(() => import('@/components/activity/MugeActivityPanel.vue'))
 const PetDiaryActivityPanel = defineAsyncComponent(() => import('@/components/activity/PetDiaryActivityPanel.vue'))
 
 const L: ActivityLabels = {
@@ -221,7 +223,11 @@ const activityCards = computed(() => {
           : group.activityIds.includes(2026090900)
             ? 'charity-flower' as const
             : null
-    const adapted = group.activityIds.includes(2026110100) ? 'milk-tea' as const : group.activityIds.includes(2026092400) ? 'wish-sign' as const : group.activityIds.includes(2026092500) ? 'share-reward' as const : adaptedKey
+    // 牧歌初启的分组 id 可能就是 2026111700，也可能只在子活动里出现，两种都算。
+    const isMuge = group.id === 2026111700 || group.activityIds.includes(2026111700) || group.activityIds.some(id => String(id).startsWith('202611170'))
+    // 故友重逢：父活动 2026111800、子活动 2026111801，只读展示，不做任何召回/领奖动作。
+    const isFriendRecall = group.id === 2026111800 || group.activityIds.includes(2026111800) || group.activityIds.includes(2026111801) || group.activityIds.some(id => String(id).startsWith('202611180'))
+    const adapted = isMuge ? 'muge' as const : isFriendRecall ? 'friend-recall' as const : group.activityIds.includes(2026110100) ? 'milk-tea' as const : group.activityIds.includes(2026092400) ? 'wish-sign' as const : group.activityIds.includes(2026092500) ? 'share-reward' as const : adaptedKey
     const window = { startMs: group.startTime * 1000, endMs: group.endTime * 1000 }
     const hue = Math.abs(group.id * 37) % 360
     return {
@@ -229,14 +235,18 @@ const activityCards = computed(() => {
       key: String(group.id),
       activityIds: group.activityIds,
       adaptedKey: adapted,
-      title: adapted === 'pet-diary' ? '萌宠日记' : group.title || `活动 ${group.id}`,
+      title: adapted === 'pet-diary' ? '萌宠日记' : adapted === 'friend-recall' ? '故友重逢' : group.title || `活动 ${group.id}`,
       description: adapted
-        ? adapted === 'milk-tea' ? '经营奶茶小店、兑换商店与兼职工作' : adapted === 'pet-diary' ? '查看比熊成长、爪印手记、拾物小铺与比熊赠礼' : adapted === 'charity-flower' ? '查看爱心、公益进度与奖励状态' : adapted === 'qing-mei' ? '领取青梅种子、精酿并售卖青梅酿' : adapted === 'wish-sign' ? '查看祈愿状态、祈愿池和每日奖励' : adapted === 'share-reward' ? '查看每日快乐值与档位进度' : '查看天气、每日进度与气象研究'
+        ? adapted === 'muge'
+          ? '兴牧庆典、牧友同行、成长手册与牧场人格测试'
+          : adapted === 'friend-recall' ? '召回老友领奖 · 社交互动掉落重逢礼包' : adapted === 'milk-tea' ? '经营奶茶小店、兑换商店与兼职工作' : adapted === 'pet-diary' ? '查看比熊成长、爪印手记、拾物小铺与比熊赠礼' : adapted === 'charity-flower' ? '查看爱心、公益进度与奖励状态' : adapted === 'qing-mei' ? '领取青梅种子、精酿并售卖青梅酿' : adapted === 'wish-sign' ? '查看祈愿状态、祈愿池和每日奖励' : adapted === 'share-reward' ? '查看每日快乐值与档位进度' : '查看天气、每日进度与气象研究'
         : ACTIVITY_CLIENT_PREVIEWS.some(item => item.title === group.title || item.ids.some(id => group.activityIds.includes(id)))
           ? '已读取客户端静态预览，动态规则待服务端开放'
           : '暂未适配详情',
       icon: {
         '': 'i-carbon-calendar',
+        'muge': 'i-carbon-worship',
+        'friend-recall': 'i-carbon-group',
         'milk-tea': 'i-carbon-cafe',
         'pet-diary': 'i-fa-solid-paw',
         'charity-flower': 'i-carbon-favorite',
@@ -245,7 +255,7 @@ const activityCards = computed(() => {
         'wish-sign': 'i-carbon-sun',
         'share-reward': 'i-carbon-share',
       }[adapted || ''] || 'i-carbon-calendar',
-      image: adapted === 'milk-tea' ? '/activity/milk-tea/img_s4Main_bg.png' : adapted === 'pet-diary' ? '/activity/pet-diary/scene-home-adult.webp?v=20260912' : adapted === 'wish-sign' ? '/activity/wish-sign/card-bg.svg' : adapted === 'share-reward' ? '/activity/share-reward/card-bg.svg' : group.imageUrl || (adapted === 'rain-poem' ? '/activity/rain-poem/day-rain-bg.jpg' : ''),
+      image: adapted === 'muge' ? '/activity/muge/icon.png' : adapted === 'milk-tea' ? '/activity/milk-tea/img_s4Main_bg.png' : adapted === 'pet-diary' ? '/activity/pet-diary/scene-home-adult.webp?v=20260912' : adapted === 'wish-sign' ? '/activity/wish-sign/card-bg.svg' : adapted === 'share-reward' ? '/activity/share-reward/card-bg.svg' : group.imageUrl || (adapted === 'rain-poem' ? '/activity/rain-poem/day-rain-bg.jpg' : ''),
       imagePosition: adapted === 'pet-diary' ? 'center 64%' : 'center',
       window,
       updatedMs: window.startMs,
@@ -363,9 +373,14 @@ async function loadActivityDirectory() {
 }
 
 async function rescanActivityDirectory() {
+  if (activityScanLoading.value)
+    return
   activityScanLoading.value = true
   try {
-    const { data } = await api.post('/api/activity/update/scan')
+    // 在线目录还会逐项读取活动分组，不能沿用普通接口的 20 秒超时。
+    const { data } = await api.post('/api/activity/update/scan', undefined, { timeout: 180_000 })
+    if (data?.ok !== true || data.running || data.report?.online?.available !== true || data.report.online.stale)
+      throw new Error(data?.error || data?.report?.online?.error || '尚未取得本次活动目录，更新未完成')
     applyActivityDirectoryReport(data.report)
     toast.success('活动目录已更新')
   }
@@ -593,19 +608,22 @@ onUnmounted(() => {
           v-for="card in filteredActivityCards"
           :key="card.key"
           class="group relative min-h-52 overflow-hidden rounded-lg text-left text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-500"
-          :class="card.status === 'ended' ? 'cursor-not-allowed grayscale saturate-0' : 'hover:-translate-y-0.5 hover:shadow-lg'"
+          :class="[{ 'muge-directory-card': card.adaptedKey === 'muge' }, card.status === 'ended' ? 'cursor-not-allowed grayscale saturate-0' : 'hover:-translate-y-0.5 hover:shadow-lg']"
           :disabled="card.status === 'ended'"
           @click="selectedActivity = card.key"
         >
-          <img v-if="card.image" :src="card.image" alt="" class="absolute inset-0 h-full w-full object-cover transition duration-500" :style="{ objectPosition: card.imagePosition }" :class="card.status === 'active' && 'group-hover:scale-105'">
+          <div v-if="card.adaptedKey === 'muge'" class="muge-directory-card__art" aria-hidden="true">
+            <img :src="card.image" alt="">
+          </div>
+          <img v-else-if="card.image" :src="card.image" alt="" class="absolute inset-0 h-full w-full object-cover transition duration-500" :style="{ objectPosition: card.imagePosition }" :class="card.status === 'active' && 'group-hover:scale-105'">
           <div v-else class="absolute inset-0" :style="card.backgroundStyle">
             <div class="absolute h-40 w-40 border border-white/15 rounded-full -right-8 -top-10" />
             <div class="absolute top-12 h-24 w-24 border border-white/10 rounded-full -right-2" />
             <span class="i-carbon-calendar absolute bottom-2 right-5 text-7xl text-white/8" />
           </div>
-          <div class="absolute inset-0 from-[#071621]/90 via-[#102b3c]/30 to-transparent bg-gradient-to-t" />
+          <div v-if="card.adaptedKey !== 'muge'" class="absolute inset-0 from-[#071621]/90 via-[#102b3c]/30 to-transparent bg-gradient-to-t" />
           <div v-if="card.status === 'ended'" class="absolute inset-0 bg-gray-600/35" />
-          <div class="relative min-h-52 flex flex-col justify-between p-5">
+          <div class="relative min-h-52 flex flex-col justify-between p-5" :class="{ 'muge-directory-card__body': card.adaptedKey === 'muge' }">
             <div class="flex items-start justify-between gap-3">
               <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium backdrop-blur-sm" :class="card.status === 'active' ? 'bg-cyan-100/90 text-cyan-950' : 'bg-gray-100/85 text-gray-700'">
                 <span :class="card.status === 'active' ? card.icon : card.status === 'upcoming' ? 'i-carbon-time' : 'i-carbon-checkmark'" />
@@ -687,6 +705,20 @@ onUnmounted(() => {
       萌宠日记面板自带游戏风格顶栏与返回按钮，且直接读 usePetDiaryStore，
       因此不外挂返回按钮、不传 activity/loading/error props。
     -->
+    <!-- 牧歌的档期以活动服务回包为准，卡片按目录时间算出来可能是“未开始/已结束”；
+         这里的面板自己会显示尚未开始或已结束，所以不按目录状态挡在门外。 -->
+    <div v-else-if="selectedActivityCard?.adaptedKey === 'muge'">
+      <MugeActivityPanel @back="selectedActivity = null" />
+    </div>
+    <!-- 故友重逢：只读规则展示，不放任何召回/领奖/自动化操作。 -->
+    <div v-else-if="selectedActivityCard?.adaptedKey === 'friend-recall'">
+      <FriendRecallPanel
+        :title="selectedActivityCard.title"
+        :activity-ids="selectedActivityCard.activityIds"
+        :window="selectedActivityCard.window"
+        @back="selectedActivity = null"
+      />
+    </div>
     <div v-else-if="selectedActivityCard?.adaptedKey === 'milk-tea' && selectedActivityCard.status === 'active'">
       <MilkTeaActivityPanel @back="selectedActivity = null" />
     </div>
@@ -923,3 +955,80 @@ onUnmounted(() => {
     </template>
   </section>
 </template>
+
+<style scoped>
+/* The 97×91 entry icon is an illustration, not a full-bleed cover. */
+.muge-directory-card {
+  color: #243247;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.48));
+  box-shadow:
+    0 8px 24px rgba(31, 38, 80, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(1.25);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+}
+.muge-directory-card__art {
+  position: absolute;
+  right: 18px;
+  top: 52px;
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--theme-primary) 9%, transparent);
+}
+.muge-directory-card__art img {
+  width: 97px;
+  height: 91px;
+  object-fit: contain;
+}
+.muge-directory-card__body > div:last-child {
+  padding-top: 18px;
+  padding-right: 108px;
+}
+.muge-directory-card__body h2 {
+  font-size: 24px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.muge-directory-card__body p,
+.muge-directory-card__body div.text-xs {
+  color: #526176;
+  overflow-wrap: anywhere;
+}
+.muge-directory-card__body [class*='i-carbon-'] {
+  display: inline-block;
+  flex-shrink: 0;
+  color: var(--theme-primary);
+}
+.muge-directory-card__body > div:first-child > span:first-child {
+  background: color-mix(in srgb, var(--theme-primary) 13%, transparent);
+  color: var(--theme-primary);
+}
+:global(.dark) .muge-directory-card {
+  color: #edf2f9;
+  border-color: rgba(203, 213, 225, 0.23);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.82), rgba(30, 41, 59, 0.58));
+}
+:global(.dark) .muge-directory-card__body p,
+:global(.dark) .muge-directory-card__body div.text-xs {
+  color: #bdcadb;
+}
+@media (max-width: 380px) {
+  .muge-directory-card__art {
+    right: 12px;
+    width: 80px;
+    height: 80px;
+  }
+  .muge-directory-card__art img {
+    width: 76px;
+    height: 72px;
+  }
+  .muge-directory-card__body > div:last-child {
+    padding-right: 78px;
+  }
+}
+</style>

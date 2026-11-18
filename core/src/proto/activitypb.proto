@@ -10,7 +10,9 @@ service ActivityService {
     rpc Operate(OperateRequest) returns (OperateReply);
 }
 
-message ListRequest {}
+message ListRequest {
+    int32 game_scene_id = 1;
+}
 
 message GetGroupRequest {
     int64 id = 1;

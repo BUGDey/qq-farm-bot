@@ -7,6 +7,8 @@ services:
         # 构建镜像时安装 pnpm / 依赖用的 npm 镜像源，源不可用时改 .env 里的这两项即可
         NPM_REGISTRY: "${NPM_REGISTRY:-https://registry.npmmirror.com}"
         NPM_REGISTRY_FALLBACK: "${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org}"
+        # node 基础镜像（含加速前缀），换源时在 .env 里写 NODE_IMAGE=...
+        NODE_IMAGE: "${NODE_IMAGE:-docker.1ms.run/library/node:24-alpine}"
     image: qq-farm-bot:latest
     container_name: qq-farm-bot
     restart: unless-stopped
@@ -70,7 +72,7 @@ services:
       context: .
       dockerfile: napcat/Dockerfile
       args:
-        NAPCAT_IMAGE: "${NAPCAT_IMAGE:-mlikiowa/napcat-docker:v4.18.19}"
+        NAPCAT_IMAGE: "${NAPCAT_IMAGE:-docker.m.daocloud.io/mlikiowa/napcat-docker:v4.18.42}"
     image: qq-farm-napcat:latest
     container_name: qq-farm-napcat
     hostname: "${NAPCAT_DEVICE_NAME:-qq-farm-bot}"

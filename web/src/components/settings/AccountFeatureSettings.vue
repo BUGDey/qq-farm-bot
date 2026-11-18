@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import api from '@/api'
+import RanchActivitySettings from '@/components/settings/RanchActivitySettings.vue'
 import SellFruitExcludes from '@/components/settings/SellFruitExcludes.vue'
 import StrategySettingsTab from '@/components/settings/StrategySettingsTab.vue'
 import StrategyTimingPanel from '@/components/settings/StrategyTimingPanel.vue'
@@ -11,7 +12,7 @@ import BaseSwitch from '@/components/ui/BaseSwitch.vue'
 import { CHARITY_FLOWER_ACTIVITY_WINDOW, isWithinActivityWindowMs, MILK_TEA_ACTIVITY_WINDOW, MILK_TEA_BUSINESS_WINDOW, PET_DIARY_ACTIVITY_WINDOW, RAIN_POEM_ACTIVITY_WINDOW, SHARE_REWARD_ACTIVITY_WINDOW, WISH_SIGN_ACTIVITY_WINDOW } from '@/constants/activity-windows'
 import { usePetStore } from '@/stores/pet'
 
-type ModuleKey = 'planting' | 'fertilizer' | 'ranch' | 'friends' | 'steal' | 'merchant' | 'activity'
+type ModuleKey = 'planting' | 'fertilizer' | 'friends' | 'steal' | 'merchant' | 'activity'
 
 const props = defineProps<{
   currentAccountName: string | null
@@ -34,6 +35,15 @@ const emit = defineEmits<{
 const strategy = defineModel<any>('strategy', { required: true })
 const automation = defineModel<any>('automation', { required: true })
 const activeModule = ref<ModuleKey | null>(null)
+const ranchActivity = ref<InstanceType<typeof RanchActivitySettings> | null>(null)
+const activitySaving = ref(false)
+const mugeSettings = [
+  { key: 'muge_task_claim', label: '自动领取成长任务' },
+  { key: 'muge_celebration_claim', label: '自动领取庆典奖励' },
+  { key: 'muge_friend_claim', label: '自动领取牧友奖励' },
+  { key: 'muge_handbook_claim', label: '自动领取成长手册奖励' },
+  { key: 'muge_auto_answer', label: '自动答题并领取' },
+]
 const editSnapshot = ref<{ strategy: any, automation: any } | null>(null)
 const qixiFriends = ref<Array<{ gid: number, name: string }>>([])
 const SHOW_STAR_ACTIVITY = false
@@ -125,11 +135,41 @@ const showCharityFlowerActivity = computed(() => isWithinActivityWindowMs(CHARIT
 const showPetDiaryActivity = computed(() => isWithinActivityWindowMs(PET_DIARY_ACTIVITY_WINDOW, nowMs.value))
 const showWishSignActivity = computed(() => isWithinActivityWindowMs(WISH_SIGN_ACTIVITY_WINDOW, nowMs.value))
 const showShareRewardActivity = computed(() => isWithinActivityWindowMs(SHARE_REWARD_ACTIVITY_WINDOW, nowMs.value))
+const mugeWindow = ref<{ active: boolean, startTime: number, endTime: number } | null>(null)
+const showMugeActivity = computed(() => !!mugeWindow.value?.active && nowMs.value >= mugeWindow.value.startTime && nowMs.value < mugeWindow.value.endTime)
+const mugeUnavailable = ref(false)
+let mugeGeneration = 0
+function onAutomationUpdated(event: Event) {
+  const detail = (event as CustomEvent<{ accountId: string | number, automation: Record<string, boolean> }>).detail
+  if (String(detail?.accountId) !== String(props.currentAccountId) || activeModule.value === 'activity')
+    return
+  for (const item of mugeSettings) {
+    if (typeof detail.automation?.[item.key] === 'boolean')
+      automation.value.automation[item.key] = detail.automation[item.key]
+  }
+}
+async function loadMugeWindow() {
+  const version = ++mugeGeneration
+  mugeWindow.value = null
+  mugeUnavailable.value = false
+  if (!props.currentAccountId)
+    return
+  try {
+    const { data } = await api.get('/api/activity/muge', { timeout: 10000, headers: { 'x-account-id': props.currentAccountId } })
+    if (!data.ok)
+      throw new Error(data.error || '牧歌活动状态读取失败')
+    if (version === mugeGeneration)
+      mugeWindow.value = data.activity || null
+  }
+  catch {
+    if (version === mugeGeneration)
+      mugeUnavailable.value = true
+  }
+}
 
 const moduleInfo: Record<ModuleKey, { title: string, description: string, icon: string, image: string, tone: string }> = {
   planting: { title: '种植与收获', description: '选种、收获、出售和巡田节奏', icon: 'i-carbon-sprout', image: '/game-config/module_icons/planting.png', tone: 'emerald' },
   fertilizer: { title: '土地与施肥', description: '土地升级、施肥和化肥补充', icon: 'i-carbon-soil-moisture', image: '/game-config/module_icons/fertilizer.png', tone: 'amber' },
-  ranch: { title: '牧场', description: '栏舍动物的收获、投喂与牧草', icon: 'i-carbon-cattle', image: '/game-config/module_icons/planting.png', tone: 'lime' },
   friends: { title: '好友', description: '帮助、捣乱和好友申请', icon: 'i-carbon-user-multiple', image: '/game-config/module_icons/friends-friendship.png', tone: 'sky' },
   steal: { title: '偷菜', description: '巡查频率和操作延迟', icon: 'i-carbon-crop-health', image: '/game-config/module_icons/steal.png', tone: 'lime' },
   merchant: { title: '神秘商人', description: '商品购买和货币范围', icon: 'i-carbon-store', image: '/game-config/module_icons/merchant.png', tone: 'orange' },
@@ -142,6 +182,9 @@ const selectedLandNames = computed(() => props.fertilizerLandTypeOptions.filter(
 const selectedLandTypeCount = computed(() => Array.isArray(automation.value.automation.fertilizer_land_types) ? automation.value.automation.fertilizer_land_types.length : 0)
 const activityKeys = computed(() => [
   'star_solar_claim',
+  'mail_claim',
+  'share_claim_daily',
+  ...(showMugeActivity.value ? mugeSettings.map(item => item.key) : []),
   ...(showMilkTeaActivity.value ? ['mall_coupon_gift_buy', 'milk_tea_share', 'milk_tea_cashier', 'milk_tea_wages', 'milk_tea_share_daily', 'milk_tea_share_rewards', 'milk_tea_fund_rewards'] : []),
   ...(showMilkTeaBusiness.value ? ['milk_tea_upgrade', 'milk_tea_craft', 'milk_tea_boost', 'milk_tea_hire', 'milk_tea_work_interact', 'milk_tea_seed_buy'] : []),
   ...(showRainPoemActivity.value
@@ -200,14 +243,6 @@ function summaryTags(key: ModuleKey) {
       automation.value.automation.fertilizer_buy_organic || automation.value.automation.fertilizer_buy_normal ? '自动补肥' : '不补肥',
     ]
   }
-  if (key === 'ranch') {
-    return [
-      automation.value.automation.ranch_harvest ? '一键收获' : '不自动收获',
-      automation.value.automation.ranch_feed ? '投喂罐头桶' : '不自动投喂',
-      automation.value.automation.ranch_add_feed ? '加牧草' : '不加牧草',
-      `间隔 ${automation.value.ranchCheckIntervalMinutes || 30} 分钟`,
-    ]
-  }
   if (key === 'friends') {
     return [
       automation.value.automation.friend_help ? '帮助好友' : '不帮助',
@@ -236,6 +271,8 @@ function summaryTags(key: ModuleKey) {
   return [
     automation.value.automation.task ? '自动完成日常任务' : '不做日常',
     automation.value.automation.star_solar_claim && '节令小札',
+    automation.value.automation.share_claim_daily && '每日分享领罐头',
+    showMugeActivity.value && mugeSettings.some(item => automation.value.automation[item.key]) && '牧歌初启',
     SHOW_STAR_ACTIVITY && starFestivalEnabled.value && '心许千灯星垂野',
     SHOW_QIXI_ACTIVITY && qixiActivityEnabled.value && '鹊桥寄情',
     showRainPoemActivity.value && rainPoemActivityEnabled.value && '雨落成诗',
@@ -253,8 +290,6 @@ function moduleEnabled(key: ModuleKey) {
     return automation.value.automation.farm
   if (key === 'fertilizer')
     return automation.value.automation.fertilizer !== 'none' || automation.value.automation.land_upgrade
-  if (key === 'ranch')
-    return automation.value.automation.ranch_harvest || automation.value.automation.ranch_feed || automation.value.automation.ranch_add_feed
   if (key === 'friends')
     return automation.value.automation.friend
   if (key === 'steal')
@@ -270,11 +305,6 @@ function setModuleEnabled(key: ModuleKey, enabled: boolean) {
   }
   else if (key === 'fertilizer') {
     automation.value.automation.fertilizer = enabled ? (automation.value.automation.fertilizer === 'none' ? 'normal' : automation.value.automation.fertilizer) : 'none'
-  }
-  else if (key === 'ranch') {
-    automation.value.automation.ranch_harvest = enabled
-    automation.value.automation.ranch_feed = enabled
-    automation.value.automation.ranch_add_feed = enabled
   }
   else if (key === 'friends') {
     automation.value.automation.friend = enabled
@@ -343,9 +373,31 @@ async function loadQixiFriends() {
   }
   catch { qixiFriends.value = [] }
 }
-function finish() {
+async function finish() {
   if (!activeModule.value)
     return
+  if (activitySaving.value)
+    return
+  if (activeModule.value === 'activity') {
+    activitySaving.value = true
+    try {
+      if (ranchActivity.value && !await ranchActivity.value.save())
+        return
+      // ranch_* 开关由 /api/ranch/settings 独立管理。通用账号保存会把页面加载时
+      // 快照的旧 ranch_* 值经 /api/automation 逐键回写，覆盖刚保存的牧场设置
+      // （表现为「自动领取每日福利」保存后重开又变回关闭）。这里在触发通用保存
+      // 前剔除这些键，避免陈旧值回写。
+      if (automation.value?.automation) {
+        const cleanAutomation: Record<string, unknown> = {}
+        for (const [key, value] of Object.entries(automation.value.automation)) {
+          if (!key.startsWith('ranch_'))
+            cleanAutomation[key] = value
+        }
+        automation.value.automation = cleanAutomation
+      }
+    }
+    finally { activitySaving.value = false }
+  }
   emit('save', activeModule.value, true)
   editSnapshot.value = null
   activeModule.value = null
@@ -360,6 +412,8 @@ function openModule(key: ModuleKey) {
   activeModule.value = key
 }
 function cancel() {
+  if (activitySaving.value)
+    return
   if (editSnapshot.value) {
     strategy.value = editSnapshot.value.strategy
     automation.value = editSnapshot.value.automation
@@ -368,20 +422,28 @@ function cancel() {
   activeModule.value = null
 }
 onMounted(() => {
+  window.addEventListener('automation-updated', onAutomationUpdated)
   loadQixiFriends()
   nowTimer = window.setInterval(() => {
     nowMs.value = Date.now()
   }, 60000)
 })
 onUnmounted(() => {
+  mugeGeneration++
+  window.removeEventListener('automation-updated', onAutomationUpdated)
   if (nowTimer)
     window.clearInterval(nowTimer)
 })
 watch(() => props.currentAccountId, loadQixiFriends)
+watch(() => props.currentAccountId, loadMugeWindow, { immediate: true })
+watch(() => props.currentAccountId, () => {
+  editSnapshot.value = null
+  activeModule.value = null
+})
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="account-feature-settings space-y-5">
     <div v-if="loading" class="py-12 text-center text-gray-500">
       <span class="i-svg-spinners-ring-resize mb-2 inline-block text-2xl" /><div>加载中...</div>
     </div>
@@ -390,7 +452,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
     </div>
     <template v-else>
       <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <span class="text-gray-700 font-medium dark:text-gray-300">账号设置</span>
+        <span class="text-gray-700 font-medium dark:text-gray-300">农场自动配置</span>
         <span class="h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-600" />
         <span>{{ currentAccountName ? `正在配置：${currentAccountName}` : '请先在账号管理中选择账号' }}</span>
       </div>
@@ -438,7 +500,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
             <span v-if="isReadonly" class="text-xs text-gray-400 dark:text-gray-500">
               只读（仅账号添加者可修改）
             </span>
-            <BaseButton v-else variant="secondary" size="sm" @click="openModule(key as ModuleKey)">
+            <BaseButton v-else class="settings-frost-button" variant="secondary" size="sm" @click="openModule(key as ModuleKey)">
               配置
             </BaseButton>
           </div>
@@ -449,14 +511,14 @@ watch(() => props.currentAccountId, loadQixiFriends)
     <Teleport to="body">
       <Transition name="feature-modal">
         <div v-if="activeModule && activeInfo" class="fixed inset-0 z-[200] grid place-items-center overflow-y-auto bg-gray-950/45 p-3 backdrop-blur-[2px] sm:p-6" @click.self="cancel">
-          <section class="feature-config-modal max-h-[94vh] max-w-4xl w-full flex flex-col overflow-hidden border border-gray-200 rounded-2xl bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+          <section role="dialog" aria-modal="true" aria-labelledby="feature-config-title" class="feature-config-modal max-h-[94vh] max-w-4xl w-full flex flex-col overflow-hidden border border-gray-200 rounded-2xl bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
             <header class="flex items-start justify-between gap-4 border-b border-gray-200/80 px-5 py-4 dark:border-gray-700 sm:px-6">
               <div class="min-w-0 flex items-start gap-3">
                 <img v-if="activeInfo.image" :src="activeInfo.image" alt="" class="h-11 w-11 shrink-0 rounded-lg bg-gray-100 object-contain p-1.5 dark:bg-gray-700">
                 <span v-else class="inline-grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-gray-100 text-xl dark:bg-gray-700" :class="activeInfo.icon" />
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-center gap-2">
-                    <h3 class="text-lg text-gray-900 font-semibold dark:text-gray-100">
+                    <h3 id="feature-config-title" class="text-lg text-gray-900 font-semibold dark:text-gray-100">
                       {{ activeInfo.title }}
                     </h3>
                     <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-300">
@@ -590,23 +652,6 @@ watch(() => props.currentAccountId, loadQixiFriends)
                 </section>
               </div>
 
-              <div v-else-if="activeModule === 'ranch'" class="space-y-5">
-                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
-                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                    牧场自动化
-                  </div>
-                  <div class="grid gap-3 sm:grid-cols-2">
-                    <BaseSwitch v-model="automation.automation.ranch_harvest" label="一键收获栏舍" />
-                    <BaseSwitch v-model="automation.automation.ranch_feed" label="自动投喂罐头桶" />
-                    <BaseSwitch v-model="automation.automation.ranch_add_feed" label="自动加牧草" />
-                    <BaseInput v-model.number="automation.ranchCheckIntervalMinutes" label="检测间隔（分钟）" type="number" min="1" />
-                  </div>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    定时扫描栏舍：有可收获产物时一键收获、罐头桶余量低时投喂、牧草不足时加草。仅自动执行有成功抓包样本的操作。
-                  </p>
-                </section>
-              </div>
-
               <div v-else-if="activeModule === 'friends'" class="space-y-5">
                 <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
                   <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
@@ -671,13 +716,30 @@ watch(() => props.currentAccountId, loadQixiFriends)
               </div>
 
               <div v-else class="space-y-4">
+                <RanchActivitySettings ref="ranchActivity" :readonly="isReadonly" :disabled="saving || activitySaving" />
+                <p v-if="mugeUnavailable" class="text-sm text-gray-500" role="status">牧歌活动状态暂不可用，现有开关值保持不变。</p>
+                <!-- activity-extension: muge; account automation keys are saved by the shared activity footer. -->
+                <section v-if="showMugeActivity" class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <h3 class="text-sm text-gray-700 font-medium dark:text-gray-300">牧歌初启</h3>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-for="item in mugeSettings" :key="item.key" v-model="automation.automation[item.key]" :label="item.label" :disabled="saving || activitySaving" />
+                  </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    「自动答题并领取」会自动完成人格问卷并结算领取奖励；不会清空你已保存的进度。
+                  </p>
+                </section>
                 <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700 dark:bg-gray-900/25">
                   <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
-                    日常任务
+                    农场日常任务
                   </div>
                   <div class="grid gap-3 sm:grid-cols-2">
                     <BaseSwitch v-model="automation.automation.task" label="自动完成日常任务" />
+                    <BaseSwitch v-model="automation.automation.mail_claim" label="自动领取邮件奖励" />
+                    <BaseSwitch v-model="automation.automation.share_claim_daily" label="每日分享领罐头" />
                   </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    每日分享领罐头：每日首次分享可获得罐头(1小时)×5，开启后自动检查并领取（不会代你伪造分享动作）。
+                  </p>
                 </section>
 
                 <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
@@ -936,10 +998,10 @@ watch(() => props.currentAccountId, loadQixiFriends)
               </div>
             </div>
             <footer class="flex justify-end gap-2 border-t bg-gray-50/70 px-5 py-4 dark:border-gray-700 dark:bg-gray-900/20 sm:px-6">
-              <BaseButton variant="secondary" size="sm" @click="cancel">
+              <BaseButton class="settings-frost-button" variant="secondary" size="sm" :disabled="activitySaving" @click="cancel">
                 取消
               </BaseButton>
-              <BaseButton size="sm" :loading="saving" @click="finish">
+              <BaseButton class="settings-frost-button" size="sm" :loading="saving || activitySaving" @click="finish">
                 保存并关闭
               </BaseButton>
             </footer>
@@ -951,6 +1013,22 @@ watch(() => props.currentAccountId, loadQixiFriends)
 </template>
 
 <style scoped>
+.feature-config-modal {
+  max-height: calc(100dvh - 2rem);
+}
+.feature-config-modal > header,
+.feature-config-modal > footer { flex-shrink: 0; }
+.feature-config-modal > div { overscroll-behavior: contain; scrollbar-gutter: stable; }
+.settings-frost-button {
+  border: 1px solid color-mix(in srgb, var(--theme-primary) 25%, rgba(255, 255, 255, 0.8)) !important;
+  box-shadow: 0 3px 14px color-mix(in srgb, var(--theme-primary) 12%, transparent), inset 0 1px 1px rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(16px) saturate(1.2);
+}
+.account-feature-settings .settings-frost-button {
+  color: var(--theme-primary) !important;
+  background: color-mix(in srgb, var(--theme-primary) 9%, rgba(255,255,255,0.7)) !important;
+}
+
 /* 账号设置里的功能配置弹窗：与其他页面统一为半透明白色（不再叠加蓝→绿渐变色调），
    用更高特异性压过全局 .bg-white 规则，白底更高保证密集文字可读。 */
 .bg-white.feature-config-modal {
@@ -963,7 +1041,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
 /* 弹窗内所有配置分组块（基础功能/选种策略/日常任务/节令小札/奶茶热销中等）
    原本灰底、彩底混杂，统一为半透明白色（用 space-y 特征精准命中分组块，
    避免误伤内部选项 chip 的选中高亮背景） */
-.feature-config-modal div[class*='space-y-'] {
+.feature-config-modal section[class*='space-y-'] {
   background: rgba(255, 255, 255, 0.55) !important;
   /* 白色磨砂底上用淡墨色描边才有可见的分组边界（原先白色边框等于不可见） */
   border-color: rgba(31, 38, 80, 0.14) !important;
@@ -974,7 +1052,7 @@ watch(() => props.currentAccountId, loadQixiFriends)
   background: rgba(31, 41, 55, 0.82) !important;
 }
 
-:global(.dark) .feature-config-modal div[class*='space-y-'] {
+:global(.dark) .feature-config-modal section[class*='space-y-'] {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
 }

@@ -1,34 +1,36 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import NavMoreMenu from '@/components/game/NavMoreMenu.vue'
 import { menuRoutes } from '@/router/menu'
+import { useGameSpaceStore } from '@/stores/game-space'
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const userStore = useUserStore()
+const gameSpace = useGameSpaceStore()
 
-const primaryItems = [
-  { path: '/', label: '首页', icon: 'i-fas-home' },
-  { path: '/personal', label: '农场', icon: 'i-carbon-sprout' },
-  { path: '/ranch', label: '牧场', icon: 'i-carbon-cattle' },
-  { path: '/friends', label: '朋友', icon: 'i-carbon-user-multiple' },
+const primaryItems = computed(() => [
+  { path: gameSpace.isRanch ? '/ranch' : '/', label: '首页', icon: 'i-fas-home' },
+  { path: gameSpace.personalPath, label: gameSpace.spaceLabel, icon: gameSpace.isRanch ? 'i-carbon-cattle' : 'i-carbon-sprout' },
+  { path: gameSpace.isRanch ? '/ranch/friends' : '/friends', label: gameSpace.isRanch ? '牧场好友' : '好友', icon: 'i-carbon-user-multiple' },
   { path: '/activity', label: '活动', icon: 'i-carbon-gift' },
 ].filter((item) => {
   const target = menuRoutes.find(menu => `/${menu.path}` === item.path || (item.path === '/' && menu.path === ''))
   return (!target?.adminOnly || userStore.isAdmin) && (!target?.superOnly || userStore.isSuperAdmin)
-})
+}))
 
 // 「我的账户 / 设置 / 管理后台」已从更多菜单移除：设置改为底部独立 tab，
 // 我的账号与管理后台在设置页内有入口。
-const moreItems = menuRoutes
+const moreItems = computed(() => menuRoutes
   .filter(item => !['dashboard', 'personal', 'ranch', 'friends', 'activity', 'account', 'Settings', 'adminPanel'].includes(item.name))
   // 受限入口按角色隔离（与侧边栏行为一致）：adminOnly 仅管理员、superOnly 仅超管
   .filter(item => (!item.adminOnly || userStore.isAdmin) && (!item.superOnly || userStore.isSuperAdmin))
   .map(item => ({
-    path: item.path ? `/${item.path}` : '/',
-    label: item.label,
+    path: gameSpace.isRanch && ['shop', 'illustrated', 'analytics'].includes(item.name) ? `/ranch/${item.name}` : item.path ? `/${item.path}` : '/',
+    label: gameSpace.isRanch && ['shop', 'illustrated', 'analytics'].includes(item.name) ? `牧场${item.label}` : item.label,
     icon: item.icon,
-  }))
+  })))
 </script>
 
 <template>

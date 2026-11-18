@@ -8,6 +8,7 @@ const STATE_FILE = getDataFile('activity-update-report.json');
 
 let timer = null;
 let running = false;
+let activeScan = null;
 let report = null;
 let knownActivityIds = [];
 let intervalMs = DEFAULT_INTERVAL_MS;
@@ -107,10 +108,11 @@ function analyzeReport(scanned, previous, online = null) {
   };
 }
 
-async function runActivityUpdateScan() {
-  if (running) return report;
+function runActivityUpdateScan() {
+  // 手动更新与定时任务共用正在进行的扫描；不得把旧报告当成本次完成结果。
+  if (activeScan) return activeScan;
   running = true;
-  try {
+  activeScan = (async () => {
     const previous = report || readSavedReport();
     const scanned = localScanEnabled
       ? { ...scanActivityUpdates({ knownActivityIds }), localScanEnabled: true }
@@ -126,10 +128,12 @@ async function runActivityUpdateScan() {
     report = analyzeReport(scanned, previous, online);
     writeSavedReport(report);
     return report;
-  } finally {
+  })().finally(() => {
     running = false;
+    activeScan = null;
     nextScanAt = Date.now() + intervalMs;
-  }
+  });
+  return activeScan;
 }
 
 function scheduleNextScan() {

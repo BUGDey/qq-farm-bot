@@ -1,0 +1,5052 @@
+[
+  {
+    "method": "StealProduce",
+    "direction": "request",
+    "params": {
+      "host_gid": 2,
+      "targets": [
+        {
+          "ranch_inst_id": 2,
+          "slot_index": 3
+        }
+      ]
+    },
+    "hex": "0802120408021003"
+  },
+  {
+    "method": "StealProduce",
+    "direction": "response",
+    "params": {
+      "ranches": [
+        {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_harvest_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "expected_produce_exp": 24,
+              "expected_produce_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "mature_ready_at_ms": 26,
+              "mutation": {
+                "mutation_type": 2,
+                "source": 3,
+                "weight_display_x10": 4,
+                "scale_bp": 5,
+                "weight_final_x10": 6,
+                "tier": 7,
+                "became_at_ms": 8,
+                "strokable": true,
+                "stroked_gids": [
+                  10
+                ]
+              }
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "lots": [
+                {
+                  "item_id": 2,
+                  "base_num": 3,
+                  "remain_num": 4,
+                  "stolen_num": 5,
+                  "animal_id": 6,
+                  "can_steal": true,
+                  "stealers": [
+                    8
+                  ]
+                }
+              ],
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        }
+      ],
+      "op_results": [
+        {
+          "facility_inst_id": 2,
+          "kind": 3,
+          "target_id": 4,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "costs": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ]
+        }
+      ]
+    },
+    "hex": "0a870108021003180422540802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b2010408021003b80118c2010408021003c8011af20113080210031804200528063007380840014a010a2a040802100330073a190802120f0802100318042005280630013a010818042001280142060802100318042266080210031804522e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206005a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da20600"
+  },
+  {
+    "method": "StrokeAnimal",
+    "direction": "request",
+    "params": {
+      "host_gid": 2,
+      "target": {
+        "ranch_inst_id": 2,
+        "animal_inst_id": 3
+      }
+    },
+    "hex": "0802120408021003"
+  },
+  {
+    "method": "StrokeAnimal",
+    "direction": "response",
+    "params": {
+      "ranches": [
+        {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_harvest_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "expected_produce_exp": 24,
+              "expected_produce_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "mature_ready_at_ms": 26,
+              "mutation": {
+                "mutation_type": 2,
+                "source": 3,
+                "weight_display_x10": 4,
+                "scale_bp": 5,
+                "weight_final_x10": 6,
+                "tier": 7,
+                "became_at_ms": 8,
+                "strokable": true,
+                "stroked_gids": [
+                  10
+                ]
+              }
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "lots": [
+                {
+                  "item_id": 2,
+                  "base_num": 3,
+                  "remain_num": 4,
+                  "stolen_num": 5,
+                  "animal_id": 6,
+                  "can_steal": true,
+                  "stealers": [
+                    8
+                  ]
+                }
+              ],
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        }
+      ],
+      "op_result": {
+        "facility_inst_id": 2,
+        "kind": 3,
+        "target_id": 4,
+        "rewards": [
+          {
+            "id": 2,
+            "count": 3,
+            "expire_time": 4,
+            "uid": 7,
+            "is_new": true,
+            "mutant_types": [
+              9
+            ],
+            "is_locked": true,
+            "gift_detail": {
+              "sender_name": "official-fixture",
+              "send_time": 3,
+              "msg_text_id": 4
+            },
+            "item_detail": {},
+            "tab_id": 13,
+            "show": {}
+          }
+        ],
+        "costs": [
+          {
+            "id": 2,
+            "count": 3,
+            "expire_time": 4,
+            "uid": 7,
+            "is_new": true,
+            "mutant_types": [
+              9
+            ],
+            "is_locked": true,
+            "gift_detail": {
+              "sender_name": "official-fixture",
+              "send_time": 3,
+              "msg_text_id": 4
+            },
+            "item_detail": {},
+            "tab_id": 13,
+            "show": {}
+          }
+        ]
+      },
+      "triggered": true,
+      "remaining_times": 5
+    },
+    "hex": "0a870108021003180422540802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b2010408021003b80118c2010408021003c8011af20113080210031804200528063007380840014a010a2a040802100330073a190802120f0802100318042005280630013a010818042001280142060802100318041266080210031804522e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206005a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da2060018012005"
+  },
+  {
+    "method": "PutHazard",
+    "direction": "request",
+    "params": {
+      "ranch_inst_id": 2,
+      "host_gid": 3,
+      "op_id": 4,
+      "count": 5
+    },
+    "hex": "0802100318042005"
+  },
+  {
+    "method": "PutHazard",
+    "direction": "response",
+    "params": {
+      "actual_count": 2,
+      "remaining_times": 3,
+      "hazards": [
+        {
+          "hazard_id": 2,
+          "owner": 3,
+          "hazard_type": 4
+        }
+      ],
+      "rewards": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "hex": "080210031a06080210031804226608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003"
+  },
+  {
+    "method": "Sell",
+    "direction": "request",
+    "params": {
+      "items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "hex": "0a6608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003"
+  },
+  {
+    "method": "Sell",
+    "direction": "response",
+    "params": {
+      "sell_items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "get_items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "hex": "0a6608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003126608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003"
+  },
+  {
+    "method": "BatchUse",
+    "direction": "request",
+    "params": {
+      "items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "target": {
+        "host_gid": 2,
+        "land_ids": [
+          3
+        ],
+        "use_config_id": 4
+      }
+    },
+    "hex": "0a6608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003120708021201031804"
+  },
+  {
+    "method": "BatchUse",
+    "direction": "response",
+    "params": {
+      "items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "got_items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "compensated_items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "lands": [
+        {
+          "id": 2,
+          "unlocked": true,
+          "level": 4,
+          "max_level": 5,
+          "could_unlock": true,
+          "could_upgrade": true,
+          "unlock_condition": {
+            "preceeding_land_id": 2,
+            "level_need": 3,
+            "gold_need": 4,
+            "items_need": [
+              {
+                "id": 2,
+                "count": 3,
+                "expire_time": 4,
+                "uid": 7,
+                "is_new": true,
+                "mutant_types": [
+                  9
+                ],
+                "is_locked": true,
+                "tab_id": 13
+              }
+            ],
+            "need_color_count": [
+              {
+                "level": 2,
+                "count": 3
+              }
+            ]
+          },
+          "upgrade_condition": {
+            "preceeding_lands_count_need": 2,
+            "level_need": 3,
+            "items_need": [
+              {
+                "id": 2,
+                "count": 3,
+                "expire_time": 4,
+                "uid": 7,
+                "is_new": true,
+                "mutant_types": [
+                  9
+                ],
+                "is_locked": true,
+                "tab_id": 13
+              }
+            ]
+          },
+          "buff": {
+            "plant_yield_bonus": 2,
+            "planting_time_reduction": 3,
+            "plant_exp_bonus": 4,
+            "plant_mutant_bonus": 5,
+            "bp_exp_bonus": 6,
+            "plant_mutant_exp_bonus": 7
+          },
+          "plant": {
+            "id": 2,
+            "name": "official-fixture",
+            "phases": [
+              {
+                "phase": 2,
+                "begin_time": 3,
+                "phase_id": 4,
+                "dry_time": 7,
+                "weeds_time": 8,
+                "insect_time": 9,
+                "ferts_used": {
+                  "2": 10
+                }
+              }
+            ],
+            "season": 6,
+            "dry_num": 7,
+            "stole_num": 10,
+            "fruit_id": 11,
+            "fruit_num": 12,
+            "weed_owners": [
+              13
+            ],
+            "insect_owners": [
+              14
+            ],
+            "stealers": [
+              15
+            ],
+            "grow_sec": 16,
+            "stealable": true,
+            "left_inorc_fert_times": 18,
+            "left_fruit_num": 19,
+            "steal_intimacy_level": 20,
+            "mutant_config_ids": [
+              21
+            ],
+            "is_nudged": true,
+            "exp": 23,
+            "last_mutant_config_ids": [
+              24
+            ],
+            "last_fruit_id": 25,
+            "last_fruit_num": 26,
+            "source_fruit_id": 27,
+            "source_fruit_num": 28,
+            "mutant_plant_ids": [
+              33
+            ],
+            "last_plant_id": 34,
+            "buff_effects": [
+              {
+                "attr_id": 2,
+                "attr_value": 3,
+                "extra_info": 4
+              }
+            ],
+            "social_items": [
+              {
+                "item_id": 2,
+                "type": 3,
+                "sub_type": 4,
+                "owner_id": 5,
+                "put_time": 6
+              }
+            ],
+            "bp_fruits": [
+              {
+                "fruit_id": 2,
+                "fruit_num": 3,
+                "left_fruit_num": 4,
+                "season": 5
+              }
+            ],
+            "planting_player_level": 38,
+            "crop_social_events": [
+              {
+                "item_id": 2,
+                "owner_id": 3,
+                "put_time": 4,
+                "land_id": 5
+              }
+            ],
+            "weather_wood": {
+              "wood_item_id": 2,
+              "wood_item_num": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "use_config_history": {
+              "2": 41
+            },
+            "mutant_infos": [
+              {
+                "mutant_time": 2,
+                "mutant_config_id": 3,
+                "mutant_plant_id": 6,
+                "forced_src": 7,
+                "collection_series_id": 8,
+                "collection_item_id": 9
+              }
+            ]
+          },
+          "is_shared": true,
+          "can_share": true,
+          "master_land_id": 14,
+          "slave_land_ids": [
+            15
+          ],
+          "land_size": 16,
+          "lands_level": 17
+        }
+      ],
+      "land_op_drops": [
+        {
+          "land_id": 2,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "costs": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "triggered_skill_ids": [
+            5
+          ],
+          "buff_effects": [
+            {
+              "attr_id": 2,
+              "attr_value": 3,
+              "extra_info": 4
+            }
+          ]
+        }
+      ],
+      "farm_rewards": [
+        {
+          "source_item_id": 2,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ]
+        }
+      ]
+    },
+    "hex": "0a6608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003126608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a04080210031a6608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003229f020802100118042005280130013a1f0802100318042211080210031804300738014201094801600d2a04080210034217080210031a11080210031804300738014201094801600d4a0c08021003180420052806300752ba01080212106f6666696369616c2d6669787475726522120802100318043007380840094a040802100a28063007480a500b580c62010d6a010e72010f7810800101880112900113980114a2010115a80101b00117ba010118c00119c8011ad0011bd8011c820201218802229202060802100318049a020a08021003180420052806a202080802100318042005a80226b202080802100318042005ba02080802100318042005c2020408021029ca020c08021003280630073808400958016001680e72010f78108001112a6d0802122e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206001a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206002201052a0608021003180432320802122e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da20600"
+  },
+  {
+    "method": "InteractRecords",
+    "direction": "request",
+    "params": {
+      "global_scene_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "InteractRecords",
+    "direction": "response",
+    "params": {
+      "records": [
+        {
+          "time": 2,
+          "interact_type": 3,
+          "opr_gid": 4,
+          "opr_nickname": "official-fixture",
+          "opr_avatar_url": "official-fixture",
+          "steal_item_id": 7,
+          "steal_item_num": 8,
+          "count": 9,
+          "authorized_status": 10,
+          "level": 11,
+          "equip_avatar_frames": [
+            {
+              "id": 2,
+              "type": 3,
+              "count": 4,
+              "priority": 5,
+              "is_new": true,
+              "expire_time": 7
+            }
+          ],
+          "host_type": 13,
+          "month_cards": [
+            {
+              "id": 2
+            }
+          ],
+          "put_social_item_id": 15,
+          "put_social_item_num": 16,
+          "binded_communities": [
+            {
+              "openid": "official-fixture",
+              "name": "official-fixture",
+              "avatar": "official-fixture"
+            }
+          ],
+          "feed_item_id": 18,
+          "feed_item_num": 19,
+          "big_farm_level": 20,
+          "newbie_privilege": true,
+          "like_item_id": 22,
+          "stroke_animal_id": 23,
+          "stroke_triggered": true
+        }
+      ]
+    },
+    "hex": "0a9a0108021003180422106f6666696369616c2d666978747572652a106f6666696369616c2d66697874757265300738084009480a500b5a0c080210031804200528013007600d6a020802700f78108201360a106f6666696369616c2d6669787475726512106f6666696369616c2d666978747572651a106f6666696369616c2d66697874757265880112900113980114a00101a80116b00117b80101"
+  },
+  {
+    "method": "GetGameFriends",
+    "direction": "request",
+    "params": {
+      "friend_gids": [
+        2
+      ],
+      "global_scene_id": 3
+    },
+    "hex": "0a01021003"
+  },
+  {
+    "method": "GetGameFriends",
+    "direction": "response",
+    "params": {
+      "friends": [
+        {
+          "gid": 2,
+          "open_id": "official-fixture",
+          "name": "official-fixture",
+          "avatar_url": "official-fixture",
+          "remark": "official-fixture",
+          "level": 7,
+          "gold": 8,
+          "tags": {
+            "is_new": true,
+            "is_follow": true
+          },
+          "plant": {
+            "dry_time_sec": 2,
+            "weed_time_sec": 3,
+            "insect_time_sec": 4,
+            "ripe_time_sec": 5,
+            "ripe_fruit_id": 6,
+            "steal_plant_num": 7,
+            "dry_num": 8,
+            "weed_num": 9,
+            "insect_num": 10
+          },
+          "authorized_status": 11,
+          "host_type": 12,
+          "illustrated": {
+            "normal_progress": 2,
+            "premium_progress": 3,
+            "ranch_progress": 4
+          },
+          "equip_avatar_frames": [
+            {
+              "id": 2,
+              "type": 3,
+              "count": 4,
+              "priority": 5,
+              "is_new": true,
+              "expire_time": 7
+            }
+          ],
+          "exp": 15,
+          "is_banned": true,
+          "month_cards": [
+            {
+              "id": 2
+            }
+          ],
+          "is_returner": true,
+          "battlepass": {
+            "season_id": 2,
+            "level": 3,
+            "level_up_at": 4
+          },
+          "last_login_at": 20,
+          "weather": {
+            "weather_type": 2,
+            "source": 3,
+            "begin_time": 4,
+            "end_time": 5,
+            "is_active": true,
+            "afterglow_time": 7,
+            "afterglow_weather_type": 8,
+            "can_collect": true,
+            "block_reason": 10
+          },
+          "pet_treasure_hunt": {
+            "has_plunderable_treasure": true,
+            "lucky_star_gained_total": 3
+          },
+          "newbie_privilege": true,
+          "big_farm_status": {
+            "can_steal": true,
+            "can_midwife": true,
+            "can_help": true,
+            "steal_lot_count": 5,
+            "midwife_count": 6,
+            "help_count": 7
+          },
+          "main_city_level": 25,
+          "big_farm_level": 26,
+          "big_farm_exp": 27,
+          "world_coin": 28,
+          "collection_info": {
+            "score": {
+              "2": {
+                "score": 2,
+                "score_time": 3
+              }
+            }
+          }
+        }
+      ]
+    },
+    "hex": "0ae101080212106f6666696369616c2d666978747572651a106f6666696369616c2d6669787475726522106f6666696369616c2d666978747572652a106f6666696369616c2d66697874757265300738084204080110014a1208021003180420052806300738084009480a500b580c62060802100318046a0c080210031804200528013007700f78018201020802880101920106080210031804980114a2011208021003180420052801300738084001480aaa010408011003b00101ba010c080110011801200528063007c00119c8011ad0011bd8011ce2010a0a080802120408021003"
+  },
+  {
+    "method": "SyncAll",
+    "direction": "request",
+    "params": {
+      "open_ids": [
+        "official-fixture"
+      ],
+      "global_scene_id": 4
+    },
+    "hex": "12106f6666696369616c2d666978747572651804"
+  },
+  {
+    "method": "SyncAll",
+    "direction": "response",
+    "params": {
+      "game_friends": [
+        {
+          "gid": 2,
+          "open_id": "official-fixture",
+          "name": "official-fixture",
+          "avatar_url": "official-fixture",
+          "remark": "official-fixture",
+          "level": 7,
+          "gold": 8,
+          "tags": {
+            "is_new": true,
+            "is_follow": true
+          },
+          "plant": {
+            "dry_time_sec": 2,
+            "weed_time_sec": 3,
+            "insect_time_sec": 4,
+            "ripe_time_sec": 5,
+            "ripe_fruit_id": 6,
+            "steal_plant_num": 7,
+            "dry_num": 8,
+            "weed_num": 9,
+            "insect_num": 10
+          },
+          "authorized_status": 11,
+          "host_type": 12,
+          "illustrated": {
+            "normal_progress": 2,
+            "premium_progress": 3,
+            "ranch_progress": 4
+          },
+          "equip_avatar_frames": [
+            {
+              "id": 2,
+              "type": 3,
+              "count": 4,
+              "priority": 5,
+              "is_new": true,
+              "expire_time": 7
+            }
+          ],
+          "exp": 15,
+          "is_banned": true,
+          "month_cards": [
+            {
+              "id": 2
+            }
+          ],
+          "is_returner": true,
+          "battlepass": {
+            "season_id": 2,
+            "level": 3,
+            "level_up_at": 4
+          },
+          "last_login_at": 20,
+          "weather": {
+            "weather_type": 2,
+            "source": 3,
+            "begin_time": 4,
+            "end_time": 5,
+            "is_active": true,
+            "afterglow_time": 7,
+            "afterglow_weather_type": 8,
+            "can_collect": true,
+            "block_reason": 10
+          },
+          "pet_treasure_hunt": {
+            "has_plunderable_treasure": true,
+            "lucky_star_gained_total": 3
+          },
+          "newbie_privilege": true,
+          "big_farm_status": {
+            "can_steal": true,
+            "can_midwife": true,
+            "can_help": true,
+            "steal_lot_count": 5,
+            "midwife_count": 6,
+            "help_count": 7
+          },
+          "main_city_level": 25,
+          "big_farm_level": 26,
+          "big_farm_exp": 27,
+          "world_coin": 28,
+          "collection_info": {
+            "score": {
+              "2": {
+                "score": 2,
+                "score_time": 3
+              }
+            }
+          }
+        }
+      ],
+      "invitations": [
+        {
+          "open_id": "official-fixture",
+          "time_at": 3
+        }
+      ],
+      "application_count": 4,
+      "blocked_players": [
+        {
+          "gid": 2,
+          "name": "official-fixture",
+          "avatar_url": "official-fixture",
+          "level": 5,
+          "blocked_at": 6,
+          "open_id": "official-fixture"
+        }
+      ],
+      "blocked_by_players": [
+        {
+          "gid": 2,
+          "name": "official-fixture",
+          "avatar_url": "official-fixture",
+          "level": 5,
+          "blocked_at": 6,
+          "open_id": "official-fixture"
+        }
+      ]
+    },
+    "hex": "0ae101080212106f6666696369616c2d666978747572651a106f6666696369616c2d6669787475726522106f6666696369616c2d666978747572652a106f6666696369616c2d66697874757265300738084204080110014a1208021003180420052806300738084009480a500b580c62060802100318046a0c080210031804200528013007700f78018201020802880101920106080210031804980114a2011208021003180420052801300738084001480aaa010408011003b00101ba010c080110011801200528063007c00119c8011ad0011bd8011ce2010a0a08080212040802100312140a106f6666696369616c2d6669787475726510031804223c080212106f6666696369616c2d666978747572651a106f6666696369616c2d666978747572652005280632106f6666696369616c2d666978747572652a3c080212106f6666696369616c2d666978747572651a106f6666696369616c2d666978747572652005280632106f6666696369616c2d66697874757265"
+  },
+  {
+    "method": "EnterHomestead",
+    "direction": "request",
+    "params": {
+      "host_gid": 2,
+      "reason": 3,
+      "host_type": 4,
+      "share_id": 5,
+      "share_open_id": "official-fixture",
+      "share_cfg_id": 7,
+      "share_key": "official-fixture"
+    },
+    "hex": "08021003180420052a106f6666696369616c2d6669787475726530073a106f6666696369616c2d66697874757265"
+  },
+  {
+    "method": "EnterHomestead",
+    "direction": "response",
+    "params": {
+      "basic": {
+        "gid": 2,
+        "name": "official-fixture",
+        "level": 4,
+        "exp": 5,
+        "gold": 6,
+        "open_id": "official-fixture",
+        "avatar_url": "official-fixture",
+        "remark": "official-fixture",
+        "signature": "official-fixture",
+        "gender": 11,
+        "equip_avatar_frames": [
+          {
+            "id": 2,
+            "type": 3,
+            "count": 4,
+            "priority": 5,
+            "is_new": true,
+            "expire_time": 7
+          }
+        ],
+        "share_infos": {
+          "2": {
+            "share_count": 2,
+            "is_claimed": true
+          }
+        },
+        "authorized_status": 14,
+        "disable_nudge": true,
+        "disable_month_card": true,
+        "month_cards": [
+          {
+            "id": 2
+          }
+        ],
+        "last_online_timestamp": 18,
+        "binded_communities": [
+          {
+            "openid": "official-fixture",
+            "name": "official-fixture",
+            "avatar": "official-fixture"
+          }
+        ],
+        "allow_ark_visit": true,
+        "big_farm_level": 21,
+        "big_farm_exp": 22
+      },
+      "nudge_info": {
+        "events": [
+          {
+            "event_id": 2,
+            "priority": 3,
+            "describe": "official-fixture",
+            "nudge_input_text": "official-fixture"
+          }
+        ],
+        "disable_popup": true
+      },
+      "host_at_home": true,
+      "host_relation": {
+        "game_friend": {
+          "gid": 2,
+          "open_id": "official-fixture",
+          "name": "official-fixture",
+          "avatar_url": "official-fixture",
+          "remark": "official-fixture",
+          "level": 7,
+          "gold": 8,
+          "tags": {
+            "is_new": true,
+            "is_follow": true
+          },
+          "plant": {
+            "dry_time_sec": 2,
+            "weed_time_sec": 3,
+            "insect_time_sec": 4,
+            "ripe_time_sec": 5,
+            "ripe_fruit_id": 6,
+            "steal_plant_num": 7,
+            "dry_num": 8,
+            "weed_num": 9,
+            "insect_num": 10
+          },
+          "authorized_status": 11,
+          "host_type": 12,
+          "illustrated": {
+            "normal_progress": 2,
+            "premium_progress": 3,
+            "ranch_progress": 4
+          },
+          "equip_avatar_frames": [
+            {
+              "id": 2,
+              "type": 3,
+              "count": 4,
+              "priority": 5,
+              "is_new": true,
+              "expire_time": 7
+            }
+          ],
+          "exp": 15,
+          "is_banned": true,
+          "month_cards": [
+            {
+              "id": 2
+            }
+          ],
+          "is_returner": true,
+          "battlepass": {
+            "season_id": 2,
+            "level": 3,
+            "level_up_at": 4
+          },
+          "last_login_at": 20,
+          "weather": {
+            "weather_type": 2,
+            "source": 3,
+            "begin_time": 4,
+            "end_time": 5,
+            "is_active": true,
+            "afterglow_time": 7,
+            "afterglow_weather_type": 8,
+            "can_collect": true,
+            "block_reason": 10
+          },
+          "pet_treasure_hunt": {
+            "has_plunderable_treasure": true,
+            "lucky_star_gained_total": 3
+          },
+          "newbie_privilege": true,
+          "big_farm_status": {
+            "can_steal": true,
+            "can_midwife": true,
+            "can_help": true,
+            "steal_lot_count": 5,
+            "midwife_count": 6,
+            "help_count": 7
+          },
+          "main_city_level": 25,
+          "big_farm_level": 26,
+          "big_farm_exp": 27,
+          "world_coin": 28,
+          "collection_info": {}
+        },
+        "is_friend": true,
+        "is_community_member": true
+      },
+      "unix_milli": 6,
+      "is_tourist": true,
+      "apply_token": "official-fixture",
+      "homestead_cells": {
+        "grid_width": 2,
+        "grid_height": 3,
+        "cells": [
+          {
+            "cell_id": 2,
+            "grid_x": 3,
+            "grid_y": 4,
+            "status": 5,
+            "occupied_by": 6,
+            "region_id": 7,
+            "unlock_need": [
+              {
+                "id": 2,
+                "count": 3,
+                "expire_time": 4,
+                "uid": 7,
+                "is_new": true,
+                "mutant_types": [
+                  9
+                ],
+                "is_locked": true,
+                "tab_id": 13
+              }
+            ],
+            "unlock_end_time": 11,
+            "unlock_secs": 12,
+            "can_share_unlock": true,
+            "share_cost": [
+              {
+                "id": 2,
+                "count": 3,
+                "expire_time": 4,
+                "uid": 7,
+                "is_new": true,
+                "mutant_types": [
+                  9
+                ],
+                "is_locked": true,
+                "tab_id": 13
+              }
+            ]
+          }
+        ],
+        "facilities": [
+          {
+            "instance_id": 2,
+            "facility_id": 3,
+            "module_type": 4,
+            "position_x": 5,
+            "position_y": 6,
+            "rotation": 7,
+            "level": 8,
+            "width": 9,
+            "height": 10,
+            "capacity": 11,
+            "occupied_cell_ids": [
+              12
+            ],
+            "ranch": {
+              "ranch_inst_id": 2,
+              "capacity": 3,
+              "animal_count": 4,
+              "husbandry_type": 7
+            },
+            "feed_machine": {
+              "feed_count": 2,
+              "consume_rate": 3,
+              "remaining_secs": 5,
+              "is_owner": true,
+              "status": 9
+            },
+            "order_board": {
+              "submittable_count": 2,
+              "slot_used": 3
+            },
+            "state": 13,
+            "upgrade_state": 14,
+            "upgrade_end_time": 15
+          }
+        ],
+        "building_items": [
+          {
+            "inst_id": 2,
+            "facility_id": 3,
+            "level": 4,
+            "upgrade_state": 6,
+            "upgrade_end_time": 7,
+            "added_at": 8,
+            "is_new": true
+          }
+        ],
+        "has_ready_upgrade": true,
+        "region_occupied_count": 8,
+        "region_quota_count": 9,
+        "region_speed_up": {
+          "item_id": 2,
+          "own_count": 3,
+          "secs_per_item": 4
+        }
+      }
+    },
+    "hex": "0acc01080212106f6666696369616c2d6669787475726518042005280632106f6666696369616c2d666978747572653a106f6666696369616c2d6669787475726542106f6666696369616c2d666978747572654a106f6666696369616c2d66697874757265500b5a0c08021003180420052801300762080802120408021001680e7001780182010208028801129201360a106f6666696369616c2d6669787475726512106f6666696369616c2d666978747572651a106f6666696369616c2d66697874757265980101a00115a80116122c0a28080210031a106f6666696369616c2d6669787475726522106f6666696369616c2d666978747572651001180122de010ad701080212106f6666696369616c2d666978747572651a106f6666696369616c2d6669787475726522106f6666696369616c2d666978747572652a106f6666696369616c2d66697874757265300738084204080110014a1208021003180420052806300738084009480a500b580c62060802100318046a0c080210031804200528013007700f78018201020802880101920106080210031804980114a2011208021003180420052801300738084001480aaa010408011003b00101ba010c080110011801200528063007c00119c8011ad0011bd8011ce2010010011801280630013a106f6666696369616c2d66697874757265429a01080210031a380802100318042005280630073a11080210031804300738014201094801600d500b580c60016a11080210031804300738014201094801600d223c08021003180420052806300738084009480a500b5a010ca201080802100318043007aa010a08021003200538014009b2010408021003600d680e700f2a0e08021003180428063007380840013001380840094a06080210031804"
+  },
+  {
+    "method": "LeaveHomestead",
+    "direction": "request",
+    "params": {
+      "host_gid": 2,
+      "host_type": 3
+    },
+    "hex": "08021003"
+  },
+  {
+    "method": "LeaveHomestead",
+    "direction": "response",
+    "params": {},
+    "hex": ""
+  },
+  {
+    "method": "GetIllustratedListV2",
+    "direction": "request",
+    "params": {
+      "rarity": 2,
+      "type": 3
+    },
+    "hex": "08021003"
+  },
+  {
+    "method": "GetIllustratedListV2",
+    "direction": "response",
+    "params": {
+      "list": [
+        {
+          "fruit_id": 2,
+          "rarity": 3,
+          "unlocked": true,
+          "progress": 5,
+          "layer": 6,
+          "reward": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "is_new": true,
+          "guarantees": [
+            {
+              "source_rarity": 2,
+              "cur": 3,
+              "total": 4
+            }
+          ],
+          "giant": {
+            "unlocked": true,
+            "best_weight_x10": 3,
+            "lo_x10": 4,
+            "hi_x10": 5,
+            "tier": 6,
+            "tier_reached_mask": 7,
+            "harvest_count": 8,
+            "is_new": true
+          }
+        }
+      ],
+      "total_progress": 3,
+      "current_level": 4,
+      "total_rewards": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "rarity": [
+        6
+      ],
+      "type": 7,
+      "next_level_progress": 8,
+      "has_claimable_reward": true,
+      "has_claimed_reward": true,
+      "buff_effects": [
+        {
+          "attr_id": 2,
+          "attr_value": 3,
+          "extra_info": 4
+        }
+      ],
+      "next_buff_effect": {
+        "attr_id": 2,
+        "attr_value": 3,
+        "extra_info": 4
+      },
+      "ranch_weight_score": 13
+    },
+    "hex": "0a5608021003180120052806322e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da20600380142060802100318044a100801100318042005280630073808400110031804226608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a04080210032a0106300738084001480152060802100318045a06080210031804600d"
+  },
+  {
+    "method": "ClaimAllRewardsV2",
+    "direction": "request",
+    "params": {
+      "type": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "ClaimAllRewardsV2",
+    "direction": "response",
+    "params": {
+      "total_rewards": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "claimed_level_ids": [
+        3
+      ],
+      "current_level": 4,
+      "next_level_rewards": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "hex": "0a6608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a04080210031201031804226608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003"
+  },
+  {
+    "method": "GetIllustratedLevelListV2",
+    "direction": "request",
+    "params": {
+      "type": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "GetIllustratedLevelListV2",
+    "direction": "response",
+    "params": {
+      "current_level": 2,
+      "total_progress": 3,
+      "level_list": [
+        {
+          "level": 2,
+          "point_condition": 3,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "can_claim": true,
+          "claimed": true
+        }
+      ]
+    },
+    "hex": "080210031a38080210031a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da2060020012801"
+  },
+  {
+    "method": "ClearNewUnlockedFruitsV2",
+    "direction": "request",
+    "params": {
+      "fruit_ids": [
+        2
+      ],
+      "scope": 3
+    },
+    "hex": "0a01021003"
+  },
+  {
+    "method": "ClearNewUnlockedFruitsV2",
+    "direction": "response",
+    "params": {
+      "cleared_fruit_ids": [
+        2
+      ],
+      "scope": 3
+    },
+    "hex": "0a01021003"
+  },
+  {
+    "method": "GetRanchWeightScoreV2",
+    "direction": "request",
+    "params": {},
+    "hex": ""
+  },
+  {
+    "method": "GetRanchWeightScoreV2",
+    "direction": "response",
+    "params": {
+      "total_score": 2,
+      "current_id": 3,
+      "calc_mode": 4,
+      "levels": [
+        {
+          "id": 2,
+          "score_condition": 3,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "can_claim": true,
+          "claimed": true
+        }
+      ]
+    },
+    "hex": "0802100318042238080210031a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da2060020012801"
+  },
+  {
+    "method": "ClaimRanchWeightScoreRewardV2",
+    "direction": "request",
+    "params": {
+      "id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "ClaimRanchWeightScoreRewardV2",
+    "direction": "response",
+    "params": {
+      "rewards": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "claimed_ids": [
+        3
+      ]
+    },
+    "hex": "0a6608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003120103"
+  },
+  {
+    "method": "GetRanchWeightRankV2",
+    "direction": "request",
+    "params": {
+      "animal_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "GetRanchWeightRankV2",
+    "direction": "response",
+    "params": {
+      "groups": [
+        {
+          "animal_id": 2,
+          "items": [
+            {
+              "player": {
+                "gid": 2,
+                "name": "official-fixture",
+                "avatar": "official-fixture",
+                "level": 5,
+                "gender": 6,
+                "big_farm_level": 7
+              },
+              "weight_x10": 3,
+              "tier": 4,
+              "rank": 5,
+              "can_show_off": true,
+              "is_self": true
+            }
+          ]
+        }
+      ]
+    },
+    "hex": "0a3c080212380a2c080212106f6666696369616c2d666978747572651a106f6666696369616c2d6669787475726520052806300710031804200528013001"
+  },
+  {
+    "method": "ShopProfiles",
+    "direction": "request",
+    "params": {
+      "global_scene_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "ShopProfiles",
+    "direction": "response",
+    "params": {
+      "shop_profiles": [
+        {
+          "shop_id": 2,
+          "shop_name": "official-fixture",
+          "shop_type": 4,
+          "global_scene_ids": [
+            5
+          ],
+          "is_rotation_shop": true,
+          "rotation_state": {
+            "shop_id": 2,
+            "present": true,
+            "period_day": 4,
+            "round_index": 5,
+            "npc_id": 6,
+            "shop_start_time": 7,
+            "shop_end_time": 8,
+            "has_redpoint": true,
+            "npc_spawn_point_id": 10
+          }
+        }
+      ]
+    },
+    "hex": "0a2f080212106f6666696369616c2d6669787475726518042201052801321208021001180420052806300738084001480a"
+  },
+  {
+    "method": "ShopInfo",
+    "direction": "request",
+    "params": {
+      "shop_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "ShopInfo",
+    "direction": "response",
+    "params": {
+      "goods_list": [
+        {
+          "id": 2,
+          "bought_num": 3,
+          "price": 4,
+          "limit_count": 5,
+          "unlocked": true,
+          "item_id": 7,
+          "item_count": 8,
+          "conds": [
+            {
+              "type": 2,
+              "param": 3
+            }
+          ],
+          "is_display_countdown": true,
+          "end_time": 11,
+          "discount_price": 12,
+          "discount_start_time": 13,
+          "discount_end_time": 14,
+          "show_conds": [
+            {
+              "type": "official-fixture"
+            }
+          ],
+          "owned": true
+        }
+      ]
+    },
+    "hex": "0a3408021003180420052801300738084204080210034801500b580c600d680e72120a106f6666696369616c2d666978747572657801"
+  },
+  {
+    "method": "BuyGoods",
+    "direction": "request",
+    "params": {
+      "goods_id": 2,
+      "num": 3,
+      "price": 4,
+      "auto_add": true
+    },
+    "hex": "0802100318042001"
+  },
+  {
+    "method": "BuyGoods",
+    "direction": "response",
+    "params": {
+      "goods": {
+        "id": 2,
+        "bought_num": 3,
+        "price": 4,
+        "limit_count": 5,
+        "unlocked": true,
+        "item_id": 7,
+        "item_count": 8,
+        "conds": [
+          {
+            "type": 2,
+            "param": 3
+          }
+        ],
+        "is_display_countdown": true,
+        "end_time": 11,
+        "discount_price": 12,
+        "discount_start_time": 13,
+        "discount_end_time": 14,
+        "show_conds": [
+          {
+            "type": "official-fixture"
+          }
+        ],
+        "owned": true
+      },
+      "get_items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "cost_items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "hex": "0a3408021003180420052801300738084204080210034801500b580c600d680e72120a106f6666696369616c2d666978747572657801126608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a04080210031a6608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003"
+  },
+  {
+    "method": "RotationShopInfo",
+    "direction": "request",
+    "params": {
+      "shop_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "RotationShopInfo",
+    "direction": "response",
+    "params": {
+      "opened": true,
+      "present": true,
+      "period_day": 4,
+      "round_index": 5,
+      "shelves": [
+        {
+          "shelf_id": 2,
+          "shelf_name": "official-fixture",
+          "sort": 4
+        }
+      ],
+      "goods": [
+        {
+          "shelf_id": 2,
+          "slot": 3,
+          "item_id": 4,
+          "item_count": 5,
+          "cost_item_id": 6,
+          "cost_count": 7,
+          "discount_price": 8,
+          "discount_start_time": 9,
+          "discount_end_time": 10,
+          "limit_count": 11,
+          "limit_used": 12,
+          "buy_conds": [
+            {
+              "type": "official-fixture"
+            }
+          ],
+          "goods_id": 14
+        }
+      ]
+    },
+    "hex": "08011001180420052a16080212106f6666696369616c2d666978747572651804322c08021003180420052806300738084009480a500b580c62120a106f6666696369616c2d66697874757265680e"
+  },
+  {
+    "method": "RotationBuyGoods",
+    "direction": "request",
+    "params": {
+      "goods_id": 2,
+      "count": 3,
+      "period_day": 4,
+      "round_index": 5
+    },
+    "hex": "0802100318042005"
+  },
+  {
+    "method": "RotationBuyGoods",
+    "direction": "response",
+    "params": {
+      "card": {
+        "shelf_id": 2,
+        "slot": 3,
+        "item_id": 4,
+        "item_count": 5,
+        "cost_item_id": 6,
+        "cost_count": 7,
+        "discount_price": 8,
+        "discount_start_time": 9,
+        "discount_end_time": 10,
+        "limit_count": 11,
+        "limit_used": 12,
+        "buy_conds": [
+          {
+            "type": "official-fixture"
+          }
+        ],
+        "goods_id": 14
+      },
+      "awards": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "hex": "0a2c08021003180420052806300738084009480a500b580c62120a106f6666696369616c2d66697874757265680e126608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003"
+  },
+  {
+    "method": "RotationShopClearRedpoint",
+    "direction": "request",
+    "params": {
+      "shop_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "RotationShopClearRedpoint",
+    "direction": "response",
+    "params": {},
+    "hex": ""
+  },
+  {
+    "method": "GetBuildingList",
+    "direction": "request",
+    "params": {},
+    "hex": ""
+  },
+  {
+    "method": "GetBuildingList",
+    "direction": "response",
+    "params": {
+      "items": [
+        {
+          "inst_id": 2,
+          "facility_id": 3,
+          "level": 4,
+          "upgrade_state": 6,
+          "upgrade_end_time": 7,
+          "added_at": 8,
+          "is_new": true
+        }
+      ],
+      "has_ready_upgrade": true
+    },
+    "hex": "0a0e08021003180428063007380840011001"
+  },
+  {
+    "method": "GetFacilityDetail",
+    "direction": "request",
+    "params": {
+      "instance_id": 2,
+      "host_gid": 3
+    },
+    "hex": "08021003"
+  },
+  {
+    "method": "GetFacilityDetail",
+    "direction": "response",
+    "params": {
+      "info": {
+        "instance_id": 2,
+        "name": "official-fixture",
+        "description": "official-fixture",
+        "base_facility_id": 5,
+        "module_type": 6,
+        "upgrade_cost": [
+          {
+            "id": 2,
+            "count": 3,
+            "expire_time": 4,
+            "uid": 7,
+            "is_new": true,
+            "mutant_types": [
+              9
+            ],
+            "is_locked": true,
+            "gift_detail": {
+              "sender_name": "official-fixture",
+              "send_time": 3,
+              "msg_text_id": 4
+            },
+            "item_detail": {},
+            "tab_id": 13,
+            "show": {}
+          }
+        ],
+        "level": 8,
+        "facility_id": 9,
+        "position_x": 10,
+        "position_y": 11,
+        "rotation": 12,
+        "width": 13,
+        "height": 14,
+        "capacity": 15,
+        "ranch": {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_produce_exp": 24,
+              "mature_ready_at_ms": 26
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        },
+        "empty_detail": {},
+        "feed_machine": {
+          "feed_count": 2,
+          "consume_rate": 3,
+          "remaining_secs": 5,
+          "is_owner": true,
+          "status": 9
+        },
+        "order_board": {
+          "submittable_count": 2,
+          "slot_used": 3
+        }
+      }
+    },
+    "hex": "0ad601080212106f6666696369616c2d666978747572651a106f6666696369616c2d6669787475726520052806322e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da2060038084009480a500b580c600d680e700fa2015208021003180422300802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b80118c8011a2a040802100330073a08080218042001280142060802100318049a0600aa010a08021003200538014009b2010408021003"
+  },
+  {
+    "method": "GetRanchOpTimes",
+    "direction": "request",
+    "params": {
+      "op_ids": [
+        2
+      ]
+    },
+    "hex": "0a0102"
+  },
+  {
+    "method": "GetRanchOpTimes",
+    "direction": "response",
+    "params": {
+      "ops": [
+        {
+          "op_id": 2,
+          "times_limit": 3,
+          "used_times": 4,
+          "remaining_times": 5
+        }
+      ]
+    },
+    "hex": "0a080802100318042005"
+  },
+  {
+    "method": "BatchGetBasicInfo",
+    "direction": "request",
+    "params": {
+      "open_ids": [
+        "official-fixture"
+      ]
+    },
+    "hex": "0a106f6666696369616c2d66697874757265"
+  },
+  {
+    "method": "BatchGetBasicInfo",
+    "direction": "response",
+    "params": {
+      "basic_infos": [
+        {
+          "gid": 2,
+          "name": "official-fixture",
+          "level": 4,
+          "exp": 5,
+          "gold": 6,
+          "open_id": "official-fixture",
+          "avatar_url": "official-fixture",
+          "remark": "official-fixture",
+          "signature": "official-fixture",
+          "gender": 11,
+          "equip_avatar_frames": [
+            {
+              "id": 2,
+              "type": 3,
+              "count": 4,
+              "priority": 5,
+              "is_new": true,
+              "expire_time": 7
+            }
+          ],
+          "share_infos": {
+            "2": {
+              "share_count": 2,
+              "is_claimed": true
+            }
+          },
+          "authorized_status": 14,
+          "disable_nudge": true,
+          "disable_month_card": true,
+          "month_cards": [
+            {
+              "id": 2
+            }
+          ],
+          "last_online_timestamp": 18,
+          "binded_communities": [
+            {
+              "openid": "official-fixture",
+              "name": "official-fixture",
+              "avatar": "official-fixture"
+            }
+          ],
+          "allow_ark_visit": true,
+          "big_farm_level": 21,
+          "big_farm_exp": 22
+        }
+      ]
+    },
+    "hex": "0acc01080212106f6666696369616c2d6669787475726518042005280632106f6666696369616c2d666978747572653a106f6666696369616c2d6669787475726542106f6666696369616c2d666978747572654a106f6666696369616c2d66697874757265500b5a0c08021003180420052801300762080802120408021001680e7001780182010208028801129201360a106f6666696369616c2d6669787475726512106f6666696369616c2d666978747572651a106f6666696369616c2d66697874757265980101a00115a80116"
+  },
+  {
+    "method": "PlaceAnimal",
+    "direction": "request",
+    "params": {
+      "items": [
+        {
+          "ranch_inst_id": 2,
+          "animal_id": 3,
+          "giant_cub_item_id": 4
+        }
+      ]
+    },
+    "hex": "0a06080210031804"
+  },
+  {
+    "method": "PlaceAnimal",
+    "direction": "response",
+    "params": {
+      "ranches": [
+        {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_harvest_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "expected_produce_exp": 24,
+              "expected_produce_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "mature_ready_at_ms": 26,
+              "mutation": {
+                "mutation_type": 2,
+                "source": 3,
+                "weight_display_x10": 4,
+                "scale_bp": 5,
+                "weight_final_x10": 6,
+                "tier": 7,
+                "became_at_ms": 8,
+                "strokable": true,
+                "stroked_gids": [
+                  10
+                ]
+              }
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "lots": [
+                {
+                  "item_id": 2,
+                  "base_num": 3,
+                  "remain_num": 4,
+                  "stolen_num": 5,
+                  "animal_id": 6,
+                  "can_steal": true,
+                  "stealers": [
+                    8
+                  ]
+                }
+              ],
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        }
+      ],
+      "op_results": [
+        {
+          "facility_inst_id": 2,
+          "kind": 3,
+          "target_id": 4,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "costs": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ]
+        }
+      ]
+    },
+    "hex": "0a870108021003180422540802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b2010408021003b80118c2010408021003c8011af20113080210031804200528063007380840014a010a2a040802100330073a190802120f0802100318042005280630013a010818042001280142060802100318041a66080210031804522e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206005a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da20600"
+  },
+  {
+    "method": "TriggerProduce",
+    "direction": "request",
+    "params": {
+      "host_gid": 2,
+      "targets": [
+        {
+          "ranch_inst_id": 2,
+          "animal_inst_id": 3
+        }
+      ]
+    },
+    "hex": "0802120408021003"
+  },
+  {
+    "method": "TriggerProduce",
+    "direction": "response",
+    "params": {
+      "ranches": [
+        {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_harvest_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "expected_produce_exp": 24,
+              "expected_produce_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "mature_ready_at_ms": 26,
+              "mutation": {
+                "mutation_type": 2,
+                "source": 3,
+                "weight_display_x10": 4,
+                "scale_bp": 5,
+                "weight_final_x10": 6,
+                "tier": 7,
+                "became_at_ms": 8,
+                "strokable": true,
+                "stroked_gids": [
+                  10
+                ]
+              }
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "lots": [
+                {
+                  "item_id": 2,
+                  "base_num": 3,
+                  "remain_num": 4,
+                  "stolen_num": 5,
+                  "animal_id": 6,
+                  "can_steal": true,
+                  "stealers": [
+                    8
+                  ]
+                }
+              ],
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        }
+      ],
+      "op_results": [
+        {
+          "facility_inst_id": 2,
+          "kind": 3,
+          "target_id": 4,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "costs": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ]
+        }
+      ]
+    },
+    "hex": "0a870108021003180422540802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b2010408021003b80118c2010408021003c8011af20113080210031804200528063007380840014a010a2a040802100330073a190802120f0802100318042005280630013a010818042001280142060802100318041a66080210031804522e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206005a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da20600"
+  },
+  {
+    "method": "FeedAnimal",
+    "direction": "request",
+    "params": {
+      "targets": [
+        {
+          "ranch_inst_id": 2,
+          "animal_inst_id": 3
+        }
+      ],
+      "bucket_type": 3
+    },
+    "hex": "0a04080210031003"
+  },
+  {
+    "method": "FeedAnimal",
+    "direction": "response",
+    "params": {
+      "ranches": [
+        {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_harvest_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "expected_produce_exp": 24,
+              "expected_produce_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "mature_ready_at_ms": 26,
+              "mutation": {
+                "mutation_type": 2,
+                "source": 3,
+                "weight_display_x10": 4,
+                "scale_bp": 5,
+                "weight_final_x10": 6,
+                "tier": 7,
+                "became_at_ms": 8,
+                "strokable": true,
+                "stroked_gids": [
+                  10
+                ]
+              }
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "lots": [
+                {
+                  "item_id": 2,
+                  "base_num": 3,
+                  "remain_num": 4,
+                  "stolen_num": 5,
+                  "animal_id": 6,
+                  "can_steal": true,
+                  "stealers": [
+                    8
+                  ]
+                }
+              ],
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        }
+      ],
+      "deduct_secs": 3,
+      "bucket_remain_secs": 5,
+      "op_results": [
+        {
+          "facility_inst_id": 2,
+          "kind": 3,
+          "target_id": 4,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "costs": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ]
+        }
+      ]
+    },
+    "hex": "0a870108021003180422540802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b2010408021003b80118c2010408021003c8011af20113080210031804200528063007380840014a010a2a040802100330073a190802120f0802100318042005280630013a01081804200128014206080210031804100320052a66080210031804522e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206005a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da20600"
+  },
+  {
+    "method": "AddFeed",
+    "direction": "request",
+    "params": {
+      "instance_id": 2,
+      "add_count": 3,
+      "use_gold": true,
+      "host_gid": 5
+    },
+    "hex": "0802100318012005"
+  },
+  {
+    "method": "AddFeed",
+    "direction": "response",
+    "params": {
+      "detail": {
+        "feed_count": 2,
+        "consume_rate": 3,
+        "remaining_secs": 5,
+        "is_owner": true,
+        "status": 9
+      },
+      "consumed": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "hex": "0a0a08021003200538014009126608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003"
+  },
+  {
+    "method": "SubmitOrder",
+    "direction": "request",
+    "params": {
+      "slot_index": 2,
+      "instance_id": "official-fixture"
+    },
+    "hex": "080212106f6666696369616c2d66697874757265"
+  },
+  {
+    "method": "SubmitOrder",
+    "direction": "response",
+    "params": {
+      "new_slot": {
+        "slot_index": 2,
+        "instance_id": "official-fixture",
+        "template_id": 4,
+        "pool_id": 5,
+        "order_quality": 6,
+        "req_items": [
+          {
+            "id": 2,
+            "count": 3,
+            "expire_time": 4,
+            "uid": 7,
+            "is_new": true,
+            "mutant_types": [
+              9
+            ],
+            "is_locked": true,
+            "gift_detail": {
+              "sender_name": "official-fixture",
+              "send_time": 3,
+              "msg_text_id": 4
+            },
+            "item_detail": {},
+            "tab_id": 13,
+            "show": {}
+          }
+        ],
+        "reward_items": [
+          {
+            "id": 2,
+            "count": 3,
+            "expire_time": 4,
+            "uid": 7,
+            "is_new": true,
+            "mutant_types": [
+              9
+            ],
+            "is_locked": true,
+            "gift_detail": {
+              "sender_name": "official-fixture",
+              "send_time": 3,
+              "msg_text_id": 4
+            },
+            "item_detail": {},
+            "tab_id": 13,
+            "show": {}
+          }
+        ],
+        "created_at": 9,
+        "submit_state": 10
+      },
+      "rewards": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "submit_quota": 4,
+      "rare_pity": 5
+    },
+    "hex": "0a7e080212106f6666696369616c2d66697874757265180420052806322e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206003a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206004009480a126608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a040802100318042005"
+  },
+  {
+    "method": "RefreshOrder",
+    "direction": "request",
+    "params": {
+      "slot_index": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "RefreshOrder",
+    "direction": "response",
+    "params": {
+      "new_slot": {
+        "slot_index": 2,
+        "instance_id": "official-fixture",
+        "template_id": 4,
+        "pool_id": 5,
+        "order_quality": 6,
+        "req_items": [
+          {
+            "id": 2,
+            "count": 3,
+            "expire_time": 4,
+            "uid": 7,
+            "is_new": true,
+            "mutant_types": [
+              9
+            ],
+            "is_locked": true,
+            "gift_detail": {
+              "sender_name": "official-fixture",
+              "send_time": 3,
+              "msg_text_id": 4
+            },
+            "item_detail": {},
+            "tab_id": 13,
+            "show": {}
+          }
+        ],
+        "reward_items": [
+          {
+            "id": 2,
+            "count": 3,
+            "expire_time": 4,
+            "uid": 7,
+            "is_new": true,
+            "mutant_types": [
+              9
+            ],
+            "is_locked": true,
+            "gift_detail": {
+              "sender_name": "official-fixture",
+              "send_time": 3,
+              "msg_text_id": 4
+            },
+            "item_detail": {},
+            "tab_id": 13,
+            "show": {}
+          }
+        ],
+        "created_at": 9,
+        "submit_state": 10
+      },
+      "refresh_quota": 3,
+      "rare_pity": 4
+    },
+    "hex": "0a7e080212106f6666696369616c2d66697874757265180420052806322e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206003a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206004009480a10031804"
+  },
+  {
+    "method": "UpgradeBuilding",
+    "direction": "request",
+    "params": {
+      "inst_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "UpgradeBuilding",
+    "direction": "response",
+    "params": {
+      "upgrade": {
+        "inst_id": 2,
+        "state": 3,
+        "end_time": 4,
+        "target_facility_id": 5,
+        "target_level": 6
+      }
+    },
+    "hex": "0a0a08021003180420052806"
+  },
+  {
+    "method": "CompleteBuildingUpgrade",
+    "direction": "request",
+    "params": {
+      "inst_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "CompleteBuildingUpgrade",
+    "direction": "response",
+    "params": {
+      "facility": {
+        "instance_id": 2,
+        "facility_id": 3,
+        "module_type": 4,
+        "position_x": 5,
+        "position_y": 6,
+        "rotation": 7,
+        "level": 8,
+        "width": 9,
+        "height": 10,
+        "capacity": 11,
+        "occupied_cell_ids": [
+          12
+        ],
+        "ranch": {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_produce_exp": 24,
+              "mature_ready_at_ms": 26
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        },
+        "feed_machine": {
+          "feed_count": 2,
+          "consume_rate": 3,
+          "remaining_secs": 5,
+          "is_owner": true,
+          "status": 9
+        },
+        "order_board": {
+          "submittable_count": 2,
+          "slot_used": 3
+        },
+        "state": 13,
+        "upgrade_state": 14,
+        "upgrade_end_time": 15
+      },
+      "item": {
+        "inst_id": 2,
+        "facility_id": 3,
+        "level": 4,
+        "upgrade_state": 6,
+        "upgrade_end_time": 7,
+        "added_at": 8,
+        "is_new": true
+      }
+    },
+    "hex": "0a860108021003180420052806300738084009480a500b5a010ca2015208021003180422300802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b80118c8011a2a040802100330073a0808021804200128014206080210031804aa010a08021003200538014009b2010408021003600d680e700f120e0802100318042806300738084001"
+  },
+  {
+    "method": "GetMainCityInfo",
+    "direction": "request",
+    "params": {
+      "source": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "GetMainCityInfo",
+    "direction": "response",
+    "params": {
+      "main_city": {
+        "has_main_city": true,
+        "inst_id": 3,
+        "name": "official-fixture",
+        "level": 5,
+        "upgrade": {
+          "inst_id": 2,
+          "state": 3,
+          "end_time": 4,
+          "target_facility_id": 5,
+          "target_level": 6
+        },
+        "next_level": 7,
+        "upgrade_cost": [
+          {
+            "id": 2,
+            "count": 3,
+            "expire_time": 4,
+            "uid": 7,
+            "is_new": true,
+            "mutant_types": [
+              9
+            ],
+            "is_locked": true,
+            "gift_detail": {
+              "sender_name": "official-fixture",
+              "send_time": 3,
+              "msg_text_id": 4
+            },
+            "item_detail": {},
+            "tab_id": 13,
+            "show": {}
+          }
+        ],
+        "upgrade_secs": 9,
+        "next_unlock_goods_ids": [
+          10
+        ],
+        "region_open_quota": 11,
+        "next_region_open_quota": 12,
+        "speed_up": {
+          "item_id": 2,
+          "own_count": 3,
+          "secs_per_item": 4
+        }
+      },
+      "goods": [
+        {
+          "goods_id": 2,
+          "facility_id": 3,
+          "base_facility_id": 4,
+          "module_type": 5,
+          "name": "official-fixture",
+          "cost": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "main_city_level": 8,
+          "sort": 9,
+          "state": 10,
+          "built_count": 11,
+          "max_count": 12,
+          "is_new": true
+        }
+      ]
+    },
+    "hex": "0a67080110031a106f6666696369616c2d6669787475726520052a0a0802100318042005280630073a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da2060040094a010a500b580c6206080210031804125608021003180420052a106f6666696369616c2d66697874757265322e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da2060038084009480a500b580c6001"
+  },
+  {
+    "method": "BuyBuilding",
+    "direction": "request",
+    "params": {
+      "goods_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "BuyBuilding",
+    "direction": "response",
+    "params": {
+      "items": [
+        {
+          "inst_id": 2,
+          "facility_id": 3,
+          "level": 4,
+          "upgrade_state": 6,
+          "upgrade_end_time": 7,
+          "added_at": 8,
+          "is_new": true
+        }
+      ],
+      "consumed": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "goods": {
+        "goods_id": 2,
+        "facility_id": 3,
+        "base_facility_id": 4,
+        "module_type": 5,
+        "name": "official-fixture",
+        "cost": [
+          {
+            "id": 2,
+            "count": 3,
+            "expire_time": 4,
+            "uid": 7,
+            "is_new": true,
+            "mutant_types": [
+              9
+            ],
+            "is_locked": true,
+            "gift_detail": {
+              "sender_name": "official-fixture",
+              "send_time": 3,
+              "msg_text_id": 4
+            },
+            "item_detail": {},
+            "tab_id": 13,
+            "show": {}
+          }
+        ],
+        "main_city_level": 8,
+        "sort": 9,
+        "state": 10,
+        "built_count": 11,
+        "max_count": 12,
+        "is_new": true
+      }
+    },
+    "hex": "0a0e0802100318042806300738084001126608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a04080210031a5608021003180420052a106f6666696369616c2d66697874757265322e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da2060038084009480a500b580c6001"
+  },
+  {
+    "method": "PlayerSceneLogin",
+    "direction": "request",
+    "params": {
+      "global_scene_id": 2,
+      "experiment_keys": [
+        "official-fixture"
+      ]
+    },
+    "hex": "080212106f6666696369616c2d66697874757265"
+  },
+  {
+    "method": "PlayerSceneLogin",
+    "direction": "response",
+    "params": {
+      "global_scene_id": 2,
+      "server_time": 3,
+      "farm_scene_ext_data": {
+        "experiments": [
+          {
+            "id": 2,
+            "start_time": 3,
+            "end_time": 4,
+            "group_key": "official-fixture",
+            "exp_key": "official-fixture",
+            "is_default": true,
+            "is_control": true,
+            "is_white_list": true,
+            "module_code": "official-fixture",
+            "traffic_percentage": 12,
+            "hit": true
+          }
+        ],
+        "item_bag": {
+          "items": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "tab_id": 13
+            }
+          ],
+          "max_grid_num": 3,
+          "curr_grid_num": 4
+        },
+        "illustrated": {
+          "normal_progress": 2,
+          "premium_progress": 3,
+          "ranch_progress": 4
+        },
+        "mall_msg": {
+          "is_gift_shop_show": true,
+          "is_month_card_shop_show": true,
+          "is_recharge_shop_show": true,
+          "is_first_login": true,
+          "is_month_card_renewal_remind": true,
+          "is_limited_gift_shop_show": true,
+          "limited_gift_shop_count": 8,
+          "is_ranch_gift_shop_show": true,
+          "is_ranch_limited_gift_shop_show": true,
+          "ranch_limited_gift_shop_count": 11
+        },
+        "mutant_book_entries": [
+          {
+            "id": 2,
+            "start_time": 3,
+            "end_time": 4,
+            "activity_id": 5,
+            "red_point": true
+          }
+        ],
+        "moon_phase": 9,
+        "skin_login_info": {
+          "skin_modes": [
+            {
+              "id": 2,
+              "name": "official-fixture",
+              "icon": "official-fixture",
+              "skin_icon": "official-fixture",
+              "preview": 6,
+              "start_time": "official-fixture",
+              "end_time": "official-fixture",
+              "client_json": "official-fixture"
+            }
+          ],
+          "skin_set_effect_type_params": {
+            "2": {
+              "param1_int": 2
+            }
+          }
+        },
+        "weather": {
+          "weather_type": 2,
+          "source": 3,
+          "begin_time": 4,
+          "end_time": 5,
+          "is_active": true,
+          "afterglow_time": 7,
+          "afterglow_weather_type": 8,
+          "can_collect": true,
+          "block_reason": 10
+        }
+      },
+      "big_farm_scene_ext_data": {
+        "experiments": [
+          {
+            "id": 2,
+            "start_time": 3,
+            "end_time": 4,
+            "group_key": "official-fixture",
+            "exp_key": "official-fixture",
+            "is_default": true,
+            "is_control": true,
+            "is_white_list": true,
+            "module_code": "official-fixture",
+            "traffic_percentage": 12,
+            "hit": true
+          }
+        ],
+        "homestead_cells": {
+          "grid_width": 2,
+          "grid_height": 3,
+          "cells": [
+            {
+              "cell_id": 2,
+              "grid_x": 3,
+              "grid_y": 4,
+              "status": 5,
+              "occupied_by": 6,
+              "region_id": 7,
+              "unlock_end_time": 11,
+              "unlock_secs": 12,
+              "can_share_unlock": true
+            }
+          ],
+          "facilities": [
+            {
+              "instance_id": 2,
+              "facility_id": 3,
+              "module_type": 4,
+              "position_x": 5,
+              "position_y": 6,
+              "rotation": 7,
+              "level": 8,
+              "width": 9,
+              "height": 10,
+              "capacity": 11,
+              "occupied_cell_ids": [
+                12
+              ],
+              "state": 13,
+              "upgrade_state": 14,
+              "upgrade_end_time": 15
+            }
+          ],
+          "building_items": [
+            {
+              "inst_id": 2,
+              "facility_id": 3,
+              "level": 4,
+              "upgrade_state": 6,
+              "upgrade_end_time": 7,
+              "added_at": 8,
+              "is_new": true
+            }
+          ],
+          "has_ready_upgrade": true,
+          "region_occupied_count": 8,
+          "region_quota_count": 9,
+          "region_speed_up": {
+            "item_id": 2,
+            "own_count": 3,
+            "secs_per_item": 4
+          }
+        },
+        "mall_msg": {
+          "is_gift_shop_show": true,
+          "is_month_card_shop_show": true,
+          "is_recharge_shop_show": true,
+          "is_first_login": true,
+          "is_month_card_renewal_remind": true,
+          "is_limited_gift_shop_show": true,
+          "limited_gift_shop_count": 8,
+          "is_ranch_gift_shop_show": true,
+          "is_ranch_limited_gift_shop_show": true,
+          "ranch_limited_gift_shop_count": 11
+        },
+        "ranch_mutant_book_entries": [
+          {
+            "id": 2,
+            "start_time": 3,
+            "end_time": 4,
+            "activity_id": 5,
+            "red_point": true
+          }
+        ]
+      }
+    },
+    "hex": "0802100352a4020a4d08021003180422106f6666696369616c2d666978747572652a106f6666696369616c2d6669787475726538014001480152106f6666696369616c2d66697874757265590000000000002840600112170a11080210031804300738014201094801600d1003180422060802100318043214080110011801200128013001380840014801500b3a0a0802100318042005280140094a7a0a70080212106f6666696369616c2d666978747572651a106f6666696369616c2d6669787475726522106f6666696369616c2d66697874757265280632106f6666696369616c2d666978747572653a106f6666696369616c2d6669787475726542106f6666696369616c2d666978747572651206080212020802521208021003180420052801300738084001480a5ac8010a4d08021003180422106f6666696369616c2d666978747572652a106f6666696369616c2d6669787475726538014001480152106f6666696369616c2d6669787475726559000000000000284060011255080210031a12080210031804200528063007500b580c6001221d08021003180420052806300738084009480a500b5a010c600d680e700f2a0e08021003180428063007380840013001380840094a060802100318041a14080110011801200128013001380840014801500b220a08021003180420052801"
+  },
+  {
+    "method": "GetPlayerSceneInfo",
+    "direction": "request",
+    "params": {},
+    "hex": ""
+  },
+  {
+    "method": "GetPlayerSceneInfo",
+    "direction": "response",
+    "params": {
+      "default_global_scene_id": 2,
+      "active_global_scene_id": 3,
+      "unlocked_scenes": [
+        4
+      ]
+    },
+    "hex": "080210031a0104"
+  },
+  {
+    "method": "AllCells",
+    "direction": "request",
+    "params": {},
+    "hex": ""
+  },
+  {
+    "method": "AllCells",
+    "direction": "response",
+    "params": {
+      "grid_width": 2,
+      "grid_height": 3,
+      "cells": [
+        {
+          "cell_id": 2,
+          "grid_x": 3,
+          "grid_y": 4,
+          "status": 5,
+          "occupied_by": 6,
+          "region_id": 7,
+          "unlock_need": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "unlock_end_time": 11,
+          "unlock_secs": 12,
+          "can_share_unlock": true,
+          "share_cost": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ]
+        }
+      ],
+      "facilities": [
+        {
+          "instance_id": 2,
+          "facility_id": 3,
+          "module_type": 4,
+          "position_x": 5,
+          "position_y": 6,
+          "rotation": 7,
+          "level": 8,
+          "width": 9,
+          "height": 10,
+          "capacity": 11,
+          "occupied_cell_ids": [
+            12
+          ],
+          "ranch": {
+            "ranch_inst_id": 2,
+            "capacity": 3,
+            "animal_count": 4,
+            "animals": [
+              {
+                "ranch_inst_id": 2,
+                "slot_index": 3,
+                "animal_inst_id": 4,
+                "animal_id": 5,
+                "stage": 6,
+                "produce_count": 7,
+                "can_harvest": true,
+                "grow_ready_at_ms": 11,
+                "produce_ready_at_ms": 12,
+                "grass_blocked": true,
+                "infant_ready_at_ms": 15,
+                "producing": true,
+                "can_deliver": true,
+                "delivering_until_ms": 18,
+                "can_feed": true,
+                "limited_can_used": true,
+                "can_donate": true,
+                "expected_harvest_exp": 22,
+                "expected_produce_exp": 24,
+                "mature_ready_at_ms": 26
+              }
+            ],
+            "grass": {
+              "amount": 2,
+              "empty_at_ms": 3
+            },
+            "husbandry_type": 7,
+            "shelves": [
+              {
+                "slot_index": 2,
+                "total_remain": 4,
+                "can_collect": true,
+                "can_steal": true
+              }
+            ],
+            "hazards": [
+              {
+                "hazard_id": 2,
+                "owner": 3,
+                "hazard_type": 4
+              }
+            ]
+          },
+          "feed_machine": {
+            "feed_count": 2,
+            "consume_rate": 3,
+            "remaining_secs": 5,
+            "is_owner": true,
+            "status": 9
+          },
+          "order_board": {
+            "submittable_count": 2,
+            "slot_used": 3
+          },
+          "state": 13,
+          "upgrade_state": 14,
+          "upgrade_end_time": 15
+        }
+      ],
+      "building_items": [
+        {
+          "inst_id": 2,
+          "facility_id": 3,
+          "level": 4,
+          "upgrade_state": 6,
+          "upgrade_end_time": 7,
+          "added_at": 8,
+          "is_new": true
+        }
+      ],
+      "has_ready_upgrade": true,
+      "region_occupied_count": 8,
+      "region_quota_count": 9,
+      "region_speed_up": {
+        "item_id": 2,
+        "own_count": 3,
+        "secs_per_item": 4
+      }
+    },
+    "hex": "080210031a720802100318042005280630073a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da20600500b580c60016a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da2060022860108021003180420052806300738084009480a500b5a010ca2015208021003180422300802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b80118c8011a2a040802100330073a0808021804200128014206080210031804aa010a08021003200538014009b2010408021003600d680e700f2a0e08021003180428063007380840013001380840094a06080210031804"
+  },
+  {
+    "method": "GetRanchDetail",
+    "direction": "request",
+    "params": {
+      "host_gid": 2,
+      "ranch_inst_ids": [
+        3
+      ]
+    },
+    "hex": "0802120103"
+  },
+  {
+    "method": "GetRanchDetail",
+    "direction": "response",
+    "params": {
+      "ranches": [
+        {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_harvest_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "expected_produce_exp": 24,
+              "expected_produce_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "mature_ready_at_ms": 26,
+              "mutation": {
+                "mutation_type": 2,
+                "source": 3,
+                "weight_display_x10": 4,
+                "scale_bp": 5,
+                "weight_final_x10": 6,
+                "tier": 7,
+                "became_at_ms": 8,
+                "strokable": true,
+                "stroked_gids": [
+                  10
+                ]
+              }
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "lots": [
+                {
+                  "item_id": 2,
+                  "base_num": 3,
+                  "remain_num": 4,
+                  "stolen_num": 5,
+                  "animal_id": 6,
+                  "can_steal": true,
+                  "stealers": [
+                    8
+                  ]
+                }
+              ],
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        }
+      ],
+      "interval": 3
+    },
+    "hex": "0a870108021003180422540802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b2010408021003b80118c2010408021003c8011af20113080210031804200528063007380840014a010a2a040802100330073a190802120f0802100318042005280630013a010818042001280142060802100318041003"
+  },
+  {
+    "method": "HarvestRanch",
+    "direction": "request",
+    "params": {
+      "ranch_inst_ids": [
+        3
+      ],
+      "op": 4,
+      "animals": [
+        {
+          "ranch_inst_id": 2,
+          "animal_inst_id": 3
+        }
+      ],
+      "shelves": [
+        {
+          "ranch_inst_id": 2,
+          "slot_index": 3
+        }
+      ]
+    },
+    "hex": "12010318042204080210032a0408021003"
+  },
+  {
+    "method": "HarvestRanch",
+    "direction": "response",
+    "params": {
+      "ranches": [
+        {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_harvest_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "expected_produce_exp": 24,
+              "expected_produce_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "mature_ready_at_ms": 26,
+              "mutation": {
+                "mutation_type": 2,
+                "source": 3,
+                "weight_display_x10": 4,
+                "scale_bp": 5,
+                "weight_final_x10": 6,
+                "tier": 7,
+                "became_at_ms": 8,
+                "strokable": true,
+                "stroked_gids": [
+                  10
+                ]
+              }
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "lots": [
+                {
+                  "item_id": 2,
+                  "base_num": 3,
+                  "remain_num": 4,
+                  "stolen_num": 5,
+                  "animal_id": 6,
+                  "can_steal": true,
+                  "stealers": [
+                    8
+                  ]
+                }
+              ],
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        }
+      ],
+      "op_results": [
+        {
+          "facility_inst_id": 2,
+          "kind": 3,
+          "target_id": 4,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "costs": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ]
+        }
+      ],
+      "giant_shares": [
+        {
+          "animal_id": 2,
+          "weight_x10": 3,
+          "tier": 4
+        }
+      ]
+    },
+    "hex": "0a870108021003180422540802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b2010408021003b80118c2010408021003c8011af20113080210031804200528063007380840014a010a2a040802100330073a190802120f0802100318042005280630013a010818042001280142060802100318042a66080210031804522e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206005a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206003206080210031804"
+  },
+  {
+    "method": "CleanRanch",
+    "direction": "request",
+    "params": {
+      "host_gid": 2,
+      "hazard_ids": [
+        3
+      ]
+    },
+    "hex": "0802120103"
+  },
+  {
+    "method": "CleanRanch",
+    "direction": "response",
+    "params": {
+      "ranches": [
+        {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_harvest_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "expected_produce_exp": 24,
+              "expected_produce_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "mature_ready_at_ms": 26,
+              "mutation": {
+                "mutation_type": 2,
+                "source": 3,
+                "weight_display_x10": 4,
+                "scale_bp": 5,
+                "weight_final_x10": 6,
+                "tier": 7,
+                "became_at_ms": 8,
+                "strokable": true,
+                "stroked_gids": [
+                  10
+                ]
+              }
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "lots": [
+                {
+                  "item_id": 2,
+                  "base_num": 3,
+                  "remain_num": 4,
+                  "stolen_num": 5,
+                  "animal_id": 6,
+                  "can_steal": true,
+                  "stealers": [
+                    8
+                  ]
+                }
+              ],
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        }
+      ],
+      "op_results": [
+        {
+          "facility_inst_id": 2,
+          "kind": 3,
+          "target_id": 4,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "costs": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ]
+        }
+      ]
+    },
+    "hex": "0a870108021003180422540802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b2010408021003b80118c2010408021003c8011af20113080210031804200528063007380840014a010a2a040802100330073a190802120f0802100318042005280630013a010818042001280142060802100318041266080210031804522e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206005a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da20600"
+  },
+  {
+    "method": "CleanAllRanch",
+    "direction": "request",
+    "params": {
+      "host_gid": 2,
+      "ranch_inst_ids": [
+        3
+      ]
+    },
+    "hex": "0802120103"
+  },
+  {
+    "method": "CleanAllRanch",
+    "direction": "response",
+    "params": {
+      "ranches": [
+        {
+          "ranch_inst_id": 2,
+          "capacity": 3,
+          "animal_count": 4,
+          "animals": [
+            {
+              "ranch_inst_id": 2,
+              "slot_index": 3,
+              "animal_inst_id": 4,
+              "animal_id": 5,
+              "stage": 6,
+              "produce_count": 7,
+              "can_harvest": true,
+              "grow_ready_at_ms": 11,
+              "produce_ready_at_ms": 12,
+              "grass_blocked": true,
+              "infant_ready_at_ms": 15,
+              "producing": true,
+              "can_deliver": true,
+              "delivering_until_ms": 18,
+              "can_feed": true,
+              "limited_can_used": true,
+              "can_donate": true,
+              "expected_harvest_exp": 22,
+              "expected_harvest_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "expected_produce_exp": 24,
+              "expected_produce_sells": [
+                {
+                  "id": 2,
+                  "count": 3
+                }
+              ],
+              "mature_ready_at_ms": 26,
+              "mutation": {
+                "mutation_type": 2,
+                "source": 3,
+                "weight_display_x10": 4,
+                "scale_bp": 5,
+                "weight_final_x10": 6,
+                "tier": 7,
+                "became_at_ms": 8,
+                "strokable": true,
+                "stroked_gids": [
+                  10
+                ]
+              }
+            }
+          ],
+          "grass": {
+            "amount": 2,
+            "empty_at_ms": 3
+          },
+          "husbandry_type": 7,
+          "shelves": [
+            {
+              "slot_index": 2,
+              "lots": [
+                {
+                  "item_id": 2,
+                  "base_num": 3,
+                  "remain_num": 4,
+                  "stolen_num": 5,
+                  "animal_id": 6,
+                  "can_steal": true,
+                  "stealers": [
+                    8
+                  ]
+                }
+              ],
+              "total_remain": 4,
+              "can_collect": true,
+              "can_steal": true
+            }
+          ],
+          "hazards": [
+            {
+              "hazard_id": 2,
+              "owner": 3,
+              "hazard_type": 4
+            }
+          ]
+        }
+      ],
+      "op_results": [
+        {
+          "facility_inst_id": 2,
+          "kind": 3,
+          "target_id": 4,
+          "rewards": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ],
+          "costs": [
+            {
+              "id": 2,
+              "count": 3,
+              "expire_time": 4,
+              "uid": 7,
+              "is_new": true,
+              "mutant_types": [
+                9
+              ],
+              "is_locked": true,
+              "gift_detail": {
+                "sender_name": "official-fixture",
+                "send_time": 3,
+                "msg_text_id": 4
+              },
+              "item_detail": {},
+              "tab_id": 13,
+              "show": {}
+            }
+          ]
+        }
+      ]
+    },
+    "hex": "0a870108021003180422540802100318042005280630073801500b580c6001700f7801800101880112900101980101a00101a80116b2010408021003b80118c2010408021003c8011af20113080210031804200528063007380840014a010a2a040802100330073a190802120f0802100318042005280630013a010818042001280142060802100318041266080210031804522e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da206005a2e08021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a00600da20600"
+  },
+  {
+    "method": "GetBag",
+    "direction": "request",
+    "params": {
+      "global_scene_id": 2,
+      "tab_id": 3
+    },
+    "hex": "08021003"
+  },
+  {
+    "method": "GetBag",
+    "direction": "response",
+    "params": {
+      "physical_items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "virtual_items": [
+        {
+          "id": 2,
+          "count": 3,
+          "expire_time": 4,
+          "uid": 7,
+          "is_new": true,
+          "mutant_types": [
+            9
+          ],
+          "is_locked": true,
+          "gift_detail": {
+            "sender_name": "official-fixture",
+            "send_time": 3,
+            "msg_text_id": 4
+          },
+          "item_detail": {
+            "weather_wood": {
+              "src_id": 2,
+              "src_count": 3,
+              "price_rate": 4,
+              "base_point": 5
+            },
+            "ranch_product": {
+              "src_item_id": 2,
+              "src_animal_id": 3,
+              "weight_x10": 4,
+              "tier": 5,
+              "price_rate": 6,
+              "base_point": 7
+            }
+          },
+          "tab_id": 13,
+          "show": {
+            "sell_cond": [
+              {
+                "type": "official-fixture"
+              }
+            ],
+            "sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ],
+            "cond_sells": [
+              {
+                "id": 2,
+                "count": 3
+              }
+            ]
+          }
+        }
+      ],
+      "max_grid_num": 4,
+      "curr_grid_num": 5,
+      "global_scene_id": 6
+    },
+    "hex": "0a6608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003126608021003180430073801420109480152160a106f6666696369616c2d66697874757265100318045a180a080802100318042005120c080210031804200528063007600da206201a120a106f6666696369616c2d666978747572652204080210032a0408021003180420052806"
+  },
+  {
+    "method": "GetBagTab",
+    "direction": "request",
+    "params": {
+      "global_scene_id": 2
+    },
+    "hex": "0802"
+  },
+  {
+    "method": "GetBagTab",
+    "direction": "response",
+    "params": {
+      "tabs": [
+        {
+          "tab_id": 2,
+          "tab_name": "official-fixture",
+          "item_count": 4,
+          "has_red_dot": true
+        }
+      ],
+      "global_scene_id": 3
+    },
+    "hex": "0a18080212106f6666696369616c2d66697874757265180420011003"
+  },
+  {
+    "method": "GetOrderPanel",
+    "direction": "request",
+    "params": {},
+    "hex": ""
+  },
+  {
+    "method": "GetOrderPanel",
+    "direction": "response",
+    "params": {
+      "panel": {
+        "board_level": 2,
+        "slot_num": 3,
+        "submit_limit": 4,
+        "refresh_limit": 5,
+        "pity_count": 6,
+        "slots": [
+          {
+            "slot_index": 2,
+            "instance_id": "official-fixture",
+            "template_id": 4,
+            "pool_id": 5,
+            "order_quality": 6,
+            "req_items": [
+              {
+                "id": 2,
+                "count": 3,
+                "expire_time": 4,
+                "uid": 7,
+                "is_new": true,
+                "mutant_types": [
+                  9
+                ],
+                "is_locked": true,
+                "tab_id": 13
+              }
+            ],
+            "reward_items": [
+              {
+                "id": 2,
+                "count": 3,
+                "expire_time": 4,
+                "uid": 7,
+                "is_new": true,
+                "mutant_types": [
+                  9
+                ],
+                "is_locked": true,
+                "tab_id": 13
+              }
+            ],
+            "created_at": 9,
+            "submit_state": 10
+          }
+        ],
+        "submit_quota": 8,
+        "refresh_quota": 9,
+        "rare_pity": 10
+      }
+    },
+    "hex": "0a56080210031804200528063244080212106f6666696369616c2d666978747572651804200528063211080210031804300738014201094801600d3a11080210031804300738014201094801600d4009480a38084009480a"
+  }
+]

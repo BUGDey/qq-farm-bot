@@ -24,13 +24,14 @@ const emit = defineEmits<{
   (e: 'refresh'): void
 }>()
 
+const isRanch = computed(() => props.profile?.scene === 'ranch')
 const harvestedItems = computed(() => (props.items || [])
   .filter(item => Number(item.harvestCount) > 0)
   .sort((a, b) => Number(b.harvestCount) - Number(a.harvestCount)))
 
 const totalHarvest = computed(() => Number(props.profile?.totalHarvestCount ?? harvestedItems.value.reduce((sum, item) => sum + Number(item.harvestCount || 0), 0)))
 const topItems = computed(() => harvestedItems.value.slice(0, 3))
-const name = computed(() => String(props.profile?.name || props.account?.nick || props.account?.name || '农场主'))
+const name = computed(() => String(props.profile?.name || props.account?.nick || props.account?.name || (isRanch.value ? '牧场主' : '农场主')))
 const avatar = computed(() => String(props.profile?.avatar || props.account?.avatar || ''))
 const level = computed(() => Number(props.profile?.level || 0))
 const exp = computed(() => Number(props.profile?.exp || 0))
@@ -84,7 +85,7 @@ useModalFocus(() => props.show, modalSurface, () => emit('close'))
 
         <div class="custom-scrollbar max-h-[calc(min(88vh,820px)-106px)] overflow-y-auto p-5 sm:p-7">
           <div class="mb-4 text-center text-2xl text-amber-700 font-bold dark:text-amber-300">
-            生涯
+            {{ isRanch ? '牧场生涯' : '生涯' }}
           </div>
 
           <div v-if="loading" class="h-56 flex flex-col items-center justify-center gap-3 text-gray-400">
@@ -103,6 +104,29 @@ useModalFocus(() => props.show, modalSurface, () => emit('close'))
           </div>
 
           <template v-else>
+            <!-- 牧场生涯：真实牧场等级/经验，不展示农场专属的收获/摘取统计 -->
+            <div v-if="isRanch" class="grid grid-cols-2 gap-3">
+              <div class="rounded-2xl bg-white p-4 text-center shadow-sm dark:bg-gray-800">
+                <div class="flex items-center justify-center gap-2 text-sm text-emerald-600 dark:text-emerald-300">
+                  <div class="i-carbon-cattle" />
+                  <span>牧场等级</span>
+                </div>
+                <div class="mt-1 text-2xl text-emerald-600 font-bold">Lv.{{ level }}</div>
+              </div>
+              <div class="rounded-2xl bg-white p-4 text-center shadow-sm dark:bg-gray-800">
+                <div class="flex items-center justify-center gap-2 text-sm text-lime-600 dark:text-lime-300">
+                  <div class="i-fas-bolt" />
+                  <span>牧场经验</span>
+                </div>
+                <div class="mt-1 text-2xl text-lime-600 font-bold">{{ formatCompactNumber(exp) }}</div>
+                <div class="mt-0.5 text-[10px] text-gray-400">来自牧场档案</div>
+              </div>
+            </div>
+            <div v-if="isRanch" class="mt-4 rounded-2xl bg-white p-4 text-center text-sm text-gray-500 shadow-sm dark:bg-gray-800 dark:text-gray-400">
+              牧场暂无独立的生涯统计接口，这里展示的是牧场自身的等级与累计经验。
+            </div>
+
+            <template v-if="!isRanch">
             <div class="grid grid-cols-2 gap-3">
               <div class="rounded-2xl bg-white p-4 text-center shadow-sm dark:bg-gray-800" :title="`精确数量：${formatNumber(totalHarvest)}`">
                 <div class="flex items-center justify-center gap-2 text-sm text-orange-600 dark:text-orange-300">
@@ -168,6 +192,7 @@ useModalFocus(() => props.show, modalSurface, () => emit('close'))
             <div v-else class="rounded-2xl bg-white py-12 text-center text-sm text-gray-400 dark:bg-gray-800">
               暂无收获记录
             </div>
+            </template>
           </template>
         </div>
       </section>

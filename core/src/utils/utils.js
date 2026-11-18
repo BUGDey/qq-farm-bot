@@ -133,6 +133,19 @@ function log(arg1, arg2, arg3 = null) {
     }
 }
 
+/**
+ * 调试级日志：写入 logger 但不推送到前端日志钩子。
+ * 用于正常的、高频的内部决策，默认 LOG_LEVEL=info 时不会进入主日志文件；
+ * 需要排查时将 LOG_LEVEL 设为 debug 即可恢复可观测性。
+ */
+function logDebug(arg1, arg2, arg3 = null) {
+    const { tag, msg, meta } = normalizeLogArgs(arg1, arg2, arg3);
+    const safeMeta = normalizeMeta(meta);
+    if (!safeMeta.module) safeMeta.module = inferModuleFromTag(tag);
+    const displayTag = resolveModuleTag(safeMeta.module);
+    coreLogger.debug(msg, { tag: displayTag, ...safeMeta });
+}
+
 function logWarn(arg1, arg2, arg3 = null) {
     const { tag, msg, meta } = normalizeLogArgs(arg1, arg2, arg3);
     const safeMeta = normalizeMeta(meta);
@@ -160,5 +173,5 @@ module.exports = {
     toLong, toNum, now,
     setLogHook,
     getServerTimeSec, syncServerTime, toTimeSec,
-    log, logWarn, sleep, randomDelay,
+    log, logDebug, logWarn, sleep, randomDelay,
 };

@@ -35,7 +35,11 @@ export const useFriendStore = defineStore('friend', () => {
   const knownFriendSettingsLoading = ref(false)
   const knownFriendSettingsSaving = ref(false)
 
+  let friendsRequest = 0
+
   function clearFriendData() {
+    friendsRequest++
+    loading.value = false
     friends.value = []
     friendLands.value = {}
     friendLandsLoading.value = {}
@@ -108,20 +112,22 @@ export const useFriendStore = defineStore('friend', () => {
     if (!accountId)
       return
     const requestedId = String(accountId)
+    const request = ++friendsRequest
     loading.value = true
     try {
       const res = await api.get('/api/friends', {
         headers: { 'x-account-id': accountId },
         params: forceSync ? { forceSync: 'true' } : {},
       })
-      if (!isCurrentAccount(requestedId))
+      if (request !== friendsRequest || !isCurrentAccount(requestedId))
         return
       if (res.data.ok) {
         friends.value = res.data.data || []
       }
     }
     finally {
-      loading.value = false
+      if (request === friendsRequest)
+        loading.value = false
     }
   }
 

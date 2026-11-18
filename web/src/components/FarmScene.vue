@@ -17,6 +17,7 @@ const emit = defineEmits<{
   (e: 'fertilize', land: any): void
   (e: 'remove', land: any): void
   (e: 'select', land: any): void
+  (e: 'land', land: any): void
 }>()
 
 const farmSceneImageCache = new Map<string, HTMLImageElement>()
@@ -208,6 +209,7 @@ onUnmounted(() => {
         :selection-active="selectedLandId !== null"
         :show-actions="false"
         @select="selectLand"
+        @land="emit('land', land)"
         @fertilize="emit('fertilize', land)"
         @remove="emit('remove', land)"
       />

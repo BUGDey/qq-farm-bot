@@ -7,6 +7,7 @@ import AccountCareerModal from '@/components/AccountCareerModal.vue'
 import AccountModal from '@/components/AccountModal.vue'
 import RemarkModal from '@/components/RemarkModal.vue'
 import { getPlatformClass, getPlatformLabel, useAccountStore } from '@/stores/account'
+import { useGameSpaceStore } from '@/stores/game-space'
 import { useStatusStore } from '@/stores/status'
 
 withDefaults(defineProps<{
@@ -15,6 +16,7 @@ withDefaults(defineProps<{
 }>(), { light: false })
 const accountStore = useAccountStore()
 const statusStore = useStatusStore()
+const gameSpace = useGameSpaceStore()
 const { accounts, currentAccount } = storeToRefs(accountStore)
 const { currentStatusReady, status } = storeToRefs(statusStore)
 
@@ -144,13 +146,37 @@ async function loadCareer() {
   careerLoading.value = true
   careerError.value = ''
   try {
-    const { data } = await api.get('/api/career', {
-      headers: { 'x-account-id': accountId },
-    })
-    if (!data?.ok)
-      throw new Error(data?.error || '生涯记录读取失败')
-    careerProfile.value = data.data || {}
-    careerItems.value = data.data?.items || []
+    if (gameSpace.isRanch) {
+      // 牧场没有独立生涯 RPC，用真实的牧场档案（等级/经验来自 GetBag 的累计经验）。
+      // 不拿农场 CareerInfoGet 数据冒充牧场生涯。
+      const { data } = await api.get('/api/ranch/profile', {
+        headers: { 'x-account-id': accountId },
+      })
+      if (!data?.ok)
+        throw new Error(data?.error || '牧场生涯读取失败')
+      const profile = data.data || {}
+      careerProfile.value = {
+        name: profile.name || currentAccount.value?.nick || '牧场主',
+        avatar: profile.avatar || '',
+        level: profile.level ?? 0,
+        exp: profile.exp ?? 0,
+        totalHarvestCount: 0,
+        totalStealCount: 0,
+        gid: profile.gid || currentAccount.value?.gid || '',
+        // 供弹窗展示牧场专属说明
+        scene: 'ranch',
+      }
+      careerItems.value = []
+    }
+    else {
+      const { data } = await api.get('/api/career', {
+        headers: { 'x-account-id': accountId },
+      })
+      if (!data?.ok)
+        throw new Error(data?.error || '生涯记录读取失败')
+      careerProfile.value = { ...(data.data || {}), scene: 'farm' }
+      careerItems.value = data.data?.items || []
+    }
   }
   catch (error: any) {
     careerError.value = error?.response?.data?.error || error?.message || '生涯记录读取失败'

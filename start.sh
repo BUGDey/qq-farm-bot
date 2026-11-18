@@ -159,7 +159,7 @@ FARM_BOOTSTRAP_ADMIN_AS_SUPER=true
 # ---- NapCat（QQ 扫码登录）----
 # 默认关闭。执行 ./start.sh 2 会自动改为 true 并启用 napcat 容器
 NAPCAT_LOGIN_ENABLED=false
-NAPCAT_IMAGE=mlikiowa/napcat-docker:v4.18.19
+NAPCAT_IMAGE=docker.m.daocloud.io/mlikiowa/napcat-docker:v4.18.42
 # QQ 登录记录里显示的设备名（只用字母/数字/连字符；修改后需重建 NapCat 容器才生效）
 NAPCAT_DEVICE_NAME=${DEFAULT_NAPCAT_DEVICE_NAME}
 
@@ -208,14 +208,77 @@ print_admin_credentials() {
 
 # ==================== NapCat（QQ 扫码登录）配置 ====================
 
-detect_napcat_image() {
-  local arch
-  arch="$(uname -m)"
-  case "$arch" in
-    x86_64|amd64) echo "mlikiowa/napcat-docker:v4.18.19" ;;
-    aarch64|arm64) echo "mlikiowa/napcat-docker:latest" ;;
-    *) echo "mlikiowa/napcat-docker:latest" ;;
+# NapCat 官方镜像坐标（仓库名固定，tag 见下面的候选表）
+NAPCAT_REPO="mlikiowa/napcat-docker"
+
+# Docker 镜像加速前缀，按「实测能拉到」的顺序排。
+# 空串 = 直连 Docker Hub。
+# 2026-11-16 起 Docker Hub 上的 mlikiowa/napcat-docker 已被作者下架（仓库返回 404），
+# 直连和多数加速站都会失败；DaoCloud 因为还有缓存，目前仍能拉到 v4.18.42 / v4.18.41 /
+# v4.18.32 / latest，所以把它排在第一位。
+NAPCAT_MIRROR_PREFIXES=(
+  "docker.m.daocloud.io"
+  "docker.1ms.run"
+  "docker.xuanyuan.me"
+  "docker.mybacc.com"
+  "dytt.online"
+  "lispy.org"
+  "swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io"
+  ""
+)
+
+# 候选 tag，新→旧。镜像源只缓存了部分版本，逐个退。
+NAPCAT_TAGS_X86=("v4.18.42" "v4.18.41" "v4.18.32" "latest")
+NAPCAT_TAGS_ARM=("v4.18.42" "v4.18.41" "latest")
+
+# 实际拉取验证完整镜像；本地已有镜像时保留用户的离线导入结果。
+napcat_ref_ok() {
+  [ -n "$1" ] || return 1
+  if docker image inspect "$1" >/dev/null 2>&1; then
+    printf '  使用本地镜像: %s\n' "$1" >&2
+    return 0
+  fi
+  printf '  拉取镜像: %s（单次最多 %s 秒）\n' "$1" "$NAPCAT_PULL_TIMEOUT" >&2
+  timeout --kill-after=10 "$NAPCAT_PULL_TIMEOUT" docker pull "$1" >&2
+}
+
+# 每次最多试各镜像源的首选版本，再逐个回退旧 tag；进度不写入返回值。
+resolve_napcat_image() {
+  local current host tag ref
+  local -a tags
+  local -A tried=()
+  command -v timeout >/dev/null 2>&1 || { printf '缺少 timeout，请先安装 coreutils。\n' >&2; return 1; }
+  local NAPCAT_PULL_TIMEOUT="${NAPCAT_PULL_TIMEOUT_SECONDS:-90}"
+  [[ "$NAPCAT_PULL_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || NAPCAT_PULL_TIMEOUT=90
+  current="$(grep -E '^NAPCAT_IMAGE=' .env 2>/dev/null | head -1 | cut -d= -f2- || true)"
+  current="${current%$'\r'}"
+  current="${current%\"}"; current="${current#\"}"
+  current="${current%\'}"; current="${current#\'}"
+  if [ -n "$current" ]; then
+    tried["$current"]=1
+    if napcat_ref_ok "$current"; then printf '%s\n' "$current"; return 0; fi
+  fi
+  case "$(uname -m)" in
+    aarch64|arm64) tags=("${NAPCAT_TAGS_ARM[@]}") ;;
+    *) tags=("${NAPCAT_TAGS_X86[@]}") ;;
   esac
+  for tag in "${tags[@]}"; do
+    for host in "${NAPCAT_MIRROR_PREFIXES[@]}"; do
+      if [ -z "$host" ]; then ref="${NAPCAT_REPO}:$tag"; else ref="$host/${NAPCAT_REPO}:$tag"; fi
+      [ -z "${tried[$ref]:-}" ] || continue
+      tried["$ref"]=1
+      if napcat_ref_ok "$ref"; then printf '%s\n' "$ref"; return 0; fi
+      printf '  拉取失败，尝试下一个来源。\n' >&2
+    done
+  done
+  return 1
+}
+
+print_napcat_image_missing_hint() {
+  warn "所有候选 NapCat 镜像均拉取失败，已停止 QQ 登录版部署。"
+  warn "请检查网络、镜像源缓存和 CPU 架构；可在 .env 设置 NAPCAT_IMAGE 为已验证的镜像坐标。"
+  warn "如有可信镜像备份，可 docker load 导入后设置对应 tag；BuildKit 构建仍可能访问 registry。"
+  warn "也可先执行 ./start.sh 1 运行默认版。"
 }
 
 enable_napcat() {
@@ -231,16 +294,24 @@ enable_napcat() {
     device_name="$current"
     log "保留你在 .env 中自定义的设备名: ${device_name}"
   fi
+  local napcat_image
+  if napcat_image="$(resolve_napcat_image)"; then
+    log "NapCat 镜像: ${napcat_image}"
+  else
+    print_napcat_image_missing_hint
+    return 1
+  fi
+
   set_env_var "NAPCAT_LOGIN_ENABLED" "true"
   set_env_var "NAPCAT_DEVICE_NAME" "${device_name}"
-  set_env_var "NAPCAT_IMAGE" "$(detect_napcat_image)"
+  set_env_var "NAPCAT_IMAGE" "${napcat_image}"
   set_env_var "NAPCAT_UID" "1000"
   set_env_var "NAPCAT_GID" "1000"
 
   # 让 compose 默认带上 napcat profile，后续 stop/logs/status 也能看到该服务
   set_env_var "COMPOSE_PROFILES" "napcat"
 
-  ok "NapCat 已启用（设备名: ${device_name}，镜像: $(detect_napcat_image)）"
+  ok "NapCat 已启用（设备名: ${device_name}，镜像: ${napcat_image}）"
 }
 
 # 切回默认版时把 NapCat 关掉，避免 profile 残留在 .env 里
@@ -280,7 +351,10 @@ wait_napcat_ready() {
   warn "NapCat 超过 5 分钟仍未就绪，请检查容器状态与日志："
   warn "  ./start.sh status"
   warn "  ${DOCKER_COMPOSE[*]} logs napcat --tail=100"
-  warn "常见原因：镜像拉取失败（网络）、架构不匹配（ARM 需 NAPCAT_IMAGE=mlikiowa/napcat-docker:latest）"
+  warn "常见原因：镜像拉取失败、镜像源缓存不完整、"
+  warn "          加速源没有缓存该版本、架构不匹配（ARM 别选 amd64 专属 tag）"
+  warn "  .env 里换成仍可用的坐标后重试，例如："
+  warn "  NAPCAT_IMAGE=docker.m.daocloud.io/${NAPCAT_REPO}:v4.18.42"
   return 0
 }
 
@@ -309,7 +383,7 @@ deploy_docker() {
   prepare_env
 
   if [ "$with_napcat" = "true" ]; then
-    enable_napcat
+    enable_napcat || return 1
     maybe_migrate_data
     prepare_napcat_dirs
     if port_in_use "$NAPCAT_PORT"; then

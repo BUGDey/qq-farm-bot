@@ -1,0 +1,1492 @@
+// Recovered from official generated decode functions; do not guess field numbers.
+// Source snapshot SHA256: 7d7632c7bea6b7c9adbd92244d3b131f8c70d13a2f61fa57f7902bd934727a79
+syntax = "proto3";
+package ranchbridge;
+
+message animal_AnimalDetail {
+  int64 ranch_inst_id = 1;
+  int32 slot_index = 2;
+  int32 animal_inst_id = 3;
+  int64 animal_id = 4;
+  int32 stage = 5;
+  int32 produce_count = 6;
+  bool can_harvest = 7;
+  int64 grow_ready_at_ms = 10;
+  int64 produce_ready_at_ms = 11;
+  bool grass_blocked = 12;
+  int64 infant_ready_at_ms = 14;
+  bool producing = 15;
+  bool can_deliver = 16;
+  int64 delivering_until_ms = 17;
+  bool can_feed = 18;
+  bool limited_can_used = 19;
+  bool can_donate = 20;
+  int64 expected_harvest_exp = 21;
+  repeated common_ItemEntry expected_harvest_sells = 22;
+  int64 expected_produce_exp = 23;
+  repeated common_ItemEntry expected_produce_sells = 24;
+  int64 mature_ready_at_ms = 25;
+  animal_AnimalMutationView mutation = 30;
+}
+
+message animal_AnimalMutationView {
+  int32 mutation_type = 1;
+  int32 source = 2;
+  int32 weight_display_x10 = 3;
+  int32 scale_bp = 4;
+  int32 weight_final_x10 = 5;
+  int32 tier = 6;
+  int64 became_at_ms = 7;
+  bool strokable = 8;
+  repeated int64 stroked_gids = 9 [packed = true];
+}
+
+message animal_AnimalRef {
+  int64 ranch_inst_id = 1;
+  int32 animal_inst_id = 2;
+}
+
+message animal_CleanAllRanchReply {
+  repeated animal_RanchDetail ranches = 1;
+  repeated facility_FacilityOpResult op_results = 2;
+}
+
+message animal_CleanAllRanchRequest {
+  int64 host_gid = 1;
+  repeated int64 ranch_inst_ids = 2 [packed = true];
+}
+
+message animal_CleanRanchReply {
+  repeated animal_RanchDetail ranches = 1;
+  repeated facility_FacilityOpResult op_results = 2;
+}
+
+message animal_CleanRanchRequest {
+  int64 host_gid = 1;
+  repeated int64 hazard_ids = 2 [packed = true];
+}
+
+message animal_FeedAnimalReply {
+  repeated animal_RanchDetail ranches = 1;
+  int64 deduct_secs = 2;
+  int64 bucket_remain_secs = 4;
+  repeated facility_FacilityOpResult op_results = 5;
+}
+
+message animal_FeedAnimalRequest {
+  repeated animal_AnimalRef targets = 1;
+  int32 bucket_type = 2;
+}
+
+message animal_GetRanchDetailReply {
+  repeated animal_RanchDetail ranches = 1;
+  int64 interval = 2;
+}
+
+message animal_GetRanchDetailRequest {
+  int64 host_gid = 1;
+  repeated int64 ranch_inst_ids = 2 [packed = true];
+}
+
+message animal_GetRanchOpTimesReply {
+  repeated animal_RanchOpTimesView ops = 1;
+}
+
+message animal_GetRanchOpTimesRequest {
+  repeated int64 op_ids = 1 [packed = true];
+}
+
+message animal_GiantShareView {
+  int64 animal_id = 1;
+  int32 weight_x10 = 2;
+  int32 tier = 3;
+}
+
+message animal_GrassInfo {
+  int64 amount = 1;
+  int64 empty_at_ms = 2;
+}
+
+message animal_HarvestRanchReply {
+  repeated animal_RanchDetail ranches = 1;
+  repeated facility_FacilityOpResult op_results = 5;
+  repeated animal_GiantShareView giant_shares = 6;
+}
+
+message animal_HarvestRanchRequest {
+  repeated int64 ranch_inst_ids = 2 [packed = true];
+  int32 op = 3;
+  repeated animal_AnimalRef animals = 4;
+  repeated animal_ShelfRef shelves = 5;
+}
+
+message animal_PlaceAnimalItem {
+  int64 ranch_inst_id = 1;
+  int64 animal_id = 2;
+  int64 giant_cub_item_id = 3;
+}
+
+message animal_PlaceAnimalReply {
+  repeated animal_RanchDetail ranches = 1;
+  repeated facility_FacilityOpResult op_results = 3;
+}
+
+message animal_PlaceAnimalRequest {
+  repeated animal_PlaceAnimalItem items = 1;
+}
+
+message animal_ProductLotDetail {
+  int64 item_id = 1;
+  int64 base_num = 2;
+  int64 remain_num = 3;
+  int64 stolen_num = 4;
+  int64 animal_id = 5;
+  bool can_steal = 6;
+  repeated int64 stealers = 7 [packed = true];
+}
+
+message animal_PutHazardReply {
+  int64 actual_count = 1;
+  int64 remaining_times = 2;
+  repeated animal_RanchHazardView hazards = 3;
+  repeated common_Item rewards = 4;
+}
+
+message animal_PutHazardRequest {
+  int64 ranch_inst_id = 1;
+  int64 host_gid = 2;
+  int64 op_id = 3;
+  int64 count = 4;
+}
+
+message animal_RanchDetail {
+  int64 ranch_inst_id = 1;
+  int32 capacity = 2;
+  int32 animal_count = 3;
+  repeated animal_AnimalDetail animals = 4;
+  animal_GrassInfo grass = 5;
+  int32 husbandry_type = 6;
+  repeated animal_ShelfDetail shelves = 7;
+  repeated animal_RanchHazardView hazards = 8;
+}
+
+message animal_RanchHazardView {
+  int64 hazard_id = 1;
+  int64 owner = 2;
+  int32 hazard_type = 3;
+}
+
+message animal_RanchOpTimesView {
+  int64 op_id = 1;
+  int64 times_limit = 2;
+  int64 used_times = 3;
+  int64 remaining_times = 4;
+}
+
+message animal_ShelfDetail {
+  int32 slot_index = 1;
+  repeated animal_ProductLotDetail lots = 2;
+  int64 total_remain = 3;
+  bool can_collect = 4;
+  bool can_steal = 5;
+}
+
+message animal_ShelfRef {
+  int64 ranch_inst_id = 1;
+  int32 slot_index = 2;
+}
+
+message animal_StealProduceReply {
+  repeated animal_RanchDetail ranches = 1;
+  repeated facility_FacilityOpResult op_results = 4;
+}
+
+message animal_StealProduceRequest {
+  int64 host_gid = 1;
+  repeated animal_ShelfRef targets = 2;
+}
+
+message animal_StrokeAnimalReply {
+  repeated animal_RanchDetail ranches = 1;
+  facility_FacilityOpResult op_result = 2;
+  bool triggered = 3;
+  int64 remaining_times = 4;
+}
+
+message animal_StrokeAnimalRequest {
+  int64 host_gid = 1;
+  animal_AnimalRef target = 2;
+}
+
+message animal_TriggerProduceReply {
+  repeated animal_RanchDetail ranches = 1;
+  repeated facility_FacilityOpResult op_results = 3;
+}
+
+message animal_TriggerProduceRequest {
+  int64 host_gid = 1;
+  repeated animal_AnimalRef targets = 2;
+}
+
+message avatarframe_AvatarFrame {
+  int64 id = 1;
+  int32 type = 2;
+  int64 count = 3;
+  int32 priority = 4;
+  bool is_new = 5;
+  int64 expire_time = 6;
+}
+
+message common_BindedCommunityInfo {
+  string openid = 1;
+  string name = 2;
+  string avatar = 3;
+}
+
+message common_BuffEffect {
+  int64 attr_id = 1;
+  int64 attr_value = 2;
+  int64 extra_info = 3;
+}
+
+message common_GiftDetail {
+  string sender_name = 1;
+  int64 send_time = 2;
+  int64 msg_text_id = 3;
+}
+
+message common_Item {
+  int64 id = 1;
+  int64 count = 2;
+  int64 expire_time = 3;
+  int64 uid = 6;
+  bool is_new = 7;
+  repeated int64 mutant_types = 8 [packed = true];
+  bool is_locked = 9;
+  common_GiftDetail gift_detail = 10;
+  common_ItemDetail item_detail = 11;
+  int64 tab_id = 12;
+  common_ItemShow show = 100;
+}
+
+message common_ItemBag {
+  repeated common_Item items = 1;
+  int64 max_grid_num = 2;
+  int64 curr_grid_num = 3;
+}
+
+message common_ItemDetail {
+  common_ItemWeatherWood weather_wood = 1;
+  common_ItemRanchProduct ranch_product = 2;
+}
+
+message common_ItemEntry {
+  int64 id = 1;
+  int64 count = 2;
+}
+
+message common_ItemRanchProduct {
+  int64 src_item_id = 1;
+  int64 src_animal_id = 2;
+  int32 weight_x10 = 3;
+  int32 tier = 4;
+  int64 price_rate = 5;
+  int64 base_point = 6;
+}
+
+message common_ItemShow {
+  repeated common_SellCond sell_cond = 3;
+  repeated common_ItemEntry sells = 4;
+  repeated common_ItemEntry cond_sells = 5;
+}
+
+message common_ItemWeatherWood {
+  int64 src_id = 1;
+  int64 src_count = 2;
+  int64 price_rate = 3;
+  int64 base_point = 4;
+}
+
+message common_SellCond {
+  string type = 1;
+  string params = 2;
+}
+
+message common_SimpleMonthCardInfo {
+  int64 id = 1;
+}
+
+message facility_FacilityOpResult {
+  int64 facility_inst_id = 1;
+  int32 kind = 2;
+  int64 target_id = 3;
+  repeated common_Item rewards = 10;
+  repeated common_Item costs = 11;
+}
+
+message friend_BattlePassBrief {
+  int64 season_id = 1;
+  int64 level = 2;
+  int64 level_up_at = 3;
+}
+
+message friend_BigFarmStatus {
+  bool can_steal = 1;
+  bool can_midwife = 2;
+  bool can_help = 3;
+  int32 steal_lot_count = 4;
+  int32 midwife_count = 5;
+  int32 help_count = 6;
+}
+
+message friend_BlockedPlayer {
+  int64 gid = 1;
+  string name = 2;
+  string avatar_url = 3;
+  int64 level = 4;
+  int64 blocked_at = 5;
+  string open_id = 6;
+}
+
+message friend_CollectionInfo {
+  map<int32, friend_CollectionScore> score = 1;
+}
+
+message friend_CollectionInfo_ScoreEntry {
+  int32 key = 1;
+  friend_CollectionScore value = 2;
+}
+
+message friend_CollectionScore {
+  int32 score = 1;
+  int64 score_time = 2;
+}
+
+message friend_GameFriend {
+  int64 gid = 1;
+  string open_id = 2;
+  string name = 3;
+  string avatar_url = 4;
+  string remark = 5;
+  int64 level = 6;
+  int64 gold = 7;
+  friend_Tags tags = 8;
+  friend_Plant plant = 9;
+  int32 authorized_status = 10;
+  int32 host_type = 11;
+  friend_Illustrated illustrated = 12;
+  repeated avatarframe_AvatarFrame equip_avatar_frames = 13;
+  int64 exp = 14;
+  bool is_banned = 15;
+  repeated common_SimpleMonthCardInfo month_cards = 16;
+  bool is_returner = 17;
+  friend_BattlePassBrief battlepass = 18;
+  int64 last_login_at = 19;
+  weather2_WeatherStatus weather = 20;
+  friend_PetTreasureHunt pet_treasure_hunt = 21;
+  bool newbie_privilege = 22;
+  friend_BigFarmStatus big_farm_status = 23;
+  int32 main_city_level = 24;
+  int64 big_farm_level = 25;
+  int64 big_farm_exp = 26;
+  int64 world_coin = 27;
+  friend_CollectionInfo collection_info = 28;
+}
+
+message friend_GetGameFriendsReply {
+  repeated friend_GameFriend friends = 1;
+}
+
+message friend_GetGameFriendsRequest {
+  repeated int64 friend_gids = 1 [packed = true];
+  int32 global_scene_id = 2;
+}
+
+message friend_Illustrated {
+  int32 normal_progress = 1;
+  int32 premium_progress = 2;
+  int32 ranch_progress = 3;
+}
+
+message friend_Invitation {
+  string open_id = 1;
+  int64 time_at = 2;
+}
+
+message friend_PetTreasureHunt {
+  bool has_plunderable_treasure = 1;
+  int64 lucky_star_gained_total = 2;
+}
+
+message friend_Plant {
+  int64 dry_time_sec = 1;
+  int64 weed_time_sec = 2;
+  int64 insect_time_sec = 3;
+  int64 ripe_time_sec = 4;
+  int64 ripe_fruit_id = 5;
+  int64 steal_plant_num = 6;
+  int64 dry_num = 7;
+  int64 weed_num = 8;
+  int64 insect_num = 9;
+}
+
+message friend_SyncAllReply {
+  repeated friend_GameFriend game_friends = 1;
+  repeated friend_Invitation invitations = 2;
+  int64 application_count = 3;
+  repeated friend_BlockedPlayer blocked_players = 4;
+  repeated friend_BlockedPlayer blocked_by_players = 5;
+}
+
+message friend_SyncAllRequest {
+  repeated string open_ids = 2;
+  int32 global_scene_id = 3;
+}
+
+message friend_Tags {
+  bool is_new = 1;
+  bool is_follow = 2;
+}
+
+message global_scene_BigFarmSceneExtData {
+  repeated tab_TabExperimentInfo experiments = 1;
+  homestead_AllCellsReply homestead_cells = 2;
+  mall_MallMsg mall_msg = 3;
+  repeated mutant_MutantBookEntry ranch_mutant_book_entries = 4;
+}
+
+message global_scene_FarmSceneExtData {
+  repeated tab_TabExperimentInfo experiments = 1;
+  common_ItemBag item_bag = 2;
+  friend_Illustrated illustrated = 4;
+  mall_MallMsg mall_msg = 6;
+  repeated mutant_MutantBookEntry mutant_book_entries = 7;
+  int32 moon_phase = 8;
+  skin_SkinLoginInfo skin_login_info = 9;
+  weather2_WeatherStatus weather = 10;
+}
+
+message global_scene_GetPlayerSceneInfoReply {
+  int32 default_global_scene_id = 1;
+  int32 active_global_scene_id = 2;
+  repeated int32 unlocked_scenes = 3 [packed = true];
+}
+
+message global_scene_GetPlayerSceneInfoRequest {
+}
+
+message global_scene_PlayerSceneLoginReply {
+  int32 global_scene_id = 1;
+  int64 server_time = 2;
+  global_scene_FarmSceneExtData farm_scene_ext_data = 10;
+  global_scene_BigFarmSceneExtData big_farm_scene_ext_data = 11;
+}
+
+message global_scene_PlayerSceneLoginRequest {
+  int32 global_scene_id = 1;
+  repeated string experiment_keys = 2;
+}
+
+message homestead_AddFeedReply {
+  homestead_FeedMachineDetail detail = 1;
+  repeated common_Item consumed = 2;
+}
+
+message homestead_AddFeedRequest {
+  int64 instance_id = 1;
+  int32 add_count = 2;
+  bool use_gold = 3;
+  int64 host_gid = 4;
+}
+
+message homestead_AllCellsReply {
+  int32 grid_width = 1;
+  int32 grid_height = 2;
+  repeated homestead_CellInfo cells = 3;
+  repeated homestead_FacilityInfo facilities = 4;
+  repeated homestead_BuildingItemInfo building_items = 5;
+  bool has_ready_upgrade = 6;
+  int32 region_occupied_count = 7;
+  int32 region_quota_count = 8;
+  homestead_SpeedUpInfo region_speed_up = 9;
+}
+
+message homestead_AllCellsRequest {
+}
+
+message homestead_BuildingItemInfo {
+  int64 inst_id = 1;
+  int32 facility_id = 2;
+  int32 level = 3;
+  int32 upgrade_state = 5;
+  int64 upgrade_end_time = 6;
+  int64 added_at = 7;
+  bool is_new = 8;
+}
+
+message homestead_BuildingUpgradeInfo {
+  int64 inst_id = 1;
+  int32 state = 2;
+  int64 end_time = 3;
+  int32 target_facility_id = 4;
+  int32 target_level = 5;
+}
+
+message homestead_BuyBuildingReply {
+  repeated homestead_BuildingItemInfo items = 1;
+  repeated common_Item consumed = 2;
+  homestead_FacilityGoodsInfo goods = 3;
+}
+
+message homestead_BuyBuildingRequest {
+  int64 goods_id = 1;
+}
+
+message homestead_CellInfo {
+  int64 cell_id = 1;
+  int32 grid_x = 2;
+  int32 grid_y = 3;
+  int32 status = 4;
+  int64 occupied_by = 5;
+  int32 region_id = 6;
+  repeated common_Item unlock_need = 7;
+  int64 unlock_end_time = 10;
+  int32 unlock_secs = 11;
+  bool can_share_unlock = 12;
+  repeated common_Item share_cost = 13;
+}
+
+message homestead_CompleteBuildingUpgradeReply {
+  homestead_FacilityInfo facility = 1;
+  homestead_BuildingItemInfo item = 2;
+}
+
+message homestead_CompleteBuildingUpgradeRequest {
+  int64 inst_id = 1;
+}
+
+message homestead_EmptyFacilityDetail {
+}
+
+message homestead_FacilityDetailInfo {
+  int64 instance_id = 1;
+  string name = 2;
+  string description = 3;
+  int32 base_facility_id = 4;
+  int32 module_type = 5;
+  repeated common_Item upgrade_cost = 6;
+  int32 level = 7;
+  int32 facility_id = 8;
+  int32 position_x = 9;
+  int32 position_y = 10;
+  int32 rotation = 11;
+  int32 width = 12;
+  int32 height = 13;
+  int32 capacity = 14;
+  animal_RanchDetail ranch = 20;
+  homestead_EmptyFacilityDetail empty_detail = 99;
+  homestead_FeedMachineDetail feed_machine = 21;
+  order_OrderBoardFacilityDetail order_board = 22;
+}
+
+message homestead_FacilityGoodsInfo {
+  int64 goods_id = 1;
+  int32 facility_id = 2;
+  int32 base_facility_id = 3;
+  int32 module_type = 4;
+  string name = 5;
+  repeated common_Item cost = 6;
+  int32 main_city_level = 7;
+  int32 sort = 8;
+  int32 state = 9;
+  int32 built_count = 10;
+  int32 max_count = 11;
+  bool is_new = 12;
+}
+
+message homestead_FacilityInfo {
+  int64 instance_id = 1;
+  int32 facility_id = 2;
+  int32 module_type = 3;
+  int32 position_x = 4;
+  int32 position_y = 5;
+  int32 rotation = 6;
+  int32 level = 7;
+  int32 width = 8;
+  int32 height = 9;
+  int32 capacity = 10;
+  repeated int64 occupied_cell_ids = 11 [packed = true];
+  animal_RanchDetail ranch = 20;
+  homestead_FeedMachineDetail feed_machine = 21;
+  order_OrderBoardFacilityDetail order_board = 22;
+  int32 state = 12;
+  int32 upgrade_state = 13;
+  int64 upgrade_end_time = 14;
+}
+
+message homestead_FeedMachineDetail {
+  int32 feed_count = 1;
+  int32 consume_rate = 2;
+  int64 remaining_secs = 4;
+  bool is_owner = 7;
+  int32 status = 8;
+}
+
+message homestead_GetBuildingListReply {
+  repeated homestead_BuildingItemInfo items = 1;
+  bool has_ready_upgrade = 2;
+}
+
+message homestead_GetBuildingListRequest {
+}
+
+message homestead_GetFacilityDetailReply {
+  homestead_FacilityDetailInfo info = 1;
+}
+
+message homestead_GetFacilityDetailRequest {
+  int64 instance_id = 1;
+  int64 host_gid = 2;
+}
+
+message homestead_GetMainCityInfoReply {
+  homestead_MainCityInfo main_city = 1;
+  repeated homestead_FacilityGoodsInfo goods = 2;
+}
+
+message homestead_GetMainCityInfoRequest {
+  int32 source = 1;
+}
+
+message homestead_MainCityInfo {
+  bool has_main_city = 1;
+  int64 inst_id = 2;
+  string name = 3;
+  int32 level = 4;
+  homestead_BuildingUpgradeInfo upgrade = 5;
+  int32 next_level = 6;
+  repeated common_Item upgrade_cost = 7;
+  int32 upgrade_secs = 8;
+  repeated int64 next_unlock_goods_ids = 9 [packed = true];
+  int32 region_open_quota = 10;
+  int32 next_region_open_quota = 11;
+  homestead_SpeedUpInfo speed_up = 12;
+}
+
+message homestead_SpeedUpInfo {
+  int64 item_id = 1;
+  int64 own_count = 2;
+  int32 secs_per_item = 3;
+}
+
+message homestead_UpgradeBuildingReply {
+  homestead_BuildingUpgradeInfo upgrade = 1;
+}
+
+message homestead_UpgradeBuildingRequest {
+  int64 inst_id = 1;
+}
+
+message illustrated_ClaimAllRewardsV2Reply {
+  repeated common_Item total_rewards = 1;
+  repeated int32 claimed_level_ids = 2 [packed = true];
+  int32 current_level = 3;
+  repeated common_Item next_level_rewards = 4;
+}
+
+message illustrated_ClaimAllRewardsV2Request {
+  int32 type = 1;
+}
+
+message illustrated_ClaimRanchWeightScoreRewardV2Reply {
+  repeated common_Item rewards = 1;
+  repeated int32 claimed_ids = 2 [packed = true];
+}
+
+message illustrated_ClaimRanchWeightScoreRewardV2Request {
+  int32 id = 1;
+}
+
+message illustrated_ClearNewUnlockedFruitsV2Reply {
+  repeated int32 cleared_fruit_ids = 1 [packed = true];
+  int32 scope = 2;
+}
+
+message illustrated_ClearNewUnlockedFruitsV2Request {
+  repeated int32 fruit_ids = 1 [packed = true];
+  int32 scope = 2;
+}
+
+message illustrated_GetIllustratedLevelListV2Reply {
+  int32 current_level = 1;
+  int32 total_progress = 2;
+  repeated illustrated_IllustratedLevelInfoV2 level_list = 3;
+}
+
+message illustrated_GetIllustratedLevelListV2Request {
+  int32 type = 1;
+}
+
+message illustrated_GetIllustratedListV2Reply {
+  repeated illustrated_IllustratedInfoV2 list = 1;
+  int32 total_progress = 2;
+  int32 current_level = 3;
+  repeated common_Item total_rewards = 4;
+  repeated int32 rarity = 5 [packed = true];
+  int32 type = 6;
+  int32 next_level_progress = 7;
+  bool has_claimable_reward = 8;
+  bool has_claimed_reward = 9;
+  repeated common_BuffEffect buff_effects = 10;
+  common_BuffEffect next_buff_effect = 11;
+  int64 ranch_weight_score = 12;
+}
+
+message illustrated_GetIllustratedListV2Request {
+  int32 rarity = 1;
+  int32 type = 2;
+}
+
+message illustrated_GetRanchWeightRankV2Reply {
+  repeated illustrated_RanchWeightRankGroup groups = 1;
+}
+
+message illustrated_GetRanchWeightRankV2Request {
+  int64 animal_id = 1;
+}
+
+message illustrated_GetRanchWeightScoreV2Reply {
+  int64 total_score = 1;
+  int32 current_id = 2;
+  int32 calc_mode = 3;
+  repeated illustrated_RanchWeightScoreLevelV2 levels = 4;
+}
+
+message illustrated_GetRanchWeightScoreV2Request {
+}
+
+message illustrated_GuaranteeProgressV2 {
+  int32 source_rarity = 1;
+  int32 cur = 2;
+  int32 total = 3;
+}
+
+message illustrated_IllustratedInfoV2 {
+  int32 fruit_id = 1;
+  int32 rarity = 2;
+  bool unlocked = 3;
+  int32 progress = 4;
+  int32 layer = 5;
+  repeated common_Item reward = 6;
+  bool is_new = 7;
+  repeated illustrated_GuaranteeProgressV2 guarantees = 8;
+  illustrated_RanchGiantRecordView giant = 9;
+}
+
+message illustrated_IllustratedLevelInfoV2 {
+  int32 level = 1;
+  int32 point_condition = 2;
+  repeated common_Item rewards = 3;
+  bool can_claim = 4;
+  bool claimed = 5;
+}
+
+message illustrated_RanchGiantRecordView {
+  bool unlocked = 1;
+  int32 best_weight_x10 = 2;
+  int32 lo_x10 = 3;
+  int32 hi_x10 = 4;
+  int32 tier = 5;
+  int32 tier_reached_mask = 6;
+  int64 harvest_count = 7;
+  bool is_new = 8;
+}
+
+message illustrated_RanchWeightRankGroup {
+  int64 animal_id = 1;
+  repeated illustrated_RanchWeightRankItem items = 2;
+}
+
+message illustrated_RanchWeightRankItem {
+  illustrated_RanchWeightRankPlayer player = 1;
+  int32 weight_x10 = 2;
+  int32 tier = 3;
+  int32 rank = 4;
+  bool can_show_off = 5;
+  bool is_self = 6;
+}
+
+message illustrated_RanchWeightRankPlayer {
+  int64 gid = 1;
+  string name = 2;
+  string avatar = 3;
+  int64 level = 4;
+  int32 gender = 5;
+  int64 big_farm_level = 6;
+}
+
+message illustrated_RanchWeightScoreLevelV2 {
+  int32 id = 1;
+  int64 score_condition = 2;
+  repeated common_Item rewards = 3;
+  bool can_claim = 4;
+  bool claimed = 5;
+}
+
+message interact_InteractRecordsReply {
+  repeated interact_Record records = 1;
+}
+
+message interact_InteractRecordsRequest {
+  int32 global_scene_id = 1;
+}
+
+message interact_Record {
+  int64 time = 1;
+  int64 interact_type = 2;
+  int64 opr_gid = 3;
+  string opr_nickname = 4;
+  string opr_avatar_url = 5;
+  int64 steal_item_id = 6;
+  int64 steal_item_num = 7;
+  int64 count = 8;
+  int32 authorized_status = 9;
+  int64 level = 10;
+  repeated avatarframe_AvatarFrame equip_avatar_frames = 11;
+  int32 host_type = 12;
+  repeated common_SimpleMonthCardInfo month_cards = 13;
+  int64 put_social_item_id = 14;
+  int64 put_social_item_num = 15;
+  repeated common_BindedCommunityInfo binded_communities = 16;
+  int64 feed_item_id = 17;
+  int64 feed_item_num = 18;
+  int64 big_farm_level = 19;
+  bool newbie_privilege = 20;
+  int64 like_item_id = 21;
+  int64 stroke_animal_id = 22;
+  bool stroke_triggered = 23;
+}
+
+message itemsys_BagTabInfo {
+  int64 tab_id = 1;
+  string tab_name = 2;
+  int64 item_count = 3;
+  bool has_red_dot = 4;
+}
+
+message itemsys_BatchUseReply {
+  repeated common_Item items = 1;
+  repeated common_Item got_items = 2;
+  repeated common_Item compensated_items = 3;
+  repeated plant2_LandInfo lands = 4;
+  repeated plant2_LandOpDrop land_op_drops = 5;
+  repeated plant2_FarmReward farm_rewards = 6;
+}
+
+message itemsys_BatchUseRequest {
+  repeated common_Item items = 1;
+  itemsys_UseTarget target = 2;
+}
+
+message itemsys_GetBagReply {
+  repeated common_Item physical_items = 1;
+  repeated common_Item virtual_items = 2;
+  int64 max_grid_num = 3;
+  int64 curr_grid_num = 4;
+  int32 global_scene_id = 5;
+}
+
+message itemsys_GetBagRequest {
+  int32 global_scene_id = 1;
+  int64 tab_id = 2;
+}
+
+message itemsys_GetBagTabReply {
+  repeated itemsys_BagTabInfo tabs = 1;
+  int32 global_scene_id = 2;
+}
+
+message itemsys_GetBagTabRequest {
+  int32 global_scene_id = 1;
+}
+
+message itemsys_SellReply {
+  repeated common_Item sell_items = 1;
+  repeated common_Item get_items = 2;
+}
+
+message itemsys_SellRequest {
+  repeated common_Item items = 1;
+}
+
+message itemsys_UseTarget {
+  int64 host_gid = 1;
+  repeated int64 land_ids = 2 [packed = true];
+  int64 use_config_id = 3;
+}
+
+message mall_MallMsg {
+  bool is_gift_shop_show = 1;
+  bool is_month_card_shop_show = 2;
+  bool is_recharge_shop_show = 3;
+  bool is_first_login = 4;
+  bool is_month_card_renewal_remind = 5;
+  bool is_limited_gift_shop_show = 6;
+  int32 limited_gift_shop_count = 7;
+  bool is_ranch_gift_shop_show = 8;
+  bool is_ranch_limited_gift_shop_show = 9;
+  int32 ranch_limited_gift_shop_count = 10;
+}
+
+message mutant_MutantBookEntry {
+  int64 id = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+  int64 activity_id = 4;
+  bool red_point = 5;
+}
+
+message nudge_NudgeEvent {
+  int64 event_id = 1;
+  int64 priority = 2;
+  string describe = 3;
+  string nudge_input_text = 4;
+}
+
+message order_GetOrderPanelReply {
+  order_OrderPanelInfo panel = 1;
+}
+
+message order_GetOrderPanelRequest {
+}
+
+message order_OrderBoardFacilityDetail {
+  int32 submittable_count = 1;
+  int32 slot_used = 2;
+}
+
+message order_OrderPanelInfo {
+  int32 board_level = 1;
+  int32 slot_num = 2;
+  int32 submit_limit = 3;
+  int32 refresh_limit = 4;
+  int32 pity_count = 5;
+  repeated order_OrderSlotView slots = 6;
+  int32 submit_quota = 7;
+  int32 refresh_quota = 8;
+  int32 rare_pity = 9;
+}
+
+message order_OrderSlotView {
+  int32 slot_index = 1;
+  string instance_id = 2;
+  int64 template_id = 3;
+  int64 pool_id = 4;
+  int32 order_quality = 5;
+  repeated common_Item req_items = 6;
+  repeated common_Item reward_items = 7;
+  int64 created_at = 8;
+  int32 submit_state = 9;
+}
+
+message order_RefreshOrderReply {
+  order_OrderSlotView new_slot = 1;
+  int32 refresh_quota = 2;
+  int32 rare_pity = 3;
+}
+
+message order_RefreshOrderRequest {
+  int32 slot_index = 1;
+}
+
+message order_SubmitOrderReply {
+  order_OrderSlotView new_slot = 1;
+  repeated common_Item rewards = 2;
+  int32 submit_quota = 3;
+  int32 rare_pity = 4;
+}
+
+message order_SubmitOrderRequest {
+  int32 slot_index = 1;
+  string instance_id = 2;
+}
+
+message plant2_BpFruitInfo {
+  int64 fruit_id = 1;
+  int64 fruit_num = 2;
+  int64 left_fruit_num = 3;
+  int64 season = 4;
+}
+
+message plant2_CropSocialEventInfo {
+  int64 item_id = 1;
+  int64 owner_id = 2;
+  int64 put_time = 3;
+  int64 land_id = 4;
+}
+
+message plant2_FarmReward {
+  int64 source_item_id = 1;
+  repeated common_Item rewards = 2;
+}
+
+message plant2_LandInfo {
+  int64 id = 1;
+  bool unlocked = 2;
+  int64 level = 3;
+  int64 max_level = 4;
+  bool could_unlock = 5;
+  bool could_upgrade = 6;
+  plant2_LandUnlockCondition unlock_condition = 7;
+  plant2_LandUpgradeCondition upgrade_condition = 8;
+  plant2_LandInfo_Buff buff = 9;
+  plant2_PlantInfo plant = 10;
+  bool is_shared = 11;
+  bool can_share = 12;
+  int64 master_land_id = 13;
+  repeated int64 slave_land_ids = 14 [packed = true];
+  int64 land_size = 15;
+  int64 lands_level = 16;
+}
+
+message plant2_LandInfo_Buff {
+  int64 plant_yield_bonus = 1;
+  int64 planting_time_reduction = 2;
+  int64 plant_exp_bonus = 3;
+  int64 plant_mutant_bonus = 4;
+  int64 bp_exp_bonus = 5;
+  int64 plant_mutant_exp_bonus = 6;
+}
+
+message plant2_LandOpDrop {
+  int64 land_id = 1;
+  repeated common_Item rewards = 2;
+  repeated common_Item costs = 3;
+  repeated int64 triggered_skill_ids = 4 [packed = true];
+  repeated common_BuffEffect buff_effects = 5;
+}
+
+message plant2_LandUnlockCondition {
+  int64 preceeding_land_id = 1;
+  int64 level_need = 2;
+  int64 gold_need = 3;
+  repeated common_Item items_need = 4;
+  repeated plant2_NeedColorCount need_color_count = 5;
+}
+
+message plant2_LandUpgradeCondition {
+  int64 preceeding_lands_count_need = 1;
+  int64 level_need = 2;
+  repeated common_Item items_need = 3;
+}
+
+message plant2_MutantInfo {
+  int64 mutant_time = 1;
+  int64 mutant_config_id = 2;
+  int64 mutant_plant_id = 5;
+  int32 forced_src = 6;
+  int64 collection_series_id = 7;
+  int64 collection_item_id = 8;
+}
+
+message plant2_NeedColorCount {
+  int64 level = 1;
+  int64 count = 2;
+}
+
+message plant2_PlantInfo {
+  int64 id = 1;
+  string name = 2;
+  repeated plant2_PlantPhaseInfo phases = 4;
+  int64 season = 5;
+  int64 dry_num = 6;
+  int64 stole_num = 9;
+  int64 fruit_id = 10;
+  int64 fruit_num = 11;
+  repeated int64 weed_owners = 12 [packed = true];
+  repeated int64 insect_owners = 13 [packed = true];
+  repeated int64 stealers = 14 [packed = true];
+  int64 grow_sec = 15;
+  bool stealable = 16;
+  int64 left_inorc_fert_times = 17;
+  int64 left_fruit_num = 18;
+  int64 steal_intimacy_level = 19;
+  repeated int64 mutant_config_ids = 20 [packed = true];
+  bool is_nudged = 21;
+  int64 exp = 22;
+  repeated int64 last_mutant_config_ids = 23 [packed = true];
+  int64 last_fruit_id = 24;
+  int64 last_fruit_num = 25;
+  int64 source_fruit_id = 26;
+  int64 source_fruit_num = 27;
+  repeated int64 mutant_plant_ids = 32 [packed = true];
+  int64 last_plant_id = 33;
+  repeated common_BuffEffect buff_effects = 34;
+  repeated plant2_SocialItemInfo social_items = 35;
+  repeated plant2_BpFruitInfo bp_fruits = 36;
+  int64 planting_player_level = 37;
+  repeated plant2_CropSocialEventInfo crop_social_events = 38;
+  plant2_WeatherWoodInfo weather_wood = 39;
+  map<int64, int64> use_config_history = 40;
+  repeated plant2_MutantInfo mutant_infos = 41;
+}
+
+message plant2_PlantInfo_UseConfigHistoryEntry {
+  int64 key = 1;
+  int64 value = 2;
+}
+
+message plant2_PlantPhaseInfo {
+  int32 phase = 1;
+  int64 begin_time = 2;
+  int64 phase_id = 3;
+  int64 dry_time = 6;
+  int64 weeds_time = 7;
+  int64 insect_time = 8;
+  map<int64, int64> ferts_used = 9;
+  repeated plant2_MutantInfo mutants = 10;
+}
+
+message plant2_PlantPhaseInfo_FertsUsedEntry {
+  int64 key = 1;
+  int64 value = 2;
+}
+
+message plant2_SocialItemInfo {
+  int64 item_id = 1;
+  int64 type = 2;
+  int64 sub_type = 3;
+  int64 owner_id = 4;
+  int64 put_time = 5;
+}
+
+message plant2_WeatherWoodInfo {
+  int64 wood_item_id = 1;
+  int64 wood_item_num = 2;
+  int64 price_rate = 3;
+  int64 base_point = 4;
+}
+
+message share_ShareInfo {
+  int64 share_count = 1;
+  bool is_claimed = 2;
+}
+
+message shop2_BuyGoodsReply {
+  shop2_GoodsInfo goods = 1;
+  repeated common_Item get_items = 2;
+  repeated common_Item cost_items = 3;
+}
+
+message shop2_BuyGoodsRequest {
+  int64 goods_id = 1;
+  int64 num = 2;
+  int64 price = 3;
+  bool auto_add = 4;
+}
+
+message shop2_Cond {
+  int32 type = 1;
+  int64 param = 2;
+}
+
+message shop2_GoodsInfo {
+  int64 id = 1;
+  int64 bought_num = 2;
+  int64 price = 3;
+  int64 limit_count = 4;
+  bool unlocked = 5;
+  int64 item_id = 6;
+  int64 item_count = 7;
+  repeated shop2_Cond conds = 8;
+  bool is_display_countdown = 9;
+  int64 end_time = 10;
+  int64 discount_price = 11;
+  int64 discount_start_time = 12;
+  int64 discount_end_time = 13;
+  repeated shop2_ShowCond show_conds = 14;
+  bool owned = 15;
+}
+
+message shop2_RotationBuyGoodsReply {
+  shop2_RotationGoodsCard card = 1;
+  repeated common_Item awards = 2;
+}
+
+message shop2_RotationBuyGoodsRequest {
+  int64 goods_id = 1;
+  int32 count = 2;
+  int64 period_day = 3;
+  int32 round_index = 4;
+}
+
+message shop2_RotationGoodsCard {
+  int32 shelf_id = 1;
+  int32 slot = 2;
+  int64 item_id = 3;
+  int64 item_count = 4;
+  int64 cost_item_id = 5;
+  int64 cost_count = 6;
+  int64 discount_price = 7;
+  int64 discount_start_time = 8;
+  int64 discount_end_time = 9;
+  int64 limit_count = 10;
+  int64 limit_used = 11;
+  repeated shop2_ShowCond buy_conds = 12;
+  int64 goods_id = 13;
+}
+
+message shop2_RotationShelf {
+  int32 shelf_id = 1;
+  string shelf_name = 2;
+  int32 sort = 3;
+}
+
+message shop2_RotationShopClearRedpointReply {
+}
+
+message shop2_RotationShopClearRedpointRequest {
+  int64 shop_id = 1;
+}
+
+message shop2_RotationShopInfoReply {
+  bool opened = 1;
+  bool present = 2;
+  int64 period_day = 3;
+  int32 round_index = 4;
+  repeated shop2_RotationShelf shelves = 5;
+  repeated shop2_RotationGoodsCard goods = 6;
+}
+
+message shop2_RotationShopInfoRequest {
+  int64 shop_id = 1;
+}
+
+message shop2_RotationShopState {
+  int64 shop_id = 1;
+  bool present = 2;
+  int64 period_day = 3;
+  int32 round_index = 4;
+  int32 npc_id = 5;
+  int64 shop_start_time = 6;
+  int64 shop_end_time = 7;
+  bool has_redpoint = 8;
+  int64 npc_spawn_point_id = 9;
+}
+
+message shop2_ShopInfoReply {
+  repeated shop2_GoodsInfo goods_list = 1;
+}
+
+message shop2_ShopInfoRequest {
+  int64 shop_id = 1;
+}
+
+message shop2_ShopProfile {
+  int64 shop_id = 1;
+  string shop_name = 2;
+  int32 shop_type = 3;
+  repeated int32 global_scene_ids = 4 [packed = true];
+  bool is_rotation_shop = 5;
+  shop2_RotationShopState rotation_state = 6;
+}
+
+message shop2_ShopProfilesReply {
+  repeated shop2_ShopProfile shop_profiles = 1;
+}
+
+message shop2_ShopProfilesRequest {
+  int32 global_scene_id = 1;
+}
+
+message shop2_ShowCond {
+  string type = 1;
+  string params = 2;
+}
+
+message skin_SkinLoginInfo {
+  repeated skin_SkinMode skin_modes = 1;
+  map<int64, skin_SkinSetEffectTypeParams> skin_set_effect_type_params = 2;
+}
+
+message skin_SkinLoginInfo_SkinSetEffectTypeParamsEntry {
+  int64 key = 1;
+  skin_SkinSetEffectTypeParams value = 2;
+}
+
+message skin_SkinMode {
+  int64 id = 1;
+  string name = 2;
+  string icon = 3;
+  string skin_icon = 4;
+  int64 preview = 5;
+  string start_time = 6;
+  string end_time = 7;
+  string client_json = 8;
+}
+
+message skin_SkinSetEffectTypeParams {
+  int64 param1_int = 1;
+}
+
+message tab_TabExperimentInfo {
+  int64 id = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+  string group_key = 4;
+  string exp_key = 5;
+  map<string, string> params = 6;
+  bool is_default = 7;
+  bool is_control = 8;
+  bool is_white_list = 9;
+  string module_code = 10;
+  double traffic_percentage = 11;
+  bool hit = 12;
+}
+
+message tab_TabExperimentInfo_ParamsEntry {
+  string key = 1;
+  string value = 2;
+}
+
+message user_BasicInfo {
+  int64 gid = 1;
+  string name = 2;
+  int64 level = 3;
+  int64 exp = 4;
+  int64 gold = 5;
+  string open_id = 6;
+  string avatar_url = 7;
+  string remark = 8;
+  string signature = 9;
+  int32 gender = 10;
+  repeated avatarframe_AvatarFrame equip_avatar_frames = 11;
+  map<int64, share_ShareInfo> share_infos = 12;
+  int32 authorized_status = 13;
+  bool disable_nudge = 14;
+  bool disable_month_card = 15;
+  repeated common_SimpleMonthCardInfo month_cards = 16;
+  int64 last_online_timestamp = 17;
+  repeated common_BindedCommunityInfo binded_communities = 18;
+  bool allow_ark_visit = 19;
+  int64 big_farm_level = 20;
+  int64 big_farm_exp = 21;
+}
+
+message user_BasicInfo_ShareInfosEntry {
+  int64 key = 1;
+  share_ShareInfo value = 2;
+}
+
+message user_BatchGetBasicInfoReply {
+  repeated user_BasicInfo basic_infos = 1;
+}
+
+message user_BatchGetBasicInfoRequest {
+  repeated string open_ids = 1;
+}
+
+message visit_EnterHomesteadReply {
+  user_BasicInfo basic = 1;
+  visit_NudgeInfo nudge_info = 2;
+  bool host_at_home = 3;
+  visit_HostRelationInfo host_relation = 4;
+  int64 unix_milli = 5;
+  bool is_tourist = 6;
+  string apply_token = 7;
+  homestead_AllCellsReply homestead_cells = 8;
+}
+
+message visit_EnterHomesteadRequest {
+  int64 host_gid = 1;
+  int32 reason = 2;
+  int32 host_type = 3;
+  int64 share_id = 4;
+  string share_open_id = 5;
+  int64 share_cfg_id = 6;
+  string share_key = 7;
+}
+
+message visit_HostRelationInfo {
+  friend_GameFriend game_friend = 1;
+  bool is_friend = 2;
+  bool is_community_member = 3;
+}
+
+message visit_LeaveHomesteadReply {
+}
+
+message visit_LeaveHomesteadRequest {
+  int64 host_gid = 1;
+  int32 host_type = 2;
+}
+
+message visit_NudgeInfo {
+  repeated nudge_NudgeEvent events = 1;
+  bool disable_popup = 2;
+}
+
+message weather2_WeatherStatus {
+  int32 weather_type = 1;
+  int32 source = 2;
+  int64 begin_time = 3;
+  int64 end_time = 4;
+  bool is_active = 5;
+  int64 afterglow_time = 6;
+  int32 afterglow_weather_type = 7;
+  bool can_collect = 8;
+  int32 block_reason = 9;
+}
+
+// Official main game.js decode functions (same client version as above).
+message friend_GetAllRequest { int32 global_scene_id = 1; }
+message friend_GetAllReply {
+ repeated friend_GameFriend game_friends = 1;
+ repeated friend_Invitation invitations = 2;
+ int64 application_count = 3;
+ repeated friend_BlockedPlayer blocked_players = 4;
+ repeated friend_BlockedPlayer blocked_by_players = 5;
+}
+message task_TaskInfoRequest { int32 global_scene_id = 1; }
+message task_TaskInfoReply { task_TaskInfo task_info = 1; }
+message task_TaskInfo {
+ repeated task_Task growth_tasks = 1;
+ repeated task_Task daily_tasks = 2;
+ repeated task_Task tasks = 3;
+}
+message task_Task {
+ int64 id = 1;
+ int64 progress = 2;
+ bool is_claimed = 3;
+ bool is_unlocked = 4;
+ repeated common_Item rewards = 5;
+ int64 total_progress = 6;
+ int64 share_multiple = 7;
+ repeated string params = 8;
+ string desc = 9;
+ int32 task_type = 10;
+ int64 group = 11;
+ int64 cond_type = 12;
+ int64 is_show_text = 13;
+ repeated common_Item activity_rewards = 14;
+}
+
+// Official 2026-11-17 main client encoder: id tag 1, do_shared tag 2;
+// batch ids are packed tag 1 ONLY (no do_shared field in official batch).
+message task_ClaimTaskRewardRequest { int64 id = 1; bool do_shared = 2; }
+message task_BatchClaimTaskRewardRequest { repeated int64 ids = 1 [packed = true]; }
+message task_ClaimTaskRewardReply {
+ repeated common_Item items = 1;
+ task_TaskInfo task_info = 2;
+ repeated common_Item compensated_items = 3;
+}
+message task_BatchClaimTaskRewardReply {
+ repeated common_Item items = 1;
+ task_TaskInfo task_info = 2;
+ repeated common_Item compensated_items = 3;
+}
+
+// Official homestead.ts generated codec, latest mcboot SHA256:
+// 93274de3387317dba66981c8b0e7bbe300eb06b8c4b7f145edb5d10ad2ab3e0f
+message homestead_ActivateFacilityRequest { int64 instance_id = 1; }
+message homestead_ActivateFacilityReply { homestead_FacilityInfo facility = 1; }

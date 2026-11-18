@@ -5,16 +5,19 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
 import AnnouncementPopup from '@/components/AnnouncementPopup.vue'
+import GameSpaceSwitch from '@/components/game/GameSpaceSwitch.vue'
 import MobileTabBar from '@/components/game/MobileTabBar.vue'
 import MysteryMerchantBanner from '@/components/shop/MysteryMerchantBanner.vue'
 import TopAccountMenu from '@/components/TopAccountMenu.vue'
 import { menuRoutes } from '@/router/menu'
 import { useAccountStore } from '@/stores/account'
 import { useAppStore } from '@/stores/app'
+import { useGameSpaceStore } from '@/stores/game-space'
 import { useStatusStore } from '@/stores/status'
 import { useUserStore } from '@/stores/user'
 
 const appStore = useAppStore()
+const gameSpace = useGameSpaceStore()
 const router = useRouter()
 
 const accountStore = useAccountStore()
@@ -69,9 +72,12 @@ useIntervalFn(() => {
   accountStore.fetchAccounts()
 }, 10000)
 
-watch(() => router.currentRoute.value.path, () => {
+watch(() => router.currentRoute.value.path, (path) => {
   mobileSearchOpen.value = false
-})
+  // 直接打开链接或通过浏览器前进/后退时，让空间与个人页保持一致。
+  if (path === '/ranch' || path.startsWith('/ranch/'))
+    gameSpace.setSpace('ranch')
+}, { immediate: true })
 
 watch(() => currentAccount.value?.id || currentAccount.value?.uin || '', () => {
   const accountRef = currentAccount.value?.id || currentAccount.value?.uin
@@ -98,12 +104,23 @@ const searchResults = computed(() => {
   return menuRoutes
     // 权限隔离：adminOnly 仅管理员、superOnly 仅超管可被搜到（与侧边栏/移动导航一致）
     .filter(item => (!item.adminOnly || userStore.isAdmin) && (!item.superOnly || userStore.isSuperAdmin))
+    .filter(item => item.name !== 'ranch')
+    .map((item) => {
+      const isPersonal = item.name === 'personal'
+      const spaceLabels: Record<string, string> = {
+        personal: '我的牧场',
+        shop: '牧场商城',
+        illustrated: '牧场图鉴',
+        friends: '牧场好友',
+      }
+      return {
+        path: isPersonal ? gameSpace.personalPath : gameSpace.isRanch && ['dashboard', 'friends', 'shop', 'illustrated', 'analytics'].includes(item.name) ? (item.name === 'dashboard' ? '/ranch' : `/ranch/${item.name}`) : (item.path ? `/${item.path}` : '/'),
+        label: gameSpace.isRanch ? (spaceLabels[item.name] || item.label) : (isPersonal ? '我的农场' : item.label),
+        icon: isPersonal ? (gameSpace.isRanch ? 'i-carbon-cattle' : 'i-carbon-sprout') : item.icon,
+        name: item.name,
+      }
+    })
     .filter(item => item.label.toLowerCase().includes(keyword) || item.name.toLowerCase().includes(keyword))
-    .map(item => ({
-      path: item.path ? `/${item.path}` : '/',
-      label: item.label,
-      icon: item.icon,
-    }))
 })
 
 function goTo(item: { path: string }) {
@@ -128,7 +145,7 @@ function onSearchBlur() {
 
     <main class="relative h-full min-h-0 min-w-0 flex flex-1 flex-col overflow-hidden">
       <!-- 顶栏：移动端左侧搜索/GitHub/通知设置小圆标；PC 右侧搜索/GitHub/通知/账号 -->
-      <header class="relative z-30 flex shrink-0 items-center justify-between gap-2 px-3 pt-2 lg:justify-end lg:gap-4 lg:px-8 sm:px-6 lg:pt-4 sm:pt-3">
+      <header class="relative z-30 flex shrink-0 flex-wrap items-center justify-between gap-2 px-3 pt-2 lg:flex-nowrap lg:justify-end lg:gap-4 lg:px-8 sm:px-6 lg:pt-4 sm:pt-3">
         <!-- 移动端快捷图标（PC 由右侧大号按钮承担） -->
         <div class="flex items-center gap-2 lg:hidden">
           <button
@@ -156,7 +173,8 @@ function onSearchBlur() {
           </button>
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="min-w-0 flex items-center gap-2 lg:gap-4">
+          <GameSpaceSwitch />
           <div :class="mobileSearchOpen ? 'absolute inset-x-3 top-full z-40 mt-1' : 'relative hidden lg:block'">
             <div class="search-box relative">
               <div class="search-icon i-carbon-search" />
@@ -209,7 +227,7 @@ function onSearchBlur() {
 
       <!-- Main Content Area（顶部/底部按圆角裁切，滚动时标题栏与内容边界同底部导航一样是弧形的） -->
       <div class="custom-scrollbar main-scroll-area min-h-0 flex flex-1 flex-col overflow-y-auto p-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:p-6 md:p-5 sm:p-3 lg:pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pt-2 md:pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
-        <MysteryMerchantBanner />
+        <MysteryMerchantBanner v-if="!gameSpace.isRanch" />
         <RouterView v-slot="{ Component, route }">
           <Transition name="slide-fade" mode="out-in">
             <component :is="Component" :key="route.path" />

@@ -1,3 +1,6 @@
+const { normalizePolicy: normalizeRanchPolicy, SETTINGS_KEYS: RANCH_SETTINGS_KEYS } = require('../services/ranch-settings');
+const RANCH_AUTOMATION_KEYS = new Set(Object.values(RANCH_SETTINGS_KEYS));
+const LEGACY_RANCH_FIELDS = ['ranchCheckIntervalMinutes', 'ranchFeedCount', 'ranchAddFeedCount', 'ranchMaxActions', 'ranchAutoStrategy'];
 const process = require('node:process');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -272,6 +275,8 @@ const DEFAULT_AUTOMATION = {
     friend_bad: false,
     friend_golden_bug: false,
     task: true,
+    // 邮件奖励自动领取：原本每日例行无条件执行，显式化后默认开启，保持既有行为不倒退。
+    mail_claim: true,
     star_passport_claim: false,
     star_solar_claim: false,
     star_record_claim: false,
@@ -299,6 +304,8 @@ const DEFAULT_AUTOMATION = {
     share_reward_share: false,
     share_reward_daily: false,
     share_reward_milestones: false,
+    // 每日首次分享领奖：仅检查可领并领取，绝不伪造分享动作；默认关闭。
+    share_claim_daily: false,
     // 萌宠成长日记（S3）。刻意不提供的开关：
     // 拾物小铺兑换（exchange，需用户指定商品）、锦囊付费刷新（花点券）、
     // markStories（纯 UI 状态无奖励）、skipBattle（是设置项不是任务）。
@@ -343,10 +350,15 @@ const DEFAULT_AUTOMATION = {
     fertilizer_smart_seconds: 300,
     skip_own_weed_bug: true,
     golden_bug_clear: true,
-    // 牧场自动化（有成功抓包样本的操作）
-    ranch_harvest: false,
-    ranch_feed: false,
-    ranch_add_feed: false
+    // 牧场策略与专用设置路由共享契约，操作开关默认关闭。
+    ranch_policy: normalizeRanchPolicy(),
+    // 牧歌初启自动化：默认全部关闭；只允许领取已达成且服务端确认的档位与任务。
+    muge_task_claim: false,
+    muge_celebration_claim: false,
+    muge_friend_claim: false,
+    muge_handbook_claim: false,
+    muge_personality_settle: false,
+    ...Object.fromEntries([...RANCH_AUTOMATION_KEYS].map(key => [key, false]))
 };
 
 // 已从前端隐藏的限时活动。即使旧配置或客户端提交 true，也必须在配置边界
@@ -521,7 +533,6 @@ const DEFAULT_ACCOUNT_CONFIG = {
     fertilizerBuyNormalCount: 1,
     fertilizerBuyNormalThresholdHours: 10,
     fertilizerBuyCheckIntervalMinutes: 60,
-    ranchCheckIntervalMinutes: 30,
     bagSeedPriority: [],
     bagSeedKnownIds: [],
     bagSeedFallbackStrategy: 'level',
@@ -855,6 +866,8 @@ function cloneAccountConfig(config = DEFAULT_ACCOUNT_CONFIG) {
     const auto = { ...DEFAULT_ACCOUNT_CONFIG.automation };
 
     for (const key of Object.keys(auto)) {
+        if (key === 'ranch_policy') { auto[key] = normalizeRanchPolicy(srcAuto[key]); continue; }
+        if (RANCH_AUTOMATION_KEYS.has(key)) { auto[key] = srcAuto[key] === true; continue; }
         if (key === 'fertilizer_land_types') {
             auto[key] = normalizeFertilizerLandTypes(srcAuto[key], DEFAULT_FERTILIZER_LAND_TYPES);
             continue;
@@ -867,9 +880,11 @@ function cloneAccountConfig(config = DEFAULT_ACCOUNT_CONFIG) {
     const friendBlacklist = Array.isArray(config.friendBlacklist) ? config.friendBlacklist : [];
     const knownFriendGids = normalizeKnownFriendGids(config.knownFriendGids);
     const plantBlacklist = Array.isArray(config.plantBlacklist) ? config.plantBlacklist : [];
+    const cleanConfig = { ...config };
+    for (const key of LEGACY_RANCH_FIELDS) delete cleanConfig[key];
 
     return {
-        ...config,
+        ...cleanConfig,
         automation: auto,
         autoCodeRefresh: {
             enabled: config.autoCodeRefresh && config.autoCodeRefresh.enabled === true,
@@ -889,7 +904,6 @@ function cloneAccountConfig(config = DEFAULT_ACCOUNT_CONFIG) {
         fertilizerBuyNormalCount: Math.max(0, Math.min(999, Number(config.fertilizerBuyNormalCount) || 1)),
         fertilizerBuyNormalThresholdHours: Math.max(0, Math.min(720, Number(config.fertilizerBuyNormalThresholdHours) || 10)),
         fertilizerBuyCheckIntervalMinutes: Math.max(1, Math.min(1440, Number(config.fertilizerBuyCheckIntervalMinutes) || 60)),
-        ranchCheckIntervalMinutes: Math.max(1, Math.min(1440, Number(config.ranchCheckIntervalMinutes) || 30)),
         autoAcceptFriendMinLevel: Math.max(0, Math.min(200, Number(config.autoAcceptFriendMinLevel) || 0)),
         goldenBugKeepCount: Math.max(0, Math.min(9999, Number(config.goldenBugKeepCount) || 0)),
         goldenBugRoundLimit: Math.max(1, Math.min(100, Number(config.goldenBugRoundLimit) || 24)),
@@ -929,7 +943,7 @@ const DEFAULT_CAPTURE_CONFIG = {
 
 let accountFallbackConfig = (() => {
     const cfg = { ...DEFAULT_ACCOUNT_CONFIG };
-    cfg.automation = { ...DEFAULT_ACCOUNT_CONFIG.automation };
+    cfg.automation = { ...DEFAULT_ACCOUNT_CONFIG.automation, ranch_policy: normalizeRanchPolicy() };
     cfg.intervals = { ...DEFAULT_ACCOUNT_CONFIG.intervals };
     cfg.friendQuietHours = { ...DEFAULT_ACCOUNT_CONFIG.friendQuietHours };
     cfg.knownFriendGids = [];
@@ -971,7 +985,11 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
         for (const [key, value] of Object.entries(input.automation)) {
             if (!ALLOWED_AUTOMATION_KEYS.has(key)) continue;
 
-            if (key === 'fertilizer') {
+            if (key === 'ranch_policy') {
+                cfg.automation[key] = normalizeRanchPolicy(value);
+            } else if (RANCH_AUTOMATION_KEYS.has(key)) {
+                cfg.automation[key] = value === true;
+            } else if (key === 'fertilizer') {
                 const allowed = ['both', 'normal', 'organic', 'smart', 'smart_only', 'smart_normal', 'final_normal', 'final_organic', 'none'];
                 cfg.automation[key] = allowed.includes(value) ? value : cfg.automation[key];
             } else if (key === 'fertilizer_land_types') {
@@ -1004,6 +1022,13 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
         }
     }
     disableHiddenActivityAutomation(cfg.automation);
+
+    // 自动喂食（宠物）配置：normalizeAccountConfig 必须显式合并该字段，
+    // 否则 applyConfigSnapshot 里写入的 cfg.petAutoFeed 会在 setAccountConfigSnapshot
+    // 二次 normalize 时被丢弃，导致 /api/dog/auto-feed 保存后回读仍是默认值。
+    if (input.petAutoFeed && typeof input.petAutoFeed === 'object') {
+        cfg.petAutoFeed = normalizePetAutoFeed(input.petAutoFeed, cfg.petAutoFeed);
+    }
 
     // 自动刷新 Code
     if (input.autoCodeRefresh && typeof input.autoCodeRefresh === 'object') {
@@ -1084,9 +1109,6 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
     if (input.fertilizerBuyCheckIntervalMinutes !== undefined && input.fertilizerBuyCheckIntervalMinutes !== null) {
         cfg.fertilizerBuyCheckIntervalMinutes = Math.max(1, Math.min(1440, Number(input.fertilizerBuyCheckIntervalMinutes) || 60));
     }
-    if (input.ranchCheckIntervalMinutes !== undefined && input.ranchCheckIntervalMinutes !== null) {
-        cfg.ranchCheckIntervalMinutes = Math.max(1, Math.min(1440, Number(input.ranchCheckIntervalMinutes) || 30));
-    }
 
     // 自动接受好友最低等级
     if (input.autoAcceptFriendMinLevel !== undefined && input.autoAcceptFriendMinLevel !== null) {
@@ -1118,7 +1140,7 @@ function normalizeAccountConfig(raw, fallbackConfig = accountFallbackConfig) {
 function pickDefaultPlanConfig(raw) {
     const cfg = normalizeAccountConfig(raw, DEFAULT_ACCOUNT_CONFIG);
     return {
-        automation: { ...cfg.automation },
+        automation: { ...cfg.automation, ranch_policy: normalizeRanchPolicy(cfg.automation.ranch_policy) },
         autoCodeRefresh: { ...cfg.autoCodeRefresh },
         plantingStrategy: cfg.plantingStrategy,
         prioritize2x2Crops: cfg.prioritize2x2Crops === true,
@@ -1485,6 +1507,7 @@ if (captureDefaultsMigrated) saveGlobalConfig();
 
 function getAutomation(accountId) {
     const auto = { ...getAccountConfigSnapshot(accountId).automation };
+    auto.ranch_policy = normalizeRanchPolicy(auto.ranch_policy);
     auto.fertilizer_land_types = normalizeFertilizerLandTypes(auto.fertilizer_land_types);
     auto.qixi_friend_priority = normalizeKnownFriendGids(auto.qixi_friend_priority, []);
     auto.sell_fruit_excludes = normalizeKnownFriendGids(auto.sell_fruit_excludes, []);
@@ -1504,7 +1527,7 @@ function getNoPlantSeeds(accountId) {
 
 function getConfigSnapshot(accountId) {
     const cfg = getAccountConfigSnapshot(accountId);
-    const auto = { ...cfg.automation };
+    const auto = { ...cfg.automation, ranch_policy: normalizeRanchPolicy(cfg.automation.ranch_policy) };
     const ui = { ...globalConfig.ui };
     return {
         automation: auto,
@@ -1523,7 +1546,6 @@ function getConfigSnapshot(accountId) {
         fertilizerBuyNormalCount: Math.max(0, Math.min(999, Number(cfg.fertilizerBuyNormalCount) || 1)),
         fertilizerBuyNormalThresholdHours: Math.max(0, Math.min(720, Number(cfg.fertilizerBuyNormalThresholdHours) || 10)),
         fertilizerBuyCheckIntervalMinutes: Math.max(1, Math.min(1440, Number(cfg.fertilizerBuyCheckIntervalMinutes) || 60)),
-        ranchCheckIntervalMinutes: Math.max(1, Math.min(1440, Number(cfg.ranchCheckIntervalMinutes) || 30)),
         goldenBugKeepCount: Math.max(0, Math.min(9999, Number(cfg.goldenBugKeepCount) || 0)),
         goldenBugRoundLimit: Math.max(1, Math.min(100, Number(cfg.goldenBugRoundLimit) || 24)),
         bagSeedPriority: [...cfg.bagSeedPriority || []],
@@ -1541,7 +1563,11 @@ function applyConfigSnapshot(patch = {}, opts = {}) {
     if (patch.automation && typeof patch.automation === 'object') {
         for (const [key, value] of Object.entries(patch.automation)) {
             if (cfg.automation[key] === undefined) continue;
-            if (key === 'fertilizer') {
+            if (key === 'ranch_policy') {
+                cfg.automation[key] = normalizeRanchPolicy(value);
+            } else if (RANCH_AUTOMATION_KEYS.has(key)) {
+                cfg.automation[key] = value === true;
+            } else if (key === 'fertilizer') {
                 const allowed = ['both', 'normal', 'organic', 'smart', 'smart_only', 'smart_normal', 'final_normal', 'final_organic', 'none'];
                 cfg.automation[key] = allowed.includes(value) ? value : cfg.automation[key];
             } else if (key === 'fertilizer_land_types') {
@@ -1636,9 +1662,6 @@ function applyConfigSnapshot(patch = {}, opts = {}) {
     if (patch.fertilizerBuyCheckIntervalMinutes !== undefined && patch.fertilizerBuyCheckIntervalMinutes !== null) {
         cfg.fertilizerBuyCheckIntervalMinutes = Math.max(1, Math.min(1440, Number(patch.fertilizerBuyCheckIntervalMinutes) || 60));
     }
-    if (patch.ranchCheckIntervalMinutes !== undefined && patch.ranchCheckIntervalMinutes !== null) {
-        cfg.ranchCheckIntervalMinutes = Math.max(1, Math.min(1440, Number(patch.ranchCheckIntervalMinutes) || 30));
-    }
     if (patch.autoAcceptFriendMinLevel !== undefined && patch.autoAcceptFriendMinLevel !== null) {
         cfg.autoAcceptFriendMinLevel = Math.max(0, Math.min(200, Number(patch.autoAcceptFriendMinLevel) || 0));
     }
@@ -1715,7 +1738,10 @@ function getPetAutoFeed(accountId) {
 }
 
 function setPetAutoFeed(accountId, config) {
-    return applyConfigSnapshot({ petAutoFeed: config || {} }, { accountId }).petAutoFeed;
+    applyConfigSnapshot({ petAutoFeed: config || {} }, { accountId });
+    // applyConfigSnapshot 返回 getConfigSnapshot，其中不含 petAutoFeed；需从账号快照回读，
+    // 否则 /api/dog/auto-feed 的 POST 响应里 autoFeed 为 undefined，前端无法同步开关状态。
+    return getPetAutoFeed(accountId);
 }
 
 function isAutomationOn(key, accountId) {
@@ -1818,10 +1844,6 @@ function getFertilizerBuyNormalThresholdHours(accountId) {
 
 function getFertilizerBuyCheckIntervalMinutes(accountId) {
     return Math.max(1, Math.min(1440, Number(getAccountConfigSnapshot(accountId).fertilizerBuyCheckIntervalMinutes) || 60));
-}
-
-function getRanchCheckIntervalMinutes(accountId) {
-    return Math.max(1, Math.min(1440, Number(getAccountConfigSnapshot(accountId).ranchCheckIntervalMinutes) || 30));
 }
 
 function getPlantBlacklist(accountId) {
@@ -2508,7 +2530,6 @@ module.exports = {
     getFertilizerBuyNormalCount,
     getFertilizerBuyNormalThresholdHours,
     getFertilizerBuyCheckIntervalMinutes,
-    getRanchCheckIntervalMinutes,
     getUI,
     setUITheme,
     getUsersSeeAllAccounts,

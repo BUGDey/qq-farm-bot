@@ -172,7 +172,14 @@ function registerAdminActivityUpdateRoutes({ app, provider, requireAdminToken })
   app.post('/api/activity/update/scan', requireAdminToken, async (req, res) => {
     try {
       const report = await runActivityUpdateScan();
-      res.json({ ok: true, report, ...getActivityUpdateState() });
+      if (report?.online?.available !== true || report.online.stale) {
+        return res.status(503).json({
+          ok: false,
+          error: report?.online?.error || '未取得本次在线活动目录，请确认账号已连接后重试',
+          ...getActivityUpdateState(),
+        });
+      }
+      res.json({ ...getActivityUpdateState(), ok: true, report });
     } catch (error) {
       res.status(500).json({ ok: false, error: error.message || '活动更新扫描失败' });
     }

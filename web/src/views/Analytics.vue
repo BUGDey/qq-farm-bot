@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useGameSpaceStore } from '@/stores/game-space'
+import RanchAnalytics from '@/views/RanchAnalytics.vue'
+
+const gameSpace = useGameSpaceStore()
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import api from '@/api'
@@ -327,7 +331,8 @@ function formatGrowTime(seconds: any) {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <RanchAnalytics v-if="gameSpace.isRanch" />
+  <div v-else class="space-y-4">
     <div class="flex gap-2 overflow-x-auto border border-white/60 rounded-xl bg-white/70 px-2 pt-2 shadow-lg backdrop-blur-md dark:border-gray-700 dark:bg-gray-800">
       <button
         class="border-b-2 px-4 py-2 text-sm font-medium transition-colors"

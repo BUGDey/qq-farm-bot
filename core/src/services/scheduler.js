@@ -80,10 +80,24 @@ function getSchedulerRegistrySnapshot(filterNs = '') {
  * @param {string} namespace - 调度器命名空间，默认 'default'
  * @returns 调度器 API 对象
  */
-function createScheduler(namespace = 'default') {
+function createScheduler(namespace = 'default', { scene = null } = {}) {
   const ns = String(namespace || 'default');
   const store = ensureNamespaceStore(ns);
   const timers = store.timers;
+
+  // Timer callbacks must not inherit an already finished scene lease from their creator.
+  function invoke(key, callback, options = {}) {
+    const session = require('./ranch-session').ranchSession;
+    return session.detached(() => {
+      const target = Object.hasOwn(options, 'scene') ? options.scene : scene;
+      const record = timers.get(key);
+      if (target && record?.kind === 'timeout' && record.sceneEpoch !== session.getEpoch()) return;
+      const valid = () => timers.get(key) === record && record?.running ? callback() : undefined;
+      if (target === 'farm') return session.inFarm(valid, { key: `timer:${ns}:${key}` });
+      if (target === 'ranch') return session.inRanch(valid, { key: `timer:${ns}:${key}` });
+      return callback();
+    });
+  }
 
   /** 清除单个任务 */
   function clearTask(taskName) {
@@ -118,7 +132,7 @@ function createScheduler(namespace = 'default') {
    * @param {Function} callback - 回调函数
    * @returns {Timeout} setTimeout 句柄
    */
-  function setTimeoutTask(taskName, delay, callback) {
+  function setTimeoutTask(taskName, delay, callback, options = {}) {
     const key = String(taskName || '');
     if (!key) throw new Error('taskName 不能为空');
     if (typeof callback !== 'function') throw new Error(`timeout 任务 ${key} 缺少回调函数`);
@@ -127,6 +141,7 @@ function createScheduler(namespace = 'default') {
     const delayMs = toDelayMs(delay, 0);
     const record = {
       kind: 'timeout',
+      sceneEpoch: require('./ranch-session').ranchSession.getEpoch(),
       delayMs,
       createdAt: Date.now(),
       nextRunAt: Date.now() + delayMs,
@@ -144,7 +159,7 @@ function createScheduler(namespace = 'default') {
       current.lastRunAt = Date.now();
       current.runCount += 1;
       try {
-        await callback();
+        await invoke(key, callback, options);
       } catch (err) {
         schedulerLogger.warn(`[${ns}] timeout 任务执行失败: ${key}`, {
           module: 'scheduler',
@@ -195,13 +210,13 @@ function createScheduler(namespace = 'default') {
 
     const runner = async () => {
       const current = timers.get(key);
-      if (!current) return;
+      if (current !== record) return;
       if (preventOverlap && current.running) return;
       current.running = true;
       current.lastRunAt = Date.now();
       current.runCount += 1;
       try {
-        await callback();
+        await invoke(key, callback, options);
       } catch (err) {
         schedulerLogger.warn(`[${ns}] interval 任务执行失败: ${key}`, {
           module: 'scheduler',
@@ -211,7 +226,7 @@ function createScheduler(namespace = 'default') {
         });
       } finally {
         const after = timers.get(key);
-        if (after) {
+        if (after === record) {
           after.running = false;
           after.nextRunAt = Date.now() + intervalMs;
         }

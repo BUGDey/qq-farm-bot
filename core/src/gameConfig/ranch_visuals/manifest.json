@@ -1,0 +1,950 @@
+{
+  "animals": {
+    "60001": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60001/1.png",
+        "2": "/game-config/ranch_visuals/animals/60001/2.png",
+        "3": "/game-config/ranch_visuals/animals/60001/3.png",
+        "4": "/game-config/ranch_visuals/animals/60001/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60002": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60002/1.png",
+        "2": "/game-config/ranch_visuals/animals/60002/2.png",
+        "3": "/game-config/ranch_visuals/animals/60002/3.png",
+        "4": "/game-config/ranch_visuals/animals/60002/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60003": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60003/1.png",
+        "2": "/game-config/ranch_visuals/animals/60003/2.png",
+        "3": "/game-config/ranch_visuals/animals/60003/3.png",
+        "4": "/game-config/ranch_visuals/animals/60003/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60004": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60004/1.png",
+        "2": "/game-config/ranch_visuals/animals/60004/2.png",
+        "3": "/game-config/ranch_visuals/animals/60004/3.png",
+        "4": "/game-config/ranch_visuals/animals/60004/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60005": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60005/1.png",
+        "2": "/game-config/ranch_visuals/animals/60005/2.png",
+        "3": "/game-config/ranch_visuals/animals/60005/3.png",
+        "4": "/game-config/ranch_visuals/animals/60005/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60006": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60006/1.png",
+        "2": "/game-config/ranch_visuals/animals/60006/2.png",
+        "3": "/game-config/ranch_visuals/animals/60006/3.png",
+        "4": "/game-config/ranch_visuals/animals/60006/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60007": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60007/1.png",
+        "2": "/game-config/ranch_visuals/animals/60007/2.png",
+        "3": "/game-config/ranch_visuals/animals/60007/3.png",
+        "4": "/game-config/ranch_visuals/animals/60007/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60008": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60008/1.png",
+        "2": "/game-config/ranch_visuals/animals/60008/2.png",
+        "3": "/game-config/ranch_visuals/animals/60008/3.png",
+        "4": "/game-config/ranch_visuals/animals/60008/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60009": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60009/1.png",
+        "2": "/game-config/ranch_visuals/animals/60009/2.png",
+        "3": "/game-config/ranch_visuals/animals/60009/3.png",
+        "4": "/game-config/ranch_visuals/animals/60009/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60010": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60010/1.png",
+        "2": "/game-config/ranch_visuals/animals/60010/2.png",
+        "3": "/game-config/ranch_visuals/animals/60010/3.png",
+        "4": "/game-config/ranch_visuals/animals/60010/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60011": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60011/1.png",
+        "2": "/game-config/ranch_visuals/animals/60011/2.png",
+        "3": "/game-config/ranch_visuals/animals/60011/3.png",
+        "4": "/game-config/ranch_visuals/animals/60011/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60012": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60012/1.png",
+        "2": "/game-config/ranch_visuals/animals/60012/2.png",
+        "3": "/game-config/ranch_visuals/animals/60012/3.png",
+        "4": "/game-config/ranch_visuals/animals/60012/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60013": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60013/1.png",
+        "2": "/game-config/ranch_visuals/animals/60013/2.png",
+        "3": "/game-config/ranch_visuals/animals/60013/3.png",
+        "4": "/game-config/ranch_visuals/animals/60013/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60014": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60014/1.png",
+        "2": "/game-config/ranch_visuals/animals/60014/2.png",
+        "3": "/game-config/ranch_visuals/animals/60014/3.png",
+        "4": "/game-config/ranch_visuals/animals/60014/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60015": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60015/1.png",
+        "2": "/game-config/ranch_visuals/animals/60015/2.png",
+        "3": "/game-config/ranch_visuals/animals/60015/3.png",
+        "4": "/game-config/ranch_visuals/animals/60015/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "60016": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/60016/1.png",
+        "2": "/game-config/ranch_visuals/animals/60016/2.png",
+        "3": "/game-config/ranch_visuals/animals/60016/3.png",
+        "4": "/game-config/ranch_visuals/animals/60016/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70001": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70001/1.png",
+        "2": "/game-config/ranch_visuals/animals/70001/2.png",
+        "3": "/game-config/ranch_visuals/animals/70001/3.png",
+        "4": "/game-config/ranch_visuals/animals/70001/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70002": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70002/1.png",
+        "2": "/game-config/ranch_visuals/animals/70002/2.png",
+        "3": "/game-config/ranch_visuals/animals/70002/3.png",
+        "4": "/game-config/ranch_visuals/animals/70002/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70003": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70003/1.png",
+        "2": "/game-config/ranch_visuals/animals/70003/2.png",
+        "3": "/game-config/ranch_visuals/animals/70003/3.png",
+        "4": "/game-config/ranch_visuals/animals/70003/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70004": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70004/1.png",
+        "2": "/game-config/ranch_visuals/animals/70004/2.png",
+        "3": "/game-config/ranch_visuals/animals/70004/3.png",
+        "4": "/game-config/ranch_visuals/animals/70004/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70005": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70005/1.png",
+        "2": "/game-config/ranch_visuals/animals/70005/2.png",
+        "3": "/game-config/ranch_visuals/animals/70005/3.png",
+        "4": "/game-config/ranch_visuals/animals/70005/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70006": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70006/1.png",
+        "2": "/game-config/ranch_visuals/animals/70006/2.png",
+        "3": "/game-config/ranch_visuals/animals/70006/3.png",
+        "4": "/game-config/ranch_visuals/animals/70006/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70007": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70007/1.png",
+        "2": "/game-config/ranch_visuals/animals/70007/2.png",
+        "3": "/game-config/ranch_visuals/animals/70007/3.png",
+        "4": "/game-config/ranch_visuals/animals/70007/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70008": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70008/1.png",
+        "2": "/game-config/ranch_visuals/animals/70008/2.png",
+        "3": "/game-config/ranch_visuals/animals/70008/3.png",
+        "4": "/game-config/ranch_visuals/animals/70008/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70009": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70009/1.png",
+        "2": "/game-config/ranch_visuals/animals/70009/2.png",
+        "3": "/game-config/ranch_visuals/animals/70009/3.png",
+        "4": "/game-config/ranch_visuals/animals/70009/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70010": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70010/1.png",
+        "2": "/game-config/ranch_visuals/animals/70010/2.png",
+        "3": "/game-config/ranch_visuals/animals/70010/3.png",
+        "4": "/game-config/ranch_visuals/animals/70010/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70011": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70011/1.png",
+        "2": "/game-config/ranch_visuals/animals/70011/2.png",
+        "3": "/game-config/ranch_visuals/animals/70011/3.png",
+        "4": "/game-config/ranch_visuals/animals/70011/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    },
+    "70012": {
+      "poses": {
+        "1": "/game-config/ranch_visuals/animals/70012/1.png",
+        "2": "/game-config/ranch_visuals/animals/70012/2.png",
+        "3": "/game-config/ranch_visuals/animals/70012/3.png",
+        "4": "/game-config/ranch_visuals/animals/70012/4.png"
+      },
+      "animations": [
+        "fuhua",
+        "hungry_1",
+        "hungry_2",
+        "hungry_3",
+        "hungry_4",
+        "idle_1",
+        "idle_2",
+        "idle_3",
+        "idle_4",
+        "idle_sp_1",
+        "idle_sp_2",
+        "idle_sp_3",
+        "idle_sp_4",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ]
+    }
+  },
+  "facilities": {
+    "unit/prefab/buildings/MainHouse": {
+      "layers": [
+        {
+          "image": "/game-config/ranch_visuals/facilities/MainHouse/MainHouse.png",
+          "x": 0,
+          "y": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 512,
+          "height": 451,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        },
+        {
+          "image": "/game-config/ranch_visuals/facilities/MainHouse/chushi_zhucheng.png",
+          "x": 2.206,
+          "y": 96.251,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 743,
+          "height": 567,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        }
+      ]
+    },
+    "unit/prefab/buildings/Pasture-Coop": {
+      "layers": [
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture-Coop/chushi_wopeng_2.png",
+          "x": -1.5910000000000224,
+          "y": -79.09200000000004,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 930,
+          "height": 295,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": true
+        },
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture-Coop/chushi_wopeng_9.png",
+          "x": 41.014,
+          "y": 4.194,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 999,
+          "height": 475,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        },
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture-Coop/chushi_wopeng_3.png",
+          "x": 8.871,
+          "y": 27.404,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 951,
+          "height": 506,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        },
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture-Coop/chushi_wopeng_0.png",
+          "x": -75.946,
+          "y": 188.864,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 165,
+          "height": 196,
+          "anchorX": 0.5,
+          "anchorY": 0.1,
+          "front": false
+        },
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture-Coop/chushi_wopeng_6.png",
+          "x": 190.963,
+          "y": 180.609,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 320,
+          "height": 236,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        }
+      ]
+    },
+    "unit/prefab/buildings/Pasture": {
+      "layers": [
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture/chushi_wopeng_2.png",
+          "x": -1.8,
+          "y": -79,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 930,
+          "height": 295,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": true
+        },
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture/chushi_wopeng_4.png",
+          "x": 2.976,
+          "y": 4.977,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 923,
+          "height": 476,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        },
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture/chushi_wopeng_3.png",
+          "x": 8.871,
+          "y": 27.404,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 951,
+          "height": 506,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        },
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture/chushi_wopeng_0.png",
+          "x": -75.483,
+          "y": 188.95,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 165,
+          "height": 196,
+          "anchorX": 0.5,
+          "anchorY": 0.1,
+          "front": false
+        },
+        {
+          "image": "/game-config/ranch_visuals/facilities/Pasture/chushi_wopeng_1.png",
+          "x": 209,
+          "y": 177,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 365,
+          "height": 305,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        }
+      ]
+    },
+    "unit/prefab/buildings/GrassMachine_1": {
+      "layers": [
+        {
+          "image": "/game-config/ranch_visuals/facilities/GrassMachine_1/GrassMachine_1.png",
+          "x": 0,
+          "y": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 800,
+          "height": 800,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        }
+      ]
+    },
+    "unit/prefab/buildings/MessageBoard": {
+      "layers": [
+        {
+          "image": "/game-config/ranch_visuals/facilities/MessageBoard/liuyanban.png",
+          "x": -8.399,
+          "y": 66.206,
+          "scaleX": 1,
+          "scaleY": 1,
+          "width": 121,
+          "height": 157,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "front": false
+        }
+      ]
+    }
+  }
+}

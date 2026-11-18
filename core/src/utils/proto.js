@@ -54,10 +54,15 @@ async function loadProto() {
         getResourcePath('proto', 'collectionpb.proto'),
         getResourcePath('proto', 'skinpb.proto'),
         getResourcePath('proto', 'avatarframepb.proto'),
-        getResourcePath('proto', 'animalpb.proto'),
+        getResourcePath('proto', 'muge.proto'),
     ], { keepCase: true });
 
     for (const name of ['MilkTeaOperateRequest', 'MilkTeaOperateReply', 'MilkTeaGetGroupReply']) {
+        types[name] = root.lookupType(`gamepb.activitypb.${name}`);
+    }
+
+    // 牧歌初启（muge.proto 自带 Muge* 系列，和 activitypb 的 List/Operate 共用服务名）
+    for (const name of ['MugeListReply', 'MugeOperateRequest', 'MugeOperateReply']) {
         types[name] = root.lookupType(`gamepb.activitypb.${name}`);
     }
 
@@ -111,6 +116,8 @@ async function loadProto() {
     // 用户
     types.LoginRequest = root.lookupType('gamepb.userpb.LoginRequest');
     types.LoginReply = root.lookupType('gamepb.userpb.LoginReply');
+    types.PlayerLoginRequest = root.lookupType('gamepb.userpb.PlayerLoginRequest');
+    types.PlayerLoginReply = root.lookupType('gamepb.userpb.PlayerLoginReply');
     types.HeartbeatRequest = root.lookupType('gamepb.userpb.HeartbeatRequest');
     types.HeartbeatReply = root.lookupType('gamepb.userpb.HeartbeatReply');
     types.ReportArkClickRequest = root.lookupType('gamepb.userpb.ReportArkClickRequest');
@@ -185,6 +192,12 @@ async function loadProto() {
     types.MallGoods = root.lookupType('gamepb.mallpb.MallGoods');
     types.PurchaseRequest = root.lookupType('gamepb.mallpb.PurchaseRequest');
     types.PurchaseResponse = root.lookupType('gamepb.mallpb.PurchaseResponse');
+    // 牧场商城（slot_type=6）走官方字段布局，与农场商城那套私有 bytes 布局并存互不影响。
+    types.RanchMallListRequest = root.lookupType('gamepb.mallpb.RanchMallListRequest');
+    types.RanchMallGoods = root.lookupType('gamepb.mallpb.RanchMallGoods');
+    types.RanchMallShareInfo = root.lookupType('gamepb.mallpb.RanchMallShareInfo');
+    types.RanchMallPurchaseRequest = root.lookupType('gamepb.mallpb.RanchMallPurchaseRequest');
+    types.RanchMallPurchaseResponse = root.lookupType('gamepb.mallpb.RanchMallPurchaseResponse');
     types.GetActiveMysteryNPCRequest = root.lookupType('gamepb.mysteryshoppb.GetActiveNPCRequest');
     types.GetActiveMysteryNPCReply = root.lookupType('gamepb.mysteryshoppb.GetActiveNPCReply');
     types.BuyMysteryShopRequest = root.lookupType('gamepb.mysteryshoppb.BuyRequest');
@@ -308,24 +321,6 @@ async function loadProto() {
     types.RechargeInfoNotify = root.lookupType('gamepb.paypb.RechargeInfoNotify');
     types.GoodsUnlockNotify = root.lookupType('gamepb.shoppb.GoodsUnlockNotify');
     types.TaskInfoNotify = root.lookupType('gamepb.taskpb.TaskInfoNotify');
-
-    // 牧场（栏舍动物）
-    for (const name of [
-        'RanchAnimal', 'Ranch', 'RanchMutation', 'ProduceLot', 'RanchSlot',
-        'SellLot', 'FeedState', 'RanchOpTimes', 'BatchOpResult',
-        'AnimalTarget', 'SlotTarget', 'PlaceTarget', 'EmptyTarget',
-        'GetRanchDetailRequest', 'GetRanchDetailReply',
-        'PlaceAnimalRequest', 'PlaceAnimalReply',
-        'TriggerProduceRequest', 'TriggerProduceReply',
-        'HarvestRanchRequest', 'HarvestRanchReply',
-        'FeedAnimalRequest', 'FeedAnimalReply',
-        'GetRanchOpTimesRequest', 'GetRanchOpTimesReply',
-        'StrokeAnimalRequest', 'StrokeAnimalReply',
-        'CleanAllRanchRequest', 'CleanAllRanchReply',
-        'AddFeedRequest', 'AddFeedReply',
-    ]) {
-        types[name] = root.lookupType(`gamepb.animalpb.${name}`);
-    }
 
     // 宠物
     types.ActivateDogRequest = root.lookupType('gamepb.dogpb.ActivateDogRequest');

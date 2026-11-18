@@ -81,3 +81,67 @@ message ClaimMonthCardRewardRequest {
 message ClaimMonthCardRewardReply {
   repeated corepb.Item items = 1;
 }
+
+// ============ 牧场商城（slot_type=6）官方字段布局 ============
+// 上面 MallGoods / PurchaseRequest / PurchaseResponse 是农场商城在用的私有
+// 字节布局（price / limit / item_ids 都是 bytes），不能改，否则农场商城直接
+// 解析失败。牧场每日福利与罐头商店走的是官方字段，这里用独立 message 承接，
+// 同一份 goods_list 用 RanchMallGoods 解码，互不影响。
+
+// 牧场商城列表请求（官方字段：1=slot_type，2=是否手动打开，3=场景）
+message RanchMallListRequest {
+  int32 slot_type = 1;
+  bool is_manual_open = 2;
+  int32 global_scene_id = 3;
+}
+
+// 牧场商城商品（官方 MallGoods 字段布局）
+message RanchMallGoods {
+  int64 goods_id = 1;
+  string name = 2;
+  int32 goods_type = 3;
+  repeated corepb.Item reward_items = 4;
+  corepb.Item price = 5;              // id 是货币，count 是单价
+  bool is_free = 6;
+  PurchaseLimit purchase_limit = 7;
+  bool is_available = 8;
+  string discount_text = 9;
+  bool is_discounted = 10;
+  int64 discount_end_time = 11;
+  int32 product_type = 12;            // 1=普通 2=宠物 3=装扮
+  string pic = 13;
+  corepb.Item discount_price = 14;
+  int64 promotion_start_time = 15;
+  int64 promotion_end_time = 16;
+  int64 ad_id = 17;
+  bool ad_only = 18;
+  RanchMallShareInfo share = 19;
+  bool is_owned = 20;
+  string bg_pic = 21;
+  string color = 22;
+}
+
+// 牧场商城分享限制
+message RanchMallShareInfo {
+  int64 share_id = 1;
+  int64 share_free_count = 2;
+  int32 share_status = 3;
+  bool share_only = 4;
+}
+
+// 牧场商城购买请求
+message RanchMallPurchaseRequest {
+  int64 goods_id = 1;
+  int64 count = 2;
+}
+
+// 牧场商城购买响应
+message RanchMallPurchaseResponse {
+  int64 goods_id = 1;
+  bool success = 2;
+  repeated corepb.Item reward_items = 3;
+  bool is_first_buy = 4;
+  PurchaseLimit purchase_limit = 5;
+  bool share_free = 6;
+  RanchMallShareInfo share = 7;
+}

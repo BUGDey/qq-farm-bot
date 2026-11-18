@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useGameSpaceStore } from '@/stores/game-space'
+import RanchDashboard from '@/views/RanchDashboard.vue'
+const gameSpace = useGameSpaceStore()
 import type { RuntimeLogEntry } from '@/utils/runtime-log'
 import { useIntervalFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -601,30 +604,6 @@ async function refreshRuntimeLogs() {
   }
 }
 
-// UnoCSS 按需生成，动态拼接的类不会被提取，这里用字面量表
-const OP_PILL: Record<string, string> = {
-  harvest: 'bg-green-500',
-  water: 'bg-blue-500',
-  weed: 'bg-yellow-500',
-  bug: 'bg-red-500',
-  farming: 'bg-teal-500',
-  fertilize: 'bg-emerald-500',
-  plant: 'bg-lime-500',
-  steal: 'bg-orange-500',
-  helpWater: 'bg-blue-400',
-  goldenBugClear: 'bg-amber-500',
-  goldenBugPut: 'bg-yellow-500',
-  helpWeed: 'bg-yellow-400',
-  helpBug: 'bg-red-300',
-  taskClaim: 'bg-indigo-500',
-  sell: 'bg-pink-500',
-  tongQiGift: 'bg-rose-500',
-}
-
-function getOpPillClass(key: string | number) {
-  return OP_PILL[String(key)] || 'bg-gray-400'
-}
-
 function getOpName(key: string | number) {
   return OP_META[String(key)]?.label || String(key)
 }
@@ -813,7 +792,8 @@ useIntervalFn(updateCountdowns, 1000)
 </script>
 
 <template>
-  <div class="dashboard-container">
+  <RanchDashboard v-if="gameSpace.isRanch" />
+  <div v-else class="dashboard-container">
     <div class="game-home">
       <!-- 用户信息卡片 -->
       <div class="game-card user-card">
@@ -948,7 +928,8 @@ useIntervalFn(updateCountdowns, 1000)
         </div>
       </div>
 
-      <!-- 账号统计卡片（全期累计） -->
+
+      <!-- 账号统计卡片（全期累计，样式与牧场一致） -->
       <div class="home-stats-panel">
         <div class="home-log-head">
           <h3>账号统计</h3>
@@ -959,14 +940,16 @@ useIntervalFn(updateCountdowns, 1000)
             :key="item.key"
             class="home-stat-item"
           >
-            <div class="home-stat-icon text-base" :class="getOpIcon(item.key)" />
-            <span class="home-stat-label" :title="getOpName(item.key)">{{ getOpName(item.key) }}</span>
-            <span class="home-stat-value-pill" :class="getOpPillClass(item.key)">{{ item.value }}</span>
+            <div class="min-w-0 flex items-center gap-1.5">
+              <div class="text-base" :class="[getOpIcon(item.key), getOpColor(item.key)]" />
+              <span class="home-stat-label" :title="getOpName(item.key)">{{ getOpName(item.key) }}</span>
+            </div>
+            <span class="home-stat-value">{{ item.value }}</span>
           </div>
         </div>
       </div>
 
-      <!-- 运行日志面板 -->
+      <!-- 运行日志面板（置于账号统计下方，页面最底部） -->
       <div class="home-log-panel">
         <div class="home-log-head">
           <h3>运行日志</h3>
@@ -1013,6 +996,7 @@ useIntervalFn(updateCountdowns, 1000)
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- 原有的统计和日志区域 -->
@@ -2020,10 +2004,6 @@ useIntervalFn(updateCountdowns, 1000)
   background: rgba(255, 255, 255, 0.35);
 }
 
-.home-stat-icon {
-  flex-shrink: 0;
-}
-
 .home-stat-label {
   min-width: 0;
   flex: 1;
@@ -2034,19 +2014,13 @@ useIntervalFn(updateCountdowns, 1000)
   white-space: nowrap;
 }
 
-.home-stat-value-pill {
-  display: inline-flex;
+/* 与牧场账号统计样式一致：右侧纯数字（绿色等宽字体），不再显示彩色胶囊 */
+.home-stat-value {
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  min-width: 52px;
-  border-radius: 999px;
-  padding: 4px 12px;
-  color: #fff;
+  color: #166534;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   font-family: 'DM Mono', 'Courier New', monospace;
-  box-shadow: 0 3px 8px rgba(31, 38, 80, 0.18);
 }
 
 .home-log-head {

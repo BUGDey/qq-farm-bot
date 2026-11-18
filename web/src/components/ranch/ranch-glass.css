@@ -1,0 +1,121 @@
+/* Opt-in surfaces for personal, illustrated and analytics ranch pages only. */
+.ranch-glass-page {
+  --ranch-glass-text: #243247;
+  --ranch-glass-muted: #526176;
+  --ranch-glass-border: rgba(255, 255, 255, .7);
+  --ranch-glass-card: linear-gradient(165deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .48));
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  min-height: 100%;
+  padding: 16px;
+  color: var(--ranch-glass-text);
+}
+.ranch-glass-page::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, .4);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .24);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  content: '';
+  pointer-events: none;
+}
+.ranch-glass-page .ui-card,
+.ranch-glass-page .ranch-glass-card,
+.ranch-glass-page .ranch-warehouse-item {
+  min-width: 0;
+  border: 1px solid var(--ranch-glass-border);
+  border-radius: 18px;
+  background: var(--ranch-glass-card);
+  box-shadow: 0 8px 24px rgba(31, 38, 80, .09), inset 0 1px 0 rgba(255, 255, 255, .7);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  backdrop-filter: blur(24px) saturate(1.35);
+}
+/* Keep fixed ranch dialogs anchored to the viewport, outside filtered ancestors. */
+.ranch-glass-page .ranch-farm-panel {
+  border: 1px solid var(--ranch-glass-border);
+  border-radius: 20px;
+  background: var(--ranch-glass-card);
+  box-shadow: 0 8px 24px rgba(31, 38, 80, .09);
+}
+.ranch-glass-page .ranch-farm-summary { background: rgba(255, 255, 255, .3); }
+.ranch-glass-page nav[aria-label='页面分区'] {
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--ranch-glass-border);
+  border-radius: 18px;
+  background: var(--ranch-glass-card);
+  box-shadow: 0 6px 20px rgba(31, 38, 80, .07);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+.ranch-glass-page nav[aria-label='页面分区'] button { flex: 1 0 auto; justify-content: center; }
+.ranch-glass-page :is(.text-gray-400, .text-gray-500, .text-gray-600) { color: var(--ranch-glass-muted); }
+.ranch-glass-page input:not([type='checkbox']) {
+  min-width: 0;
+  border-color: rgba(148, 163, 184, .45);
+  background: rgba(255, 255, 255, .56);
+  color: var(--ranch-glass-text);
+}
+.ranch-glass-page input::placeholder { color: var(--ranch-glass-muted); }
+.ranch-glass-page input:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+.ranch-illustrated-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: 13px; }
+/* 图鉴卡片对齐商城铺法：固定最小宽度自适应列数，卡片自身撑满，不留大片空白 */
+.ranch-illustrated-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; align-items: stretch; }
+.ranch-book-entry { display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid rgba(255, 255, 255, .7); border-radius: 10px; background: linear-gradient(165deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .48)); box-shadow: 0 8px 22px rgba(31, 38, 80, .1), inset 0 1.5px 0 rgba(255, 255, 255, .85); backdrop-filter: blur(24px) saturate(1.35); -webkit-backdrop-filter: blur(24px) saturate(1.35); overflow-wrap: anywhere; }
+.ranch-book-entry-media { position: relative; display: grid; height: 88px; flex-shrink: 0; place-items: center; background: rgba(255, 255, 255, .5); }
+.ranch-book-entry-id { position: absolute; left: 0; top: 0; border-bottom-right-radius: 8px; background: rgba(255, 255, 255, .78); padding: 1px 7px; font-size: 10px; font-weight: 600; color: #4b5563; }
+.ranch-book-entry-badge { position: absolute; right: 0; top: 0; border-bottom-left-radius: 8px; padding: 1px 7px; font-size: 10px; font-weight: 600; }
+.ranch-book-entry-badge.is-unlocked { background: rgba(209, 250, 229, .92); color: #047857; }
+.ranch-book-entry-badge.is-locked { background: rgba(229, 231, 235, .92); color: #4b5563; }
+.ranch-book-entry-img { width: 56px; height: 56px; object-fit: contain; }
+.ranch-book-entry-fallback { display: grid; height: 56px; width: 56px; place-items: center; border-radius: 8px; background: rgba(255, 255, 255, .8); font-size: 13px; font-weight: 600; color: #6b7280; }
+.ranch-book-entry-body { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 2px; padding: 8px 10px 10px; }
+.ranch-book-entry-body h2 { font-size: 13px; font-weight: 600; line-height: 1.35; color: var(--ranch-glass-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranch-book-entry-body p { font-size: 11px; line-height: 1.4; color: var(--ranch-glass-muted); }
+.ranch-book-entry-progress { margin-top: 1px; }
+.ranch-book-entry-weight { color: #a16207; }
+.ranch-book-entry-weight.is-empty { color: var(--ranch-glass-muted); }
+.ranch-illustrated-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.ranch-illustrated-toolbar input { flex: 1 1 180px; }
+.ranch-analytics-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px; }
+.ranch-analytics-toolbar input { flex: 1 1 180px; }
+.ranch-analytics-table { overflow-x: auto; }
+.ranch-analytics-table table { color: var(--ranch-glass-text); }
+.ranch-analytics-table thead { background: rgba(255, 255, 255, .58); }
+.ranch-analytics-table th { font-weight: 600; }
+.ranch-analytics-table tr { border-color: rgba(148, 163, 184, .22); }
+.ranch-analytics-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, .18); }
+.ranch-analytics-table tbody tr:hover { background: rgba(255, 255, 255, .4); }
+.ranch-analytics-empty { padding: 32px 16px; text-align: center; color: var(--ranch-glass-muted); }
+.dark .ranch-glass-page {
+  --ranch-glass-text: #edf2f9;
+  --ranch-glass-muted: #bdcadb;
+  --ranch-glass-border: rgba(203, 213, 225, .23);
+  --ranch-glass-card: linear-gradient(165deg, rgba(30, 41, 59, .85), rgba(30, 41, 59, .67));
+}
+.dark .ranch-glass-page::before { background: rgba(15, 23, 42, .38); border-color: rgba(203, 213, 225, .12); }
+.dark .ranch-glass-page :is(.ui-card, .ranch-glass-card, .ranch-warehouse-item) { box-shadow: 0 8px 24px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .08); }
+.dark .ranch-glass-page input:not([type='checkbox']) { background: rgba(15, 23, 42, .58); }
+.dark .ranch-glass-page .ranch-farm-summary,
+.dark .ranch-analytics-table thead { background: rgba(15, 23, 42, .48); }
+.dark .ranch-analytics-table tbody tr:nth-child(even) { background: rgba(15, 23, 42, .2); }
+.dark .ranch-analytics-table tbody tr:hover { background: rgba(71, 85, 105, .35); }
+@media (min-width: 640px) {
+  .ranch-illustrated-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 639px) {
+  .ranch-illustrated-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+  .ranch-book-entry-media { height: 76px; }
+  .ranch-book-entry-img { width: 48px; height: 48px; }
+}
+@media (max-width: 639px) {
+  .ranch-glass-page { padding: 10px; }
+  .ranch-glass-page::before { border-radius: 18px; }
+  .ranch-glass-page nav[aria-label='页面分区'] button { padding-inline: 10px; }
+  .ranch-analytics-toolbar > * { max-width: 100%; }
+}

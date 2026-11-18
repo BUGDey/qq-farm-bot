@@ -6,6 +6,8 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/api'
 
 import { menuRoutes } from '@/router/menu'
+import { ranchMenu } from '@/router/ranch-menu'
+import { useGameSpaceStore } from '@/stores/game-space'
 import { useAccountStore } from '@/stores/account'
 import { useAppStore } from '@/stores/app'
 import { useShopStore } from '@/stores/shop'
@@ -145,6 +147,8 @@ const connectionStatus = computed(() => {
 const navItems = computed(() => {
   const isAdmin = userStore.isAdmin
   const isSuperAdmin = userStore.isSuperAdmin
+  if (useGameSpaceStore().isRanch)
+    return ranchMenu
   return menuRoutes
     .filter(item => item.showInNav !== false && (!item.adminOnly || isAdmin) && (!item.superOnly || isSuperAdmin))
     .map(item => ({

@@ -110,13 +110,6 @@ function createDataProvider(deps) {
         return callWorkerApi(accountId, 'getDecorationDiagnostics');
     }
 
-    /** 牧场栏舍详情（只读，按账号合并并发） */
-    function getRanchDetail(ref, hostGid = 0) {
-        const accountId = resolveAccountId(ref);
-        const key = `ranch:${String(accountId || '')}:${String(hostGid)}`;
-        return callWorkerReadOnce(key, accountId, 'getRanchDetail', hostGid);
-    }
-
     /** 向全部 worker 广播消息（活动插件宿主装载/卸载用） */
     function sendToWorkers(message) {
         for (const worker of Object.values(workers || {})) {
@@ -295,6 +288,8 @@ function createDataProvider(deps) {
         getMilkTea: ref => callWorkerApi(resolveAccountId(ref), 'getMilkTea'),
         operateMilkTea: (ref, action, params) => callWorkerApi(resolveAccountId(ref), 'operateMilkTea', action, params || {}),
         milkTeaRecords: (ref, kind, params) => callWorkerApi(resolveAccountId(ref), 'milkTeaRecords', kind, params || {}),
+        getMugeActivity: ref => callWorkerApi(resolveAccountId(ref), 'getMugeActivity'),
+        operateMugeActivity: (ref, action, params) => callWorkerApi(resolveAccountId(ref), 'operateMugeActivity', action, params || {}),
         getPetDiaryActivity: (ref) => callWorkerApi(resolveAccountId(ref), 'getPetDiaryActivity'),
         getPetDiary: (ref) => callWorkerApi(resolveAccountId(ref), 'getPetDiary'),
         operatePetDiary: (ref, action, params) => callWorkerApi(resolveAccountId(ref), 'operatePetDiary', action, params || {}),
@@ -321,16 +316,15 @@ function createDataProvider(deps) {
         equipDecoration,
         getDecorationDiagnostics,
 
-        // ========== Ranch（牧场 / 栏舍动物） ==========
-        getRanchDetail,
-        ranchPlaceAnimal: (ref, ranchInstId, animalId, giantCubItemId) => callWorkerApi(resolveAccountId(ref), 'ranchPlaceAnimal', ranchInstId, animalId, giantCubItemId),
-        ranchTriggerProduce: (ref, ranchInstId, slotIndex) => callWorkerApi(resolveAccountId(ref), 'ranchTriggerProduce', ranchInstId, slotIndex),
-        harvestRanch: (ref, mode) => callWorkerApi(resolveAccountId(ref), 'harvestRanch', mode),
-        feedAnimal: (ref, ranchInstId, animalInstId, count) => callWorkerApi(resolveAccountId(ref), 'feedAnimal', ranchInstId, animalInstId, count),
-        getRanchOpTimes: (ref) => callWorkerApi(resolveAccountId(ref), 'getRanchOpTimes'),
-        strokeAnimal: (ref, hostGid, ranchInstId, slotIndex) => callWorkerApi(resolveAccountId(ref), 'strokeAnimal', hostGid, ranchInstId, slotIndex),
-        cleanAllRanch: (ref, hostGid) => callWorkerApi(resolveAccountId(ref), 'cleanAllRanch', hostGid),
-        addFeed: (ref, instanceId, addCount, useGold, hostGid) => callWorkerApi(resolveAccountId(ref), 'addFeed', instanceId, addCount, useGold, hostGid),
+        // ========== Ranch ==========
+        getRanchResource: (ref, resource) => callWorkerApi(resolveAccountId(ref), 'ranchResource', resource, { _timeoutMs: 120000 }),
+        getRanchStatus: (ref) => {
+            const id = resolveAccountId(ref);
+            return callWorkerReadOnce(`ranch:${String(id || '')}`, id, 'ranchStatus', { _timeoutMs: 120000 });
+        },
+        connectRanch: (ref) => callWorkerApi(resolveAccountId(ref), 'ranchConnect', { _timeoutMs: 120000 }),
+        disconnectRanch: (ref) => callWorkerApi(resolveAccountId(ref), 'ranchDisconnect', { _timeoutMs: 120000 }),
+        ranchAction: (ref, body) => callWorkerApi(resolveAccountId(ref), 'ranchAction', body, { _timeoutMs: 120000 }),
 
         // ========== Career ==========
         getCareerInfo: (ref, gid) => callWorkerApi(resolveAccountId(ref), 'getCareerInfo', gid),
@@ -361,7 +355,6 @@ function createDataProvider(deps) {
                 fertilizerBuyNormalCount: s.fertilizerBuyNormalCount,
                 fertilizerBuyNormalThresholdHours: s.fertilizerBuyNormalThresholdHours,
                 fertilizerBuyCheckIntervalMinutes: s.fertilizerBuyCheckIntervalMinutes,
-                ranchCheckIntervalMinutes: s.ranchCheckIntervalMinutes,
                 goldenBugKeepCount: s.goldenBugKeepCount,
                 goldenBugRoundLimit: s.goldenBugRoundLimit,
                 autoAcceptFriendMinLevel: s.autoAcceptFriendMinLevel,
@@ -387,7 +380,6 @@ function createDataProvider(deps) {
                 fertilizerBuyNormalCount: store.getFertilizerBuyNormalCount(id),
                 fertilizerBuyNormalThresholdHours: store.getFertilizerBuyNormalThresholdHours(id),
                 fertilizerBuyCheckIntervalMinutes: store.getFertilizerBuyCheckIntervalMinutes(id),
-                ranchCheckIntervalMinutes: store.getRanchCheckIntervalMinutes(id),
                 goldenBugKeepCount: store.getConfigSnapshot(id).goldenBugKeepCount,
                 goldenBugRoundLimit: store.getConfigSnapshot(id).goldenBugRoundLimit,
                 autoAcceptFriendMinLevel: store.getAutoAcceptFriendMinLevel(id),

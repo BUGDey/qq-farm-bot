@@ -1,0 +1,1447 @@
+{
+  "source": "/Users/xxxscarlxrd/Library/Containers/com.tencent.qqexminiprogram/Data/Library/Application Support/QQEX/miniapp/temps/miniapp_src/1112386029_3_be3b19f45e0f8b42ef5134e45489da69",
+  "configUrl": "https://cdn-resource.nqf.qq.com/release/remote/animal/config.c86eb.json",
+  "images": [
+    {
+      "id": 7002,
+      "name": "便便",
+      "file": "1030_1.png",
+      "assetPath": "texture/1030_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a6/a611839c-ef60-4f48-9cc4-9b96b2dcc6b5.70d0b.png",
+      "sha256": "26461a4630dbd6d425c403c78f2383cf352bc7dc190173ba1081edd5dbce1832"
+    },
+    {
+      "id": 60001,
+      "name": "鸡",
+      "file": "60001_1.png",
+      "assetPath": "texture/60001_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/3d/3d4caa87-bf82-42cb-abf3-596b0818755b.08221.png",
+      "sha256": "32cd9d05d52b9c9335f7c017958fbb713e6a148098225ea46b6a381742315023"
+    },
+    {
+      "id": 60002,
+      "name": "鸭",
+      "file": "60002_1.png",
+      "assetPath": "texture/60002_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/0b/0baecb9e-3599-4767-a4aa-c65f457d0f6a.a6048.png",
+      "sha256": "ca780d3a6d77d7b37d512e5f9bff229e9c98c70c051e314509dbd803fb55c3bb"
+    },
+    {
+      "id": 60003,
+      "name": "鹅",
+      "file": "60003_1.png",
+      "assetPath": "texture/60003_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/50/50387d97-44b2-4479-b93c-09595350945a.9cf8e.png",
+      "sha256": "5061984d9075ccb89d89952deba6552072ec1024a5e354bd32395936aaaa9688"
+    },
+    {
+      "id": 60004,
+      "name": "兔子",
+      "file": "60004_1.png",
+      "assetPath": "texture/60004_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a9/a90ab792-5ccb-4431-b415-884be4fc3725.a4fd3.png",
+      "sha256": "cd03abec7318670c3253721ced3df95600c74c2c03ae1710436926b017d8f2f3"
+    },
+    {
+      "id": 60005,
+      "name": "火鸡",
+      "file": "60005_1.png",
+      "assetPath": "texture/60005_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/5f/5f95139d-7cdc-46c5-a66c-60654d14e19d.8e101.png",
+      "sha256": "ce32a5d72b4019463b2154183351fe17358bf71b37be7120caf49e7541630c8e"
+    },
+    {
+      "id": 60006,
+      "name": "天竺鼠",
+      "file": "60006_1.png",
+      "assetPath": "texture/60006_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ba/ba5fcadb-8428-46c2-bf2a-293b54bb3cbe.e3538.png",
+      "sha256": "c6739016270088aa096f01eced5001a3ce08804c51f4d7d4524ede53d4136da7"
+    },
+    {
+      "id": 60007,
+      "name": "乌龟",
+      "file": "60007_1.png",
+      "assetPath": "texture/60007_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/3e/3ef4eecf-f98a-4dc7-9b44-dc9f1ea3be31.07fd9.png",
+      "sha256": "11292dc0fad0cb58703b183a35cf6e309c4cb97a5c15314e059e5edffbff04fe"
+    },
+    {
+      "id": 60008,
+      "name": "松鼠",
+      "file": "60008_1.png",
+      "assetPath": "texture/60008_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/32/32e5dcf7-9802-4541-b286-ebb5ddf1a369.a5a4d.png",
+      "sha256": "b5cb61871a9eb9f36e04a78fe887805037777ed5b2af4c7a3bcd6b910cbcbc90"
+    },
+    {
+      "id": 60009,
+      "name": "刺猬",
+      "file": "60009_1.png",
+      "assetPath": "texture/60009_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/00/003c8141-9f39-4fd4-addf-7fdf4546a398.2dad4.png",
+      "sha256": "0848d16ed44b51c6266dad3100b35cba9ab750a2da4120c9038e5d1d0faa88f2"
+    },
+    {
+      "id": 60010,
+      "name": "鼹鼠",
+      "file": "60010_1.png",
+      "assetPath": "texture/60010_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/44/44cad300-e2ec-4535-9603-d6914039c1a1.7afd4.png",
+      "sha256": "f6ad2c503b565d2511823bb0d439cb32ec906721461074aa511e3eb988a97766"
+    },
+    {
+      "id": 60011,
+      "name": "考拉",
+      "file": "60011_1.png",
+      "assetPath": "texture/60011_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/c2/c2e4cfee-7391-4a97-94ca-e656a73f1cb1.0750f.png",
+      "sha256": "8328bb2ab46ecf4b0c595817871ec655eda7933a1c7d5fe501b32ad58602d61a"
+    },
+    {
+      "id": 60012,
+      "name": "狐狸",
+      "file": "60012_1.png",
+      "assetPath": "texture/60012_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/74/74c9f1f1-d5d0-42a9-8f2a-ad5632847c6f.c229e.png",
+      "sha256": "e4ca2e4f5c080dade903791fba725c4f0c6d57db8da0ab9638fcb91a31689af9"
+    },
+    {
+      "id": 60013,
+      "name": "豪猪",
+      "file": "60013_1.png",
+      "assetPath": "texture/60013_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/f5/f53871a5-271f-4c7e-8263-7e688d830d24.88784.png",
+      "sha256": "2c1303d6678a9b64a55e52a3f3b7c191d2b78247bb7f86bedd1dba81b95e640a"
+    },
+    {
+      "id": 60014,
+      "name": "龙猫",
+      "file": "60014_1.png",
+      "assetPath": "texture/60014_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/f0/f04c29f3-253c-4395-8a21-279b8f02324f.1712e.png",
+      "sha256": "e2d28278ca20eaf5a1e06c74218c59e1f01163c354558abd9d893a62b7a6197e"
+    },
+    {
+      "id": 60015,
+      "name": "孔雀",
+      "file": "60015_1.png",
+      "assetPath": "texture/60015_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/44/442b634e-1441-4dff-be03-c7d2892f370e.de93a.png",
+      "sha256": "79304033325e34ec6ec570a61bab19d7a4ce558bed36bf3779f505102fde6ebd"
+    },
+    {
+      "id": 60016,
+      "name": "貂",
+      "file": "60016_1.png",
+      "assetPath": "texture/60016_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/7b/7b7ba66a-e507-4dfa-9c40-d00906fcf8f8.42708.png",
+      "sha256": "af08d262d10bfb6c202604cf6115b51a57178a095bfbd24dc90004ec263be57a"
+    },
+    {
+      "id": 70001,
+      "name": "羊",
+      "file": "70001_1.png",
+      "assetPath": "texture/70001_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/cb/cb2de369-2bef-4fa5-9c12-9fef1853bda4.60668.png",
+      "sha256": "61de37233565fd3838f06bfde10d34c3ed5b49b70e8990081811b3157d987981"
+    },
+    {
+      "id": 70002,
+      "name": "牛",
+      "file": "70002_1.png",
+      "assetPath": "texture/70002_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/9c/9c0cb3a9-f901-4fd0-a7d1-3573a16139b1.650f9.png",
+      "sha256": "301695d3a558e820a66c7463b222c118aaa33444f0a5ba1e5e662ec9cc08a39b"
+    },
+    {
+      "id": 70003,
+      "name": "驴",
+      "file": "70003_1.png",
+      "assetPath": "texture/70003_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/16/165051e0-df41-40be-a540-0f7c6d0834ed.82c47.png",
+      "sha256": "5314a06342291aa6032d7312b8bc9e9d7c53a7c0bd8225fc6f8778fca37e0241"
+    },
+    {
+      "id": 70004,
+      "name": "迷你猪",
+      "file": "70004_1.png",
+      "assetPath": "texture/70004_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/50/505095fa-e5b9-49d6-bfbb-e68c429963d3.b5bfa.png",
+      "sha256": "0ff9c8495028cd229c6c3c313a3ddf03db05e40230a110e78fae376da6867f20"
+    },
+    {
+      "id": 70005,
+      "name": "马",
+      "file": "70005_1.png",
+      "assetPath": "texture/70005_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/f8/f868d153-df0b-4cc8-bd7f-20289b1c4117.44271.png",
+      "sha256": "1eab439be3381ac656e74f36517d22392605092c28babda69f89f860e1f06512"
+    },
+    {
+      "id": 70006,
+      "name": "水牛",
+      "file": "70006_1.png",
+      "assetPath": "texture/70006_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/db/dbe8d16a-f3cc-4e92-b0a8-11797485717e.6ee3f.png",
+      "sha256": "c5bca96c25d2f88794f64a578182c9728fa97072e95109b069392f5a610f3f55"
+    },
+    {
+      "id": 70007,
+      "name": "骆驼",
+      "file": "70007_1.png",
+      "assetPath": "texture/70007_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/92/9297a937-1a10-4aa3-8e24-2cd1061363ed.254de.png",
+      "sha256": "cbb8e9b7baa1fd41b4f418ab0654194382e3135ac63e007ca1504768668b6418"
+    },
+    {
+      "id": 70008,
+      "name": "牦牛",
+      "file": "70008_1.png",
+      "assetPath": "texture/70008_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/87/87364ee3-45da-4446-82e1-b1819aea19f9.d6d3d.png",
+      "sha256": "94f85744161b932b99800107fe1e737758a47b370e14bcd6708c20e5d5a346ec"
+    },
+    {
+      "id": 70009,
+      "name": "鸵鸟",
+      "file": "70009_1.png",
+      "assetPath": "texture/70009_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ca/ca7814e7-5ad9-456c-953e-073ecd79462a.73fd7.png",
+      "sha256": "49784267c97be907b53534ac65499ac6e4d501ee5f8781318404d972374dae26"
+    },
+    {
+      "id": 70010,
+      "name": "梅花鹿",
+      "file": "70010_1.png",
+      "assetPath": "texture/70010_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/e4/e41883d2-37df-4d80-9920-3755af2d230a.83482.png",
+      "sha256": "510dcaffa8ac671405a151af40d7a6c744d2bb028a2fbaf3bfd9f0a89b0cf73b"
+    },
+    {
+      "id": 70011,
+      "name": "浣熊",
+      "file": "70011_1.png",
+      "assetPath": "texture/70011_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/9c/9c4fd7d4-058a-434f-8a1f-e0dc2cc5be26.3fb31.png",
+      "sha256": "bbeb86cfbb7d1b60bd1cb3086548a4376faf5acec6c06db8401ef679e830fd52"
+    },
+    {
+      "id": 70012,
+      "name": "羊驼",
+      "file": "70012_1.png",
+      "assetPath": "texture/70012_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/1f/1fa1abbd-6378-49d7-9d78-abf1fda8182f.5c8fd.png",
+      "sha256": "636aefc2c63561a6c274d6684e28cecff1801605bc820c8489b18b690c557e58"
+    },
+    {
+      "id": 65001,
+      "name": "巨大鸡幼崽",
+      "file": "65001_1.png",
+      "assetPath": "texture/65001_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/0a/0a3330e2-58b4-4db0-8ca6-61e0eee654c2.f1b32.png",
+      "sha256": "43724c4314b134da2940d97a41cae3a68e85cb2c85839340799f60bf30140099"
+    },
+    {
+      "id": 65002,
+      "name": "巨大鸭幼崽",
+      "file": "65002_1.png",
+      "assetPath": "texture/65002_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/fe/fe5eadf7-3a48-401c-8aa0-1a0a52b42a28.c93db.png",
+      "sha256": "5ffc7417f42431fb7ec243ee73c153b4703e6c5df32b134c412d4b66b463a3e1"
+    },
+    {
+      "id": 65003,
+      "name": "巨大鹅幼崽",
+      "file": "65003_1.png",
+      "assetPath": "texture/65003_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a4/a45bd7d3-a801-4bde-8f9a-c1e2dafb22e8.34b60.png",
+      "sha256": "e3e3f17b7b5b364dfa3ab37a68aa09291f053b68f981c136a620081f1181a752"
+    },
+    {
+      "id": 65004,
+      "name": "巨大兔子幼崽",
+      "file": "65004_1.png",
+      "assetPath": "texture/65004_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/87/87772940-14b6-4409-88a7-d749bf5e0b0b.bd127.png",
+      "sha256": "2820ba1b3cdc1ee4f3597dd949036d2baa3e842a5c99474e3fa9f420599c4100"
+    },
+    {
+      "id": 65005,
+      "name": "巨大火鸡幼崽",
+      "file": "65005_1.png",
+      "assetPath": "texture/65005_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/5e/5e13dd4e-7587-49ab-b9ff-61460f2ed151.6ce6a.png",
+      "sha256": "85517e70aada4a681a9d3b2555eda34baf38179616c20a56c2a779b9fd08657b"
+    },
+    {
+      "id": 65006,
+      "name": "巨大天竺鼠幼崽",
+      "file": "65006_1.png",
+      "assetPath": "texture/65006_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/80/80864244-c52d-47be-80ec-f33b15efe820.10d23.png",
+      "sha256": "8102d8db4e314177ba9b2242084cd62b50425455c0eabb55baa59ff4c7c2ebf6"
+    },
+    {
+      "id": 65007,
+      "name": "巨大乌龟幼崽",
+      "file": "65007_1.png",
+      "assetPath": "texture/65007_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/c5/c5e21bbf-d911-448c-8f97-6dd36d9a0a6c.76808.png",
+      "sha256": "b52c880b62fea6671e7c3dbe29ca5d9bdf06f69a095dc7f52dfb25d797350152"
+    },
+    {
+      "id": 65008,
+      "name": "巨大松鼠幼崽",
+      "file": "65008_1.png",
+      "assetPath": "texture/65008_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/c1/c18e81d2-1705-477e-bc56-551b328591e2.14ec5.png",
+      "sha256": "123e792d4fccd6a2318f344b64c31d6d46e0c76ecc0160ad4b8725f461e95e3c"
+    },
+    {
+      "id": 65009,
+      "name": "巨大刺猬幼崽",
+      "file": "65009_1.png",
+      "assetPath": "texture/65009_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/61/61b14366-9999-4df8-b99a-451892039972.57a12.png",
+      "sha256": "0f6e966c4854de7fdc8a2319604fe9f90d235cfdfc78e8eed197565793c7c40a"
+    },
+    {
+      "id": 65010,
+      "name": "巨大鼹鼠幼崽",
+      "file": "65010_1.png",
+      "assetPath": "texture/65010_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ce/ce59229a-9fa1-4816-a66e-afaea28370d8.e5102.png",
+      "sha256": "9d6f15dc58806695fe2ec8f94c82742187cc25523e49fcbbe06ad9b74b67f50f"
+    },
+    {
+      "id": 65011,
+      "name": "巨大考拉幼崽",
+      "file": "65011_1.png",
+      "assetPath": "texture/65011_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ef/ef633682-50a0-4d83-b2ab-4755c8745faf.b9c94.png",
+      "sha256": "9bc01b9bb5dfe24ac0e5bc76d5e606ebf953f1836f343b4e5c822c013556de41"
+    },
+    {
+      "id": 65012,
+      "name": "巨大狐狸幼崽",
+      "file": "65012_1.png",
+      "assetPath": "texture/65012_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/e5/e50eb796-bfd6-434f-a018-cf208d37dcc7.18780.png",
+      "sha256": "e24f99e532ff73560680f3837d1f6fe87768aa4ff1bc310c08bde6866bad4433"
+    },
+    {
+      "id": 65013,
+      "name": "巨大豪猪幼崽",
+      "file": "65013_1.png",
+      "assetPath": "texture/65013_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/9d/9d80d040-b48c-42f8-904f-faa62e599d8e.e0aa2.png",
+      "sha256": "4f66cb46254785c8b19ce692b34051b6e16956c4b7fd257ef17b0255ffd3cef3"
+    },
+    {
+      "id": 65014,
+      "name": "巨大龙猫幼崽",
+      "file": "65014_1.png",
+      "assetPath": "texture/65014_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/f9/f95a4599-479b-4244-902c-9247b0de66f4.b7919.png",
+      "sha256": "bc30d0f5cd2151a2856ec2814755ac05d5975eafa85b2a84f1b5a27161570638"
+    },
+    {
+      "id": 65015,
+      "name": "巨大孔雀幼崽",
+      "file": "65015_1.png",
+      "assetPath": "texture/65015_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/63/6375247f-e68d-418e-824d-99668fb3d4ba.20790.png",
+      "sha256": "aa3f7bf9b8a0d267a210c0300fc637a40ede36481288de1877aa04f8077d6087"
+    },
+    {
+      "id": 65016,
+      "name": "巨大貂幼崽",
+      "file": "65016_1.png",
+      "assetPath": "texture/65016_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/3e/3edfdd72-e408-4596-aaad-993144347be8.65017.png",
+      "sha256": "55bed5d1b1e85fec1530b90261eebe48f5c430f489caff76e12c0a086fbc935f"
+    },
+    {
+      "id": 75001,
+      "name": "巨大羊幼崽",
+      "file": "75001_1.png",
+      "assetPath": "texture/75001_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/bf/bfa9894c-23df-4ebc-a0fc-5d2c78619063.29008.png",
+      "sha256": "3cfde41c36bdf529a9990981f728bbc859ec8437411497a2375779e1b796cb20"
+    },
+    {
+      "id": 75002,
+      "name": "巨大牛幼崽",
+      "file": "75002_1.png",
+      "assetPath": "texture/75002_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/de/de9dafa7-5849-4114-9a11-200ca2c537b5.59635.png",
+      "sha256": "8b8f93c6a8dcfe32ea97de16c6b238dd6cd7c049784d84b29449280620db761d"
+    },
+    {
+      "id": 75003,
+      "name": "巨大驴幼崽",
+      "file": "75003_1.png",
+      "assetPath": "texture/75003_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/b9/b9231de6-56e1-4770-9a5a-fdd3b2b94008.f9d5d.png",
+      "sha256": "b385338f746383fe86eccea92da3a1203e45dd53b971866c9124e92a2a6e7940"
+    },
+    {
+      "id": 75004,
+      "name": "巨大迷你猪幼崽",
+      "file": "75004_1.png",
+      "assetPath": "texture/75004_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/88/88c6989c-49e5-47a5-b49f-0f360ede2c4b.f058b.png",
+      "sha256": "69e8ae76175b96f09a0e2ca2281b2d0dd200ed5e431d23bc9c2d63a0a19651fa"
+    },
+    {
+      "id": 75005,
+      "name": "巨大马幼崽",
+      "file": "75005_1.png",
+      "assetPath": "texture/75005_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/d9/d97a6d61-1744-49c9-afba-fb2527ac6a0d.c8cc5.png",
+      "sha256": "5c201b452356e892a9c1a41352eba795c9b53cef6a22d07a86115980c809bddc"
+    },
+    {
+      "id": 75006,
+      "name": "巨大水牛幼崽",
+      "file": "75006_1.png",
+      "assetPath": "texture/75006_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/69/698caf54-bac8-4abf-9fd9-7b3f30006bc9.a8ba2.png",
+      "sha256": "09f1ebd536d736c32ee3f8d0d41de68f785080fc860a6a2eec210744a904b327"
+    },
+    {
+      "id": 75007,
+      "name": "巨大骆驼幼崽",
+      "file": "75007_1.png",
+      "assetPath": "texture/75007_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/32/32fd9b3e-b91d-482a-bc32-9d988af25606.9f79f.png",
+      "sha256": "520cfad4a953bb57ed157fcae649a46c2e153e3ea1a1278b1599677e9da19329"
+    },
+    {
+      "id": 75008,
+      "name": "巨大牦牛幼崽",
+      "file": "75008_1.png",
+      "assetPath": "texture/75008_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/95/9563808c-957a-439c-ac91-a664b14dc4a8.76ba7.png",
+      "sha256": "2055e88c88f22edc42299d6c5c9513afea58f358e93027bd14c08fdbdd365328"
+    },
+    {
+      "id": 75009,
+      "name": "巨大鸵鸟幼崽",
+      "file": "75009_1.png",
+      "assetPath": "texture/75009_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/b0/b07bd9b9-3cbb-492e-b667-5a2aa0b681cb.4b707.png",
+      "sha256": "2ef8dc319c3dc1244dd1549e1b098b713e5eb5a042a2fcaaaf61a4ae6d8a7243"
+    },
+    {
+      "id": 75010,
+      "name": "巨大梅花鹿幼崽",
+      "file": "75010_1.png",
+      "assetPath": "texture/75010_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/17/17942c5d-f161-4fbb-b3e7-259dfd22ad89.35e92.png",
+      "sha256": "07046862784a5bc991c2e537ff4f29d9c79a2ef06f1b693a33f9b2dfa558058a"
+    },
+    {
+      "id": 75011,
+      "name": "巨大浣熊幼崽",
+      "file": "75011_1.png",
+      "assetPath": "texture/75011_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/3c/3c2a9a7d-e8b2-47fc-9984-12ee8ca3b5fc.e8b7c.png",
+      "sha256": "d602e1c34a5eed13fb8ef3ae75921bfb7bf4ed7d2a44f615d9d3bf690afea847"
+    },
+    {
+      "id": 75012,
+      "name": "巨大羊驼幼崽",
+      "file": "75012_1.png",
+      "assetPath": "texture/75012_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/c4/c4c8049c-cce1-4afa-b610-8e2ba4dae812.3d4b3.png",
+      "sha256": "e7010baa6330b39429229e0af78efcf784e9953504e5c13de6ad638d34e58194"
+    },
+    {
+      "id": 80021,
+      "name": "罐头(1小时)",
+      "file": "1029_1.png",
+      "assetPath": "texture/1029_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/cb/cb178dd5-877d-41de-a152-c5529867582a.4079a.png",
+      "sha256": "45f0d71a29c392f224540b3840bb182694b54208062c5349c7c1c624517d698d"
+    },
+    {
+      "id": 80022,
+      "name": "罐头(4小时)",
+      "file": "1029_2.png",
+      "assetPath": "texture/1029_2",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/74/74866a4a-9cf6-4692-a729-e14aa776cfec.21ab8.png",
+      "sha256": "b93647df6debca969f5234d2962f3567e351a3791d7f88161655ecbad94336ff"
+    },
+    {
+      "id": 80023,
+      "name": "罐头(8小时)",
+      "file": "1029_3.png",
+      "assetPath": "texture/1029_3",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/5e/5eb96cdf-e732-4771-a9bc-3937363f049c.afd27.png",
+      "sha256": "17a8f860d9af8c898e561d314e8849fb05a0613aacc192c365e0429dc979f16a"
+    },
+    {
+      "id": 80024,
+      "name": "罐头(12小时)",
+      "file": "1029_4.png",
+      "assetPath": "texture/1029_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/2a/2a10c465-7c22-4ac8-b218-a81c2a5c0cef.79537.png",
+      "sha256": "7eb7d7a1435a0908da7dd7c0fdc779ed870af1c24e91bccff03215327bcb4751"
+    },
+    {
+      "id": 80031,
+      "name": "有机罐头(1小时)",
+      "file": "1028_1.png",
+      "assetPath": "texture/1028_1",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/6e/6ee6a18e-aafd-4530-a548-4fbff180a7f4.087ff.png",
+      "sha256": "ae7d0c8db739907129e08ec6f07192dd9527326aceb367fb410060842a8a0e44"
+    },
+    {
+      "id": 80032,
+      "name": "有机罐头(4小时)",
+      "file": "1028_2.png",
+      "assetPath": "texture/1028_2",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/9e/9e5d7c25-2c3f-45e1-b329-9112412eaeeb.88283.png",
+      "sha256": "bcb49f815c7aecf87030c5db1b812f4405d638b243a9234c0dd9a1cb137298b2"
+    },
+    {
+      "id": 80033,
+      "name": "有机罐头(8小时)",
+      "file": "1028_3.png",
+      "assetPath": "texture/1028_3",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/38/38f1ef60-1978-4527-8ca8-ed54d9424041.cba34.png",
+      "sha256": "8cea6bb7160d0550ef24b4033cf3fc05ab77a067f82e8905c695ce6e6b370858"
+    },
+    {
+      "id": 80034,
+      "name": "有机罐头(12小时)",
+      "file": "1028_4.png",
+      "assetPath": "texture/1028_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/8c/8c765a0a-1355-4568-a57f-a17ecc6a7725.027d1.png",
+      "sha256": "3ac73feacdf02a4e33c184239c2d800790cbadfe9b9bca9267a0f6837a2e7ee3"
+    },
+    {
+      "id": 1060001,
+      "name": "鸡蛋",
+      "file": "1060001.png",
+      "assetPath": "texture/1060001",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/91/91043070-b1c9-4de6-92ad-66c20f0ca98b.52e55.png",
+      "sha256": "4a9728c9e48b9ff5b4c833f58cb7af810c73e7581c753fb84d3635f3b0f4001f"
+    },
+    {
+      "id": 1060002,
+      "name": "鸭蛋",
+      "file": "1060002.png",
+      "assetPath": "texture/1060002",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/8f/8f585b17-5836-4172-ab84-311fdb3a4cfa.54d88.png",
+      "sha256": "c38b4b35cc8e23624d33be1ce3a1d1470e037c178d0365d52a7694d3312d5aa1"
+    },
+    {
+      "id": 1060003,
+      "name": "鹅蛋",
+      "file": "1060003.png",
+      "assetPath": "texture/1060003",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/98/98a9f6e6-7d1d-4891-a7f8-4c9171dd0e94.dc4b5.png",
+      "sha256": "8be9d81f75bfa83a73242c0835f1a65b6adf6a8e57b36cbf68b7721d8cdd15b7"
+    },
+    {
+      "id": 1060004,
+      "name": "小兔崽",
+      "file": "1060004.png",
+      "assetPath": "texture/1060004",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a5/a50f5fdc-d66c-46c5-9112-d10a1280d674.0cfe3.png",
+      "sha256": "1a556609e75c744bebe058d32b2d1aecf849e02576087b67257b0c5960184aeb"
+    },
+    {
+      "id": 1060005,
+      "name": "火鸡蛋",
+      "file": "1060005.png",
+      "assetPath": "texture/1060005",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/89/89633758-843f-468f-bb80-1a505f0f757b.25602.png",
+      "sha256": "fd68b55643bef8c32e413f4367543e15b05005056fbb30b910397b8d03add079"
+    },
+    {
+      "id": 1060006,
+      "name": "天竺鼠崽",
+      "file": "1060006.png",
+      "assetPath": "texture/1060006",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/52/520f9cd8-89f3-4d5d-99eb-e1e0b14641cc.204e8.png",
+      "sha256": "45f8a7a0f74d24d35e6cddb9903214d0d501b51422f787e6400b7a9c0b9e213e"
+    },
+    {
+      "id": 1060007,
+      "name": "小乌龟",
+      "file": "1060007.png",
+      "assetPath": "texture/1060007",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/48/486c2455-d62f-48ac-bc0d-36d6ec61467c.d897d.png",
+      "sha256": "ccce45927c8fd972aa7b71ba3fd66541737f9fadf772fcfcd155607d0ecfba0b"
+    },
+    {
+      "id": 1060008,
+      "name": "松鼠崽",
+      "file": "1060008.png",
+      "assetPath": "texture/1060008",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/18/18db558b-54fb-4495-8bfe-90cd04087e7c.4ac9d.png",
+      "sha256": "08973191e1742b98390db5820f4af3cabb63fc984a9a4ee91682a5e443bcb25d"
+    },
+    {
+      "id": 1060009,
+      "name": "刺猬崽",
+      "file": "1060009.png",
+      "assetPath": "texture/1060009",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/f1/f176e7e2-c2d3-4a40-8fe3-0eb29652ab89.6e2d4.png",
+      "sha256": "b5c586afb7df7285e05fc4468e67729044dc5956b061a71c9e257175c4995e5e"
+    },
+    {
+      "id": 1060010,
+      "name": "鼹鼠崽",
+      "file": "1060010.png",
+      "assetPath": "texture/1060010",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ff/ff5385cb-f7f8-40e9-954d-f2349909f076.61ac7.png",
+      "sha256": "b4f969c031833234ba45fbf9d644c8988ef2b4664de0834f7ee7fcfd66521c3f"
+    },
+    {
+      "id": 1060011,
+      "name": "考拉崽",
+      "file": "1060011.png",
+      "assetPath": "texture/1060011",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/fd/fd6f93bb-2a74-40c0-a3d3-0e18f3ba79e8.a102d.png",
+      "sha256": "5cc59f8a35dfaaaf5d884bf260ed9918c34a448ab4710fa8d6c5272950770a23"
+    },
+    {
+      "id": 1060012,
+      "name": "狐狸崽",
+      "file": "1060012.png",
+      "assetPath": "texture/1060012",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/10/1084dc08-7e44-48ff-a798-843007bffe09.1aa49.png",
+      "sha256": "b72353921c29c141d4165a3f9f1422c3df7ad37a40fc3856a8dd89aaef3d055e"
+    },
+    {
+      "id": 1060013,
+      "name": "豪猪崽",
+      "file": "1060013.png",
+      "assetPath": "texture/1060013",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/36/36671750-dd6f-4e9e-9c03-cfd753e68767.b0f12.png",
+      "sha256": "2f7a48b78fedcde7ea460968839cac7c5355f3bf202946cc42ed55998d92c6ee"
+    },
+    {
+      "id": 1060014,
+      "name": "龙猫崽",
+      "file": "1060014.png",
+      "assetPath": "texture/1060014",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/dc/dc403bf4-c7f8-487a-8100-341c0962e3a9.159f8.png",
+      "sha256": "3eb8cf60b1e2cb5032067fc100944cdc40faaecd0f21eb56ac7e8575e15f0655"
+    },
+    {
+      "id": 1060015,
+      "name": "孔雀毛",
+      "file": "1060015.png",
+      "assetPath": "texture/1060015",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a5/a5360712-a96b-4e5c-92b3-9d9793276837.e2358.png",
+      "sha256": "bbd5de6ea801ed8be3b54cf5a12c894928cc478f25876b0a3a2954b4253dc4a2"
+    },
+    {
+      "id": 1060016,
+      "name": "貂崽",
+      "file": "1060016.png",
+      "assetPath": "texture/1060016",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/f4/f460d11a-a993-409f-941c-1833f749ebca.71bd2.png",
+      "sha256": "a1df26d6dbf62393dfe25642a304179de9212fa5b73bc2fa67f65cf9a9c9cea5"
+    },
+    {
+      "id": 1070001,
+      "name": "羊毛",
+      "file": "1070001.png",
+      "assetPath": "texture/1070001",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/5d/5d692a90-a60c-42f4-9358-08440db6fb25.7a5fd.png",
+      "sha256": "a84bd0ab0a61f9a323502b15096bba3e50b59b1c4aa352f80e9595345e99d0ed"
+    },
+    {
+      "id": 1070002,
+      "name": "牛奶",
+      "file": "1070002.png",
+      "assetPath": "texture/1070002",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/5c/5c3dde79-298d-4b0e-a837-8895bec4e91a.427a4.png",
+      "sha256": "7e1568e4e157bdd8405851089c9188e7e07674d7b25300c3a776994d51aaaace"
+    },
+    {
+      "id": 1070003,
+      "name": "驴崽",
+      "file": "1070003.png",
+      "assetPath": "texture/1070003",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/b8/b80911d3-9ac3-401c-9f85-9259c6234721.999e2.png",
+      "sha256": "e3af5a4a6b6c0225e3d7b089744fc4b0cdaa88be0d4bd866cb02af52df6c661c"
+    },
+    {
+      "id": 1070004,
+      "name": "迷你猪崽",
+      "file": "1070004.png",
+      "assetPath": "texture/1070004",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/46/464aebf7-26f7-40d2-b085-3b30d272c1ec.bf770.png",
+      "sha256": "f76ce54330d065b1a5e553635556f3c983a5acfd43c6574a4184b33745dc6df8"
+    },
+    {
+      "id": 1070005,
+      "name": "马奶",
+      "file": "1070005.png",
+      "assetPath": "texture/1070005",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/90/906f8d7f-dc72-4d61-8089-34f681e39c0b.8edcd.png",
+      "sha256": "f6c08073b3eb3d94dd085a9133862749956c8672f19d9c18f5301a46009d3185"
+    },
+    {
+      "id": 1070006,
+      "name": "水牛奶",
+      "file": "1070006.png",
+      "assetPath": "texture/1070006",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ad/adabcbea-3889-4584-965d-b9b8d47b13b1.1ad4c.png",
+      "sha256": "0be51a98e34f2ff2cd81d305ea2535665ae51876b0a3c59615ee780108811fe0"
+    },
+    {
+      "id": 1070007,
+      "name": "骆驼奶",
+      "file": "1070007.png",
+      "assetPath": "texture/1070007",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/8a/8a0ccd8d-a353-4e1f-9444-108caf690876.7aeb1.png",
+      "sha256": "1cfb1da0fe917ca8d3ed15e6504f7e36cc0667a9bb62faa7fac8b5dbb57ec2e1"
+    },
+    {
+      "id": 1070008,
+      "name": "牦牛毛",
+      "file": "1070008.png",
+      "assetPath": "texture/1070008",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/8e/8e887b7e-a0fe-4c2a-bf12-ef12a6320944.d7931.png",
+      "sha256": "2b3db0a11130bbae94cb79a74789a3aeb9580b0dc78eb18e260bc74c84b05866"
+    },
+    {
+      "id": 1070009,
+      "name": "鸵鸟崽",
+      "file": "1070009.png",
+      "assetPath": "texture/1070009",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/71/71f385f7-303d-4805-be36-80f7c1e53cba.d77aa.png",
+      "sha256": "f10893f8df942b7d2024d67ca96e1660e0e5003d75c8c453a81a43c3a023c5a6"
+    },
+    {
+      "id": 1070010,
+      "name": "梅花鹿崽",
+      "file": "1070010.png",
+      "assetPath": "texture/1070010",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/7a/7a65f022-e70f-45ea-adca-d2ef10d329ff.208ea.png",
+      "sha256": "d71dcf5dd7524906606f94c81932f51786b4f57a4256751527cf534625cc655e"
+    },
+    {
+      "id": 1070011,
+      "name": "浣熊崽",
+      "file": "1070011.png",
+      "assetPath": "texture/1070011",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/96/96ca45f0-57a8-49a2-9b8b-5641a648fadd.410ae.png",
+      "sha256": "3dfdbc0ac8d99de08df9df640783006b2db4f8ddef4aeaa953b8207962e48ad3"
+    },
+    {
+      "id": 1070012,
+      "name": "羊驼崽",
+      "file": "1070012.png",
+      "assetPath": "texture/1070012",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/06/0624778e-6639-402e-bb55-bb04772a2ad9.564be.png",
+      "sha256": "d699af07bf035566b46e948cda52b3759bd762126d86a108eaa0d0d3448f6ffb"
+    },
+    {
+      "id": 1065001,
+      "name": "巨大鸡蛋",
+      "file": "1065001.png",
+      "assetPath": "texture/1065001",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/1e/1e3c76e5-0987-45be-ae4d-5b4ab2c6de06.73eac.png",
+      "sha256": "dc92222bc994c2158691864b83dd3d200ea5686b81473b7ca1fcbd12c53ff0f5"
+    },
+    {
+      "id": 1065002,
+      "name": "巨大鸭蛋",
+      "file": "1065002.png",
+      "assetPath": "texture/1065002",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/16/1678c8bc-f35b-409d-ac50-3d37fcad4f50.4ecb1.png",
+      "sha256": "f8e866c8dfc41edde0edab23a09b429da4d02fe4a3d78c4054c19d377390d97a"
+    },
+    {
+      "id": 1065003,
+      "name": "巨大鹅蛋",
+      "file": "1065003.png",
+      "assetPath": "texture/1065003",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/e2/e26326f4-97a5-4a21-9098-3726906d0294.8e3f7.png",
+      "sha256": "d411e437f6257462425c4a18ebf0db15dcd34f152a1e7429fbe3c9b6014083c2"
+    },
+    {
+      "id": 1065004,
+      "name": "巨大小兔崽",
+      "file": "1065004.png",
+      "assetPath": "texture/1065004",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/98/98c356fe-bd75-4b31-8023-22c2d157b78e.269eb.png",
+      "sha256": "9a905d3368c90a878d6253f4453698dcf6df19b89fe5ae6a0d1870cff9955963"
+    },
+    {
+      "id": 1065005,
+      "name": "巨大火鸡蛋",
+      "file": "1065005.png",
+      "assetPath": "texture/1065005",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/97/97ff5fd3-abd7-4fca-9ef8-3c573bf253d1.e3431.png",
+      "sha256": "86c0915d9336a222d2e9c4dc4df924af5f48652dc1f1c4f4950fc6eba4c74e7f"
+    },
+    {
+      "id": 1065006,
+      "name": "巨大天竺鼠崽",
+      "file": "1065006.png",
+      "assetPath": "texture/1065006",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/29/29bc26bc-3940-4d90-bdd5-af6f0918fb0e.79d96.png",
+      "sha256": "7a94f3fee05468d1aaf37f9308d30f6b276a8765ae1764ac5a5fc82fc511081a"
+    },
+    {
+      "id": 1065007,
+      "name": "巨大小乌龟",
+      "file": "1065007.png",
+      "assetPath": "texture/1065007",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/43/432104bd-f18e-4778-b015-17a2ab7dd8ad.c54ad.png",
+      "sha256": "8d2c257f1682afa6a05998754a269f7909d5953d67f5f83ebf1b5b52863b5514"
+    },
+    {
+      "id": 1065008,
+      "name": "巨大松鼠崽",
+      "file": "1065008.png",
+      "assetPath": "texture/1065008",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/df/dfb88418-2df7-4418-b664-352f77487096.e699a.png",
+      "sha256": "35a67dabbeb0d69704155352b16592b0fd8a0264b848ffff6200f2c6534dd505"
+    },
+    {
+      "id": 1065009,
+      "name": "巨大刺猬崽",
+      "file": "1065009.png",
+      "assetPath": "texture/1065009",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/bf/bf883c11-b466-4b70-b4a9-9c670f1a79b8.01782.png",
+      "sha256": "600613a8184861d71236df5e92e1569c5150953743f9ae640006259f0c15374c"
+    },
+    {
+      "id": 1065010,
+      "name": "巨大鼹鼠崽",
+      "file": "1065010.png",
+      "assetPath": "texture/1065010",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/12/12f370db-a12a-4a8b-a9c1-6903a5028893.977fc.png",
+      "sha256": "1f6c556f19a5d3274681ad873e7b5e747ba005d2b3f337ee958aae153b2ac3aa"
+    },
+    {
+      "id": 1065011,
+      "name": "巨大考拉崽",
+      "file": "1065011.png",
+      "assetPath": "texture/1065011",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/3f/3f7166d0-9638-4967-9e50-80769480fdd1.b8993.png",
+      "sha256": "aded131f38535553f793a0e3d19a810c00592342e62da223050d24626de842f1"
+    },
+    {
+      "id": 1065012,
+      "name": "巨大狐狸崽",
+      "file": "1065012.png",
+      "assetPath": "texture/1065012",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/1f/1f01dc12-fd28-4a0f-b4e9-2709009e3a99.66c6e.png",
+      "sha256": "dda8d6dab04d0b4eb02ed9b4cc84cdebd3ada0be7305c63f78572f33b3b84aa5"
+    },
+    {
+      "id": 1065013,
+      "name": "巨大豪猪崽",
+      "file": "1065013.png",
+      "assetPath": "texture/1065013",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/09/0947cad0-7169-4541-8d77-cafbac916795.d34e8.png",
+      "sha256": "a31aae9e2c3ea506375a6f93ca7c3e87a2a93aa9915a08c5ae58725b523d358f"
+    },
+    {
+      "id": 1065014,
+      "name": "巨大龙猫崽",
+      "file": "1065014.png",
+      "assetPath": "texture/1065014",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/bb/bb44b1d3-726f-40e1-8b06-8d59db41aba3.e235b.png",
+      "sha256": "b174b893a8211f258ef7864bebda61e46119b707865582a5582d6b26eb9d2e49"
+    },
+    {
+      "id": 1065015,
+      "name": "巨大孔雀毛",
+      "file": "1065015.png",
+      "assetPath": "texture/1065015",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/79/79d2a74f-fadd-43f6-89ec-17b1ddf725c5.bf176.png",
+      "sha256": "1150a48e4a442d39f4e186e1dc737fec44662c7700ae0432ff91e364216fbe25"
+    },
+    {
+      "id": 1065016,
+      "name": "巨大貂崽",
+      "file": "1065016.png",
+      "assetPath": "texture/1065016",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/2e/2e099a4b-a031-4718-847a-cbf45285bbb8.3c16c.png",
+      "sha256": "c726c219505b22bd01f954b3ff4b3588b5907ee03780e569833fcb65dbc49bd0"
+    },
+    {
+      "id": 1075001,
+      "name": "巨大羊毛",
+      "file": "1075001.png",
+      "assetPath": "texture/1075001",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/53/53a293f9-d140-4467-8e9b-93f58ed8dca0.42979.png",
+      "sha256": "da3edf5c1b65f9dd3887fa5ce4a9840a929d240c0dab9d3eb979048665a2e951"
+    },
+    {
+      "id": 1075002,
+      "name": "巨大牛奶",
+      "file": "1075002.png",
+      "assetPath": "texture/1075002",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a7/a7144b72-7839-4c99-974b-c873419471fd.41844.png",
+      "sha256": "c7d326ff0a9c649459e75f28a79133789d8f94a32e3dbb90488f1f4506fb9f3f"
+    },
+    {
+      "id": 1075003,
+      "name": "巨大驴崽",
+      "file": "1075003.png",
+      "assetPath": "texture/1075003",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/0f/0ff2a585-d2ab-4e46-9e48-8def6d488531.e6556.png",
+      "sha256": "b8f5060b6d64c300555b5690037dbd1edf74fa248743fa3c5e3547efa7247890"
+    },
+    {
+      "id": 1075004,
+      "name": "巨大迷你猪崽",
+      "file": "1075004.png",
+      "assetPath": "texture/1075004",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/b2/b2a451f4-9db9-4f2e-bede-a3b217060842.8c932.png",
+      "sha256": "a6b2cf486bb2b432157e1bbc83750e13d356c46bea0ad8bb1fcddb08d838da95"
+    },
+    {
+      "id": 1075005,
+      "name": "巨大马奶",
+      "file": "1075005.png",
+      "assetPath": "texture/1075005",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/34/34730f61-9c56-40cc-a926-6ea55a251b9c.e8cb3.png",
+      "sha256": "d6f366f4886dd6081c6d6ba609b0fd47fa57e67f2545425847eef5d564ad0665"
+    },
+    {
+      "id": 1075006,
+      "name": "巨大水牛奶",
+      "file": "1075006.png",
+      "assetPath": "texture/1075006",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/09/096379ed-21c0-49bc-8354-4a01c8ca6af5.7a4ac.png",
+      "sha256": "737e46aff0da3e1f27167169ad86df8d59f83526167f7d24db022f4f2d118d95"
+    },
+    {
+      "id": 1075007,
+      "name": "巨大骆驼奶",
+      "file": "1075007.png",
+      "assetPath": "texture/1075007",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/bf/bffaf883-b9c0-4b68-a6da-59051523028d.19f99.png",
+      "sha256": "81d79f52ebff78a5ee785c9700b9e408703b63acb9e3d2427d291f788560fef7"
+    },
+    {
+      "id": 1075008,
+      "name": "巨大牦牛毛",
+      "file": "1075008.png",
+      "assetPath": "texture/1075008",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/63/6387bb6f-f301-44f1-a114-ccd2f0ca36ab.0c100.png",
+      "sha256": "8ef97af78a5dbf30021e7d0dfafc2aa86c62fc0aa7b5badcae5a904a63b91e77"
+    },
+    {
+      "id": 1075009,
+      "name": "巨大鸵鸟崽",
+      "file": "1075009.png",
+      "assetPath": "texture/1075009",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/61/61bbf036-70ce-4760-9fe3-34e89c2902db.70fc2.png",
+      "sha256": "eeb06bdfad01cc5f7bec574ff4247a428fca7944c239246f02a3f5732aad7f6c"
+    },
+    {
+      "id": 1075010,
+      "name": "巨大梅花鹿崽",
+      "file": "1075010.png",
+      "assetPath": "texture/1075010",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/7e/7e5f5e36-f23e-4843-a2fc-b51cf78290b6.eec19.png",
+      "sha256": "93adb3c8e57f2ced8ac09a8fb5abc676e796446a22fc38635033f69fa76cf4be"
+    },
+    {
+      "id": 1075011,
+      "name": "巨大浣熊崽",
+      "file": "1075011.png",
+      "assetPath": "texture/1075011",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a5/a5411125-dd3a-4c87-a016-0c9ee29c78e9.3eb5b.png",
+      "sha256": "4ec0ccc48bafacef09df83ec3dd8191099c408f54ce6b47b91d397db3e8a2797"
+    },
+    {
+      "id": 1075012,
+      "name": "巨大羊驼崽",
+      "file": "1075012.png",
+      "assetPath": "texture/1075012",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/67/67f3b1ab-953a-4dca-8503-84926354263f.ac815.png",
+      "sha256": "519c44821aa1d9131319e56e61bd9e6070b046be2236855a69aa09f0cfcd4b67"
+    },
+    {
+      "id": 2060001,
+      "name": "鸡",
+      "file": "60001_4.png",
+      "assetPath": "texture/60001_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/4e/4e827168-a726-49f5-8030-00ac0fa4d797.a33be.png",
+      "sha256": "8c7e0e5055b08c61d2b4e35813354b465cbd13a3ed2704408f6443fd38991013"
+    },
+    {
+      "id": 2060002,
+      "name": "鸭",
+      "file": "60002_4.png",
+      "assetPath": "texture/60002_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/b9/b99b2b9e-612a-4939-b0fd-cf304d0ac6b1.5ee18.png",
+      "sha256": "5736ccb6c043cb4b0aef8c552f1c1c6823ee40f2c1d59c5b7fe78af79d941fb7"
+    },
+    {
+      "id": 2060003,
+      "name": "鹅",
+      "file": "60003_4.png",
+      "assetPath": "texture/60003_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ed/edcb9f18-9c22-421f-ba9f-e551ba2ecb8a.aac67.png",
+      "sha256": "1c520bdc8354036cfbd84ed99e6be7b318078fa53aa269161ea0d75e830c75f6"
+    },
+    {
+      "id": 2060004,
+      "name": "兔",
+      "file": "60004_4.png",
+      "assetPath": "texture/60004_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/01/010b4c0e-8906-4e6e-817d-72dbe274977a.a105c.png",
+      "sha256": "5f9e17c8c39f4fe18e84871c85b47c14378dfb5563fe3ecba59ad87f250e8439"
+    },
+    {
+      "id": 2060005,
+      "name": "火鸡",
+      "file": "60005_4.png",
+      "assetPath": "texture/60005_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/dc/dc529f09-1b74-4820-b658-bc0f997359c2.d8644.png",
+      "sha256": "35f05eb54376d397072255b23800f407e7fbd75e9faf263d5b9be5a1ea7f937f"
+    },
+    {
+      "id": 2060006,
+      "name": "天竺鼠",
+      "file": "60006_4.png",
+      "assetPath": "texture/60006_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/1e/1edf932f-e4ce-4cb4-a2d3-ecc6184530d6.f72d6.png",
+      "sha256": "1927ee17d0a0f84308139579b0c550102d82f939269ba998178394b4a460a6de"
+    },
+    {
+      "id": 2060007,
+      "name": "乌龟",
+      "file": "60007_4.png",
+      "assetPath": "texture/60007_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/02/021dd10e-0536-4dc4-9363-8412ff23ac00.050c1.png",
+      "sha256": "f41544814739bf7aa454b1a15dcfd26daf368285efc7fd363791b8a83503e662"
+    },
+    {
+      "id": 2060008,
+      "name": "松鼠",
+      "file": "60008_4.png",
+      "assetPath": "texture/60008_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ef/ef04d7dd-9116-4aeb-89a4-7dedc65f1cae.c628b.png",
+      "sha256": "1adbe3d6d9c8088820ae2ea84438c526d404f76a4bd8ed418dd37660353befda"
+    },
+    {
+      "id": 2060009,
+      "name": "刺猬",
+      "file": "60009_4.png",
+      "assetPath": "texture/60009_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a7/a71ea6f9-e040-4486-91ce-179695889806.cbdaf.png",
+      "sha256": "c7cf8c1cf64b95b23b97c1bc989817942a609e12fdb50fe80f72f0b7d771afa1"
+    },
+    {
+      "id": 2060010,
+      "name": "鼹鼠",
+      "file": "60010_4.png",
+      "assetPath": "texture/60010_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/41/41e29110-dcd0-4cdb-821a-318860f0bf03.58fa2.png",
+      "sha256": "cb7e1dea522799afd6fb333d1241af0f815064538ee48e07c6bc54320c520278"
+    },
+    {
+      "id": 2060011,
+      "name": "考拉",
+      "file": "60011_4.png",
+      "assetPath": "texture/60011_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/d6/d68fc6a4-31f8-4c1f-9bc8-a588ac0d9d53.53490.png",
+      "sha256": "ce0a124a800f36b0613b20c42b00aec3adfd0578e1386fe630bc345d5daa0487"
+    },
+    {
+      "id": 2060012,
+      "name": "狐狸",
+      "file": "60012_4.png",
+      "assetPath": "texture/60012_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/88/885c9965-c863-4935-b5d9-176a018de5e4.7ad06.png",
+      "sha256": "346e95a232c12cd2028a139c288f67aaf268b61521e50dbf98bcf366d3da3bdd"
+    },
+    {
+      "id": 2060013,
+      "name": "豪猪",
+      "file": "60013_4.png",
+      "assetPath": "texture/60013_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/00/007c837d-327f-4096-b42f-9dc79bd8f581.a4252.png",
+      "sha256": "ca926c5326c8dca83efa7b700a780b3a84798518f4aed1ca66997a3b6d77c1f3"
+    },
+    {
+      "id": 2060014,
+      "name": "龙猫",
+      "file": "60014_4.png",
+      "assetPath": "texture/60014_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/c5/c5588ecb-537e-4f36-be8b-95caf994c358.32fc8.png",
+      "sha256": "9c1e5cc29fa7ffb4d41369f5bbd2e0e5529581ec4d706250a9d74aed5df2894c"
+    },
+    {
+      "id": 2060015,
+      "name": "孔雀",
+      "file": "60015_4.png",
+      "assetPath": "texture/60015_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/45/4545457c-6bba-4aaa-bcc1-c9025908bd09.8885d.png",
+      "sha256": "49f88f9af82c55e9c7065b535db85626717e8fc66475f7893381d37a4e4d910d"
+    },
+    {
+      "id": 2060016,
+      "name": "貂",
+      "file": "60016_4.png",
+      "assetPath": "texture/60016_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a7/a76551df-66a9-4c23-a7a0-5d10f6d20278.457ec.png",
+      "sha256": "ddb953872aa01c2611146ea72336c84486dcba49abc488dedeced93450006b6c"
+    },
+    {
+      "id": 2070001,
+      "name": "羊",
+      "file": "70001_4.png",
+      "assetPath": "texture/70001_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ee/ee9487f3-a31c-48d6-9b0d-8a1dcfe1e3f6.33fcc.png",
+      "sha256": "938a8edc88ace81eb73f0b85faa3e9a609fb947d0249bc420f4a44f2f41c065f"
+    },
+    {
+      "id": 2070002,
+      "name": "牛",
+      "file": "70002_4.png",
+      "assetPath": "texture/70002_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/59/59e48b7c-e89c-4b69-af8c-b84d65b6243e.766d4.png",
+      "sha256": "bae0782029bf99f8b80de318944d743646a90be8d008938c92f4e01a8c4d8044"
+    },
+    {
+      "id": 2070003,
+      "name": "驴",
+      "file": "70003_4.png",
+      "assetPath": "texture/70003_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ae/ae20490e-072b-47bc-b140-f02f828c8599.15f3e.png",
+      "sha256": "092616590595abf71b470864e9ee854694dae23ad82e7d9abd432d95cdfb1b1b"
+    },
+    {
+      "id": 2070004,
+      "name": "迷你猪",
+      "file": "70004_4.png",
+      "assetPath": "texture/70004_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/3b/3bd065dc-23d7-4f3e-8790-d288fb99bca6.b05ff.png",
+      "sha256": "40a2ca04a681d01a5c1e9f438cb201569158968445f8ed8bd1bd7af56657d875"
+    },
+    {
+      "id": 2070005,
+      "name": "马",
+      "file": "70005_4.png",
+      "assetPath": "texture/70005_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ff/ff6e0800-7dd1-461e-87a3-e99e33e120b0.884b5.png",
+      "sha256": "83217f34710fbb4b7b8de8f33ed330add9dda0592d28a0c10888f4acd58db287"
+    },
+    {
+      "id": 2070006,
+      "name": "水牛",
+      "file": "70006_4.png",
+      "assetPath": "texture/70006_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/52/52026101-710d-4120-b4fb-eb560557f8fa.b3003.png",
+      "sha256": "336905e3e3c5f988dcac9db21176e43145c6c03734bd1240c72d7bdfbecd9987"
+    },
+    {
+      "id": 2070007,
+      "name": "骆驼",
+      "file": "70007_4.png",
+      "assetPath": "texture/70007_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/3b/3b5a8bf9-255f-4614-8f09-cd9183ea4b12.2333e.png",
+      "sha256": "c6b663ad7c0ecd24aae567b2b9c4412257e2d4428f289ed1e73863d41ab91da9"
+    },
+    {
+      "id": 2070008,
+      "name": "牦牛",
+      "file": "70008_4.png",
+      "assetPath": "texture/70008_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/35/357fbd0f-ec48-4213-a642-6c5bce711dff.04296.png",
+      "sha256": "e30afb83c9bb378667019608b195570e6e1ff3aad2a65ec402b19b17942cca48"
+    },
+    {
+      "id": 2070009,
+      "name": "鸵鸟",
+      "file": "70009_4.png",
+      "assetPath": "texture/70009_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ea/ea16e69c-77be-4cf0-82d5-9ea130236c5e.81b1b.png",
+      "sha256": "7ee4782c09d142474ee88e907b32ce9d4b05891647126ddb781bdfe6b3c23db7"
+    },
+    {
+      "id": 2070010,
+      "name": "梅花鹿",
+      "file": "70010_4.png",
+      "assetPath": "texture/70010_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/2d/2d8f75d4-a41e-4e37-9ff7-b39dfeeec0ea.d84e1.png",
+      "sha256": "f07b56d8e269af498633418b694b5721b2a2103a5ad7aa467f272fd5f21b90b2"
+    },
+    {
+      "id": 2070011,
+      "name": "浣熊",
+      "file": "70011_4.png",
+      "assetPath": "texture/70011_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/c1/c1d67d16-0a4d-445e-86da-1b9da76b889a.b3d37.png",
+      "sha256": "b80772e9ad6dd5a7630b27190ecb7350c619a2b2086c5ff4f1fa537d0226b8ee"
+    },
+    {
+      "id": 2070012,
+      "name": "羊驼",
+      "file": "70012_4.png",
+      "assetPath": "texture/70012_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/7c/7cf452d1-96a5-453a-b7ec-6c834e5b2de6.dbd10.png",
+      "sha256": "0b08378eeee54fc453c69a36f3f4abc007863ac7118af16a4b1324616c5bbc7d"
+    },
+    {
+      "id": 2065001,
+      "name": "巨大鸡",
+      "file": "65001_4.png",
+      "assetPath": "texture/65001_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/bc/bc90e896-d610-4957-98fe-bd9627b619d2.8ed86.png",
+      "sha256": "de64aebd8759696ba2bcbe2fa61143ef424695a36ce0624bb381f9d9547d3d02"
+    },
+    {
+      "id": 2065002,
+      "name": "巨大鸭",
+      "file": "65002_4.png",
+      "assetPath": "texture/65002_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/d5/d5c08f98-52a5-4d1c-b6b1-f7f5e1f07679.6305e.png",
+      "sha256": "179d4d0eee766dd55f9843d9b6547af97a597eb2ee95e3c58619b8474cb24849"
+    },
+    {
+      "id": 2065003,
+      "name": "巨大鹅",
+      "file": "65003_4.png",
+      "assetPath": "texture/65003_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/11/11686607-7c41-468b-ab2c-237d48e990ea.1041e.png",
+      "sha256": "a8f53c2cc5459e9d1307e648daa8d6ed2e540aabbf793409bec5d06dcfe3d3a8"
+    },
+    {
+      "id": 2065004,
+      "name": "巨大兔",
+      "file": "65004_4.png",
+      "assetPath": "texture/65004_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/c9/c96df49d-1dfc-45f1-b4f7-db88b4e0e077.99ebf.png",
+      "sha256": "c34e8f10d7facd8539f265c6c7ace266d76d7bf2cd36a5040b0fa961c7d9a376"
+    },
+    {
+      "id": 2065005,
+      "name": "巨大火鸡",
+      "file": "65005_4.png",
+      "assetPath": "texture/65005_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/1a/1a48f909-8d48-4fea-8f21-05fd41e943b7.7142f.png",
+      "sha256": "929fa8795b4e68ffc18e84f9181f454c456d0b1a2fdd8ee337e930a3e0b7ec1a"
+    },
+    {
+      "id": 2065006,
+      "name": "巨大天竺鼠",
+      "file": "65006_4.png",
+      "assetPath": "texture/65006_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/be/be40a3f3-e865-403b-8d12-d997030f0312.581d4.png",
+      "sha256": "e2757f386224c8ad9b4e65b54259072e0537834d39f45eb3dcf56e85afc8a19b"
+    },
+    {
+      "id": 2065007,
+      "name": "巨大乌龟",
+      "file": "65007_4.png",
+      "assetPath": "texture/65007_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/72/72e385ba-e7e1-41cb-b550-b68a85b79c8b.1d281.png",
+      "sha256": "0dc03112d58cd086cca1f69c674b531d662eb7c9514d4c2e13b641d5418ce0cb"
+    },
+    {
+      "id": 2065008,
+      "name": "巨大松鼠",
+      "file": "65008_4.png",
+      "assetPath": "texture/65008_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a6/a68e17dc-fcf9-4004-bec5-8ba3ae0619f7.9bc61.png",
+      "sha256": "a971da7be259be83395641243a24562d409d4741c95515f82c93901b7a9c1654"
+    },
+    {
+      "id": 2065009,
+      "name": "巨大刺猬",
+      "file": "65009_4.png",
+      "assetPath": "texture/65009_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/4d/4d40e291-5024-4015-86f1-0880cf41058a.51cef.png",
+      "sha256": "a4192c130ab22e3bc5feead3a587679117fd99985ecadc86ec935ee6ad6e8da4"
+    },
+    {
+      "id": 2065010,
+      "name": "巨大鼹鼠",
+      "file": "65010_4.png",
+      "assetPath": "texture/65010_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/78/780714cd-256e-4687-919b-c51b632b5b0a.1b026.png",
+      "sha256": "9f8dbf6fbd5a83d4c7cbf4ff4143e7d561abd050171121a35ccb9a204da1e4ab"
+    },
+    {
+      "id": 2065011,
+      "name": "巨大考拉",
+      "file": "65011_4.png",
+      "assetPath": "texture/65011_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/57/573206f6-f368-475f-9c1a-ceced84c2d82.addce.png",
+      "sha256": "cfdb920e798bc6ba57e39a7f7dd453d929b124445315284337b1cc4915dae3e6"
+    },
+    {
+      "id": 2065012,
+      "name": "巨大狐狸",
+      "file": "65012_4.png",
+      "assetPath": "texture/65012_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/da/dae300e8-409f-4d53-86e8-1858d3bae5e3.45247.png",
+      "sha256": "a1429fa36f191c6ac85d29507800072616ae21244a9cd7778a9705787fef1ec1"
+    },
+    {
+      "id": 2065013,
+      "name": "巨大豪猪",
+      "file": "65013_4.png",
+      "assetPath": "texture/65013_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/72/72889253-f6ad-4161-ba98-579952554ea4.d00e0.png",
+      "sha256": "4b35c1994e909d6553113281e3e08769c961002f38474a2468a965c888964532"
+    },
+    {
+      "id": 2065014,
+      "name": "巨大龙猫",
+      "file": "65014_4.png",
+      "assetPath": "texture/65014_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/64/641532a5-bfc0-493a-93ba-f096a5507b8c.7044f.png",
+      "sha256": "61aeb8ebeebf2398234b4115ae12f7a2cb326c58f01906519c53fe3e99d72db7"
+    },
+    {
+      "id": 2065015,
+      "name": "巨大孔雀",
+      "file": "65015_4.png",
+      "assetPath": "texture/65015_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/f7/f756a054-2efd-4002-afb9-76d723a99b51.26e03.png",
+      "sha256": "54a2afde82bfa12003dea5430614aa9b8b60b38bd5a7a128fb6585af50b13a32"
+    },
+    {
+      "id": 2065016,
+      "name": "巨大貂",
+      "file": "65016_4.png",
+      "assetPath": "texture/65016_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/15/1567ffaf-a849-466d-bb33-09b1e890d242.041a1.png",
+      "sha256": "f997b1379d4ab2ce0ece5bfedab7376e9766efda644a75fb372ba3eca16efda4"
+    },
+    {
+      "id": 2075001,
+      "name": "巨大羊",
+      "file": "75001_4.png",
+      "assetPath": "texture/75001_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/42/42f3b930-b702-49cd-baa8-56fe6eb1b764.d2468.png",
+      "sha256": "f0fdf83a9aa34f38991956aaff96dadcb6c4fa170190ae9d2f2213b9d538bcec"
+    },
+    {
+      "id": 2075002,
+      "name": "巨大牛",
+      "file": "75002_4.png",
+      "assetPath": "texture/75002_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/5a/5a9e5c09-5175-43c7-b16d-501aeeb4e6e7.abdeb.png",
+      "sha256": "eb85c767785a8d2f57cae28ce710fc3611c3e5d22c41cbc087128046d841e672"
+    },
+    {
+      "id": 2075003,
+      "name": "巨大驴",
+      "file": "75003_4.png",
+      "assetPath": "texture/75003_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/47/477d8e08-840f-440e-94da-f22098c1bf25.6fb8d.png",
+      "sha256": "2f264badc4cca970a391d8848ea9cf21a73a6da6b40196f302215e2833fd0a4c"
+    },
+    {
+      "id": 2075004,
+      "name": "巨大迷你猪",
+      "file": "75004_4.png",
+      "assetPath": "texture/75004_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/67/6748b6e1-d787-434c-90e9-72c1d629e3a2.df71f.png",
+      "sha256": "8a926a028d172bb434b24300f0a93f259a8d8f016f2428bbadb150cc9dea604a"
+    },
+    {
+      "id": 2075005,
+      "name": "巨大马",
+      "file": "75005_4.png",
+      "assetPath": "texture/75005_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/3e/3eabab34-d40f-4f4e-9789-540390bcad10.d1abe.png",
+      "sha256": "6cbb29c540271f85a0ede4a9038cccb4dd47eaff35eac71ec481f3050682cc8a"
+    },
+    {
+      "id": 2075006,
+      "name": "巨大水牛",
+      "file": "75006_4.png",
+      "assetPath": "texture/75006_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/f3/f35f2e9e-c5b0-4537-995c-64df1944b2ec.df174.png",
+      "sha256": "5ff25c8ef961458bdead6370a8c714ca3926ceb6693b85830c13ddd32f13d194"
+    },
+    {
+      "id": 2075007,
+      "name": "巨大骆驼",
+      "file": "75007_4.png",
+      "assetPath": "texture/75007_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/a7/a7d10764-efc6-4a16-8d38-1726d2b000be.1915e.png",
+      "sha256": "d7e807b96e2b2919beb40d7a58f143b6efd2c14c650dd2008a98951b79b596d3"
+    },
+    {
+      "id": 2075008,
+      "name": "巨大牦牛",
+      "file": "75008_4.png",
+      "assetPath": "texture/75008_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/9e/9e744c8a-893f-433d-b8dc-fa0b3c0cbc70.fe527.png",
+      "sha256": "5077edf8bcf7e9ecfa68dd7717801e46ca2d0e8187a4dd467798ebf043073c16"
+    },
+    {
+      "id": 2075009,
+      "name": "巨大鸵鸟",
+      "file": "75009_4.png",
+      "assetPath": "texture/75009_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/11/11f7f7a0-dcc4-4ba8-8c9b-32e8655e4d40.9cbad.png",
+      "sha256": "1973471da58a1196ce484183ca3395bd9fc3ec24c9ca3fde5f69563a5b7a4d39"
+    },
+    {
+      "id": 2075010,
+      "name": "巨大梅花鹿",
+      "file": "75010_4.png",
+      "assetPath": "texture/75010_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/d3/d37d9dd3-f125-4ce0-9967-6c8920af4506.c5386.png",
+      "sha256": "0e7636bc780d211d5e2b7c38ff71aac335b5562bc5955f338364bce0c9ba26e2"
+    },
+    {
+      "id": 2075011,
+      "name": "巨大浣熊",
+      "file": "75011_4.png",
+      "assetPath": "texture/75011_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ee/ee0145f8-5c05-47d5-9e54-10a02ac5cdbc.e3f76.png",
+      "sha256": "244ce4f6ff377b32af96a0c93822a1afae7293def9343de9322053d6cfbda450"
+    },
+    {
+      "id": 2075012,
+      "name": "巨大羊驼",
+      "file": "75012_4.png",
+      "assetPath": "texture/75012_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/ae/ae646b14-c55a-474c-bdc6-297bac2a240d.6d7d4.png",
+      "sha256": "30e27d81671de7588b925930176705413b11e19391626d4cfb6b503f282075a4"
+    },
+    {
+      "id": 3601001,
+      "name": "牧场窝",
+      "file": "70012_4.png",
+      "assetPath": "texture/70012_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/7c/7cf452d1-96a5-453a-b7ec-6c834e5b2de6.dbd10.png",
+      "sha256": "0b08378eeee54fc453c69a36f3f4abc007863ac7118af16a4b1324616c5bbc7d"
+    },
+    {
+      "id": 3602001,
+      "name": "牧场棚",
+      "file": "70012_4.png",
+      "assetPath": "texture/70012_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/7c/7cf452d1-96a5-453a-b7ec-6c834e5b2de6.dbd10.png",
+      "sha256": "0b08378eeee54fc453c69a36f3f4abc007863ac7118af16a4b1324616c5bbc7d"
+    },
+    {
+      "id": 3702001,
+      "name": "喂食机",
+      "file": "70012_4.png",
+      "assetPath": "texture/70012_4",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/animal/native/7c/7cf452d1-96a5-453a-b7ec-6c834e5b2de6.dbd10.png",
+      "sha256": "0b08378eeee54fc453c69a36f3f4abc007863ac7118af16a4b1324616c5bbc7d"
+    }
+  ],
+  "missing": []
+}

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import api from '@/api'
+import type { GameSpace } from '@/stores/game-space'
+import { useGameSpaceStore } from '@/stores/game-space'
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'total'
 type RankType = 'earn' | 'steal'
@@ -23,25 +25,52 @@ const periods: { key: Period, label: string }[] = [
   { key: 'total', label: '总历史' },
 ]
 
+const spaceOptions: { key: GameSpace, label: string }[] = [
+  { key: 'farm', label: '农场' },
+  { key: 'ranch', label: '牧场' },
+]
+// 进入页面时沿用全局场景；页内切换只影响排行榜，不改变全局 space。
+const space = ref<GameSpace>(useGameSpaceStore().space)
+const spaceLabel = computed(() => space.value === 'ranch' ? '牧场' : '农场')
+const stealLabel = computed(() => space.value === 'ranch' ? '偷取' : '偷菜')
 const period = ref<Period>('daily')
 const type = ref<RankType>('earn')
 const list = ref<RankRow[]>([])
 const loading = ref(false)
-const loaded = ref(false)
+const errorMessage = ref('')
+const unavailableReason = ref('')
+let requestId = 0
 
 async function fetchRanking() {
+  const id = ++requestId
   loading.value = true
+  list.value = []
+  errorMessage.value = ''
+  unavailableReason.value = ''
   try {
-    const { data } = await api.get('/api/ranking', { params: { period: period.value, type: type.value } })
-    list.value = data?.ok ? (data.data?.list || []) : []
-    loaded.value = true
+    const { data } = await api.get('/api/ranking', { params: { period: period.value, type: type.value, space: space.value } })
+    if (id !== requestId)
+      return
+    if (data?.ok !== true || data.data?.space !== space.value)
+      throw new Error(data?.error || '排行榜响应场景不匹配，请更新服务端后重试')
+    unavailableReason.value = data.data.available === false ? data.data.reason || '当前场景暂无独立排行数据' : ''
+    list.value = Array.isArray(data.data.list) ? data.data.list : []
   }
-  catch {
-    list.value = []
+  catch (error: any) {
+    if (id === requestId)
+      errorMessage.value = error?.response?.data?.error || error.message || '排行榜加载失败'
   }
   finally {
-    loading.value = false
+    if (id === requestId)
+      loading.value = false
   }
+}
+
+function switchSpace(next: GameSpace) {
+  if (space.value === next)
+    return
+  space.value = next
+  fetchRanking()
 }
 
 function switchPeriod(next: Period) {
@@ -64,7 +93,7 @@ const rankedList = computed(() => list.value.map((row, index) => ({ ...row, posi
 function maskName(name: string) {
   const trimmed = String(name || '').trim()
   if (!trimmed)
-    return '未命名农场'
+    return `未命名${spaceLabel.value}`
   return `${trimmed.slice(0, 1)}******`
 }
 
@@ -100,7 +129,7 @@ function secondaryValue(row: RankRow) {
     const text = n >= 1e8 ? `${(n / 1e8).toFixed(1)}亿` : n >= 1e4 ? `${(n / 1e4).toFixed(1)}万` : String(Math.round(n))
     return `收益 +${text}`
   }
-  return `偷菜 ${Math.round(Number(row.steal) || 0)} 次`
+  return `${stealLabel.value} ${Math.round(Number(row.steal) || 0)} 次`
 }
 
 onMounted(fetchRanking)
@@ -114,6 +143,19 @@ onMounted(fetchRanking)
         <h1 class="rank-title text-gray-900 font-bold">
           本站排行
         </h1>
+      </div>
+
+      <div class="space-group mb-3 inline-flex border border-white/55 rounded-lg bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="排行场景">
+        <button
+          v-for="s in spaceOptions"
+          :key="s.key"
+          class="period-btn rounded-md transition"
+          :class="space === s.key ? 'bg-emerald-500 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+          :aria-pressed="space === s.key"
+          @click="switchSpace(s.key)"
+        >
+          {{ s.label }}
+        </button>
       </div>
 
       <div class="period-group mb-3 inline-flex border border-white/55 rounded-lg bg-white/35 p-0.5 backdrop-blur-xl backdrop-saturate-150" role="group" aria-label="排行周期">
@@ -144,15 +186,21 @@ onMounted(fetchRanking)
           :aria-pressed="type === 'steal'"
           @click="switchType('steal')"
         >
-          <span class="i-carbon-run text-base" /> 偷菜
+          <span class="i-carbon-run text-base" /> {{ stealLabel }}
         </button>
       </div>
 
-      <div v-if="loading && !loaded" class="py-14 text-center text-sm text-gray-400">
+      <div v-if="loading" class="py-14 text-center text-sm text-gray-400">
         加载中…
       </div>
+      <div v-else-if="errorMessage" class="py-14 text-center text-sm text-red-500">
+        {{ errorMessage }}
+      </div>
+      <div v-else-if="unavailableReason" class="py-14 text-center text-sm text-gray-500">
+        {{ unavailableReason }}
+      </div>
       <div v-else-if="!rankedList.length" class="py-14 text-center text-sm text-gray-400">
-        暂无排行数据，等农场跑起来再来～
+        暂无{{ spaceLabel }}排行数据，等{{ spaceLabel }}跑起来再来～
       </div>
       <div v-else class="rank-list">
         <div

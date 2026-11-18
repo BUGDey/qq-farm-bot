@@ -10,14 +10,17 @@ import FriendsFriendList from '@/components/friends/FriendsFriendList.vue'
 import FriendsPageHeader from '@/components/friends/FriendsPageHeader.vue'
 import FriendsSyncSettings from '@/components/friends/FriendsSyncSettings.vue'
 import FriendsTabs from '@/components/friends/FriendsTabs.vue'
+import RanchFriends from '@/views/RanchFriends.vue'
 import { useAccountStore } from '@/stores/account'
 import { useFriendStore } from '@/stores/friend'
+import { useGameSpaceStore } from '@/stores/game-space'
 import { useStatusStore } from '@/stores/status'
 import { useToastStore } from '@/stores/toast'
 import { formatGoldAmount } from '@/utils/number-format'
 
 const GID_BATCH_SEPARATOR_RE = /[,，\s]+/
 
+const { isRanch } = storeToRefs(useGameSpaceStore())
 const accountStore = useAccountStore()
 const friendStore = useFriendStore()
 const statusStore = useStatusStore()
@@ -237,6 +240,8 @@ const filteredInteractRecords = computed(() => {
 const visibleInteractRecords = computed(() => filteredInteractRecords.value.slice(0, 50))
 
 async function loadData() {
+  if (isRanch.value)
+    return
   if (currentAccountId.value) {
     const acc = currentAccount.value
     if (!acc)
@@ -245,6 +250,9 @@ async function loadData() {
     if (!realtimeConnected.value) {
       await statusStore.fetchStatus(currentAccountId.value)
     }
+
+    if (isRanch.value || String(acc.id) !== String(currentAccountId.value))
+      return
 
     if (acc.running) {
       avatarErrorKeys.value.clear()
@@ -268,7 +276,12 @@ useIntervalFn(() => {
   }
 }, 1000)
 
-watch(currentAccountId, (newId, oldId) => {
+watch([currentAccountId, isRanch], ([newId], [oldId]) => {
+  showConfirm.value = false
+  pendingAction.value = null
+  showBatchAddGidModal.value = false
+  showGidListModal.value = false
+  friendStore.clearFriendData()
   expandedFriends.value.clear()
   if (oldId !== undefined && newId !== oldId) {
     friendStore.clearFriendData()
@@ -647,7 +660,8 @@ async function handleBatchAddKnownFriendGids() {
 </script>
 
 <template>
-  <div class="p-4">
+  <RanchFriends v-if="isRanch" />
+  <div v-else class="p-4">
     <FriendsPageHeader
       v-model:search-keyword="searchKeyword"
       :active-tab="activeTab"
@@ -1134,6 +1148,5 @@ async function handleBatchAddKnownFriendGids() {
         </div>
       </div>
     </Teleport>
-
-      </div>
+  </div>
 </template>

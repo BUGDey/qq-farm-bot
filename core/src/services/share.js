@@ -10,14 +10,24 @@ const { sendMsgAsync } = require('../utils/network');
 const { types } = require('../utils/proto');
 const { log, toNum } = require('../utils/utils');
 const { getItemById } = require('../config/gameConfig');
+const { getDataFile } = require('../config/runtime-paths');
+const { readJsonFile, writeJsonFileAtomic } = require('./json-db');
 
 const DAILY_KEY = 'daily_share';
+
+// 每日首次分享奖励：罐头(1小时) id=80021，抓包确认 delta=5。
+// 成功判定：CheckCanShare=true → ClaimShareReward(errorCode=0) → ItemNotify(80021, delta=5)。
+// ClaimShareRewardReply.success 受 wire2 嵌套影响不可靠，不作为判据。
+const CAN_ITEM_ID = 80021;
+const CAN_EXPECTED_DELTA = 5;
+const CLAIM_STATE_FILE = () => getDataFile('share-claim-daily.json');
 
 // 两次检查最小间隔：10分钟
 const CHECK_COOLDOWN_MS = 10 * 60 * 1000;
 
 // 每日状态追踪
 let doneDateKey = '';
+let claimDoneDateKey = null; // null = 尚未从持久化文件加载
 let lastCheckAt = 0;
 let lastClaimAt = 0;
 
@@ -98,6 +108,149 @@ async function claimShareReward() {
   return types.ClaimShareRewardReply.decode(body);
 }
 
+// ---- 每日首次分享领奖：仅领取，绝不伪造分享动作 ----
+
+// 抓包确认：领取成功后服务端推送 ItemNotify(item.id=80021, delta=5)。
+// network.js 把 ItemNotify 交给 handleNotify 解码，但不对 80021 做任何处理，也没有透出事件；
+// 由于禁止改动 network.js，这里在共享的 types.ItemNotify.decode 上挂一个轻量观测钩子，
+// 把符合条件的通知记入带时间戳的缓冲，作为「到账确认」依据。
+const canNotifyTimestamps = [];
+const MAX_CAN_NOTIFY_RECORDS = 50;
+
+function installCanNotifyObserver() {
+  const type = types && types.ItemNotify;
+  if (!type || type.__canClaimObserved) return;
+  // protobuf.js 的 decode 是懒初始化的：首次调用 setup() 会用实例方法覆盖原型上的
+  // decode_setup。必须先 setup() 再打补丁，否则观察钩子会被 lazy setup 覆盖掉。
+  if (typeof type.setup === 'function') type.setup();
+  const originalDecode = type.decode;
+  if (typeof originalDecode !== 'function') return;
+  function observedDecode(buffer, ...rest) {
+    const decoded = originalDecode.call(this, buffer, ...rest);
+    try {
+      const items = (decoded && decoded.items) || [];
+      for (const itemChg of items) {
+        if (!itemChg || !itemChg.item) continue;
+        const id = toNum(itemChg.item.id);
+        const delta = toNum(itemChg.delta);
+        if (id === CAN_ITEM_ID && delta >= CAN_EXPECTED_DELTA) {
+          canNotifyTimestamps.push(Date.now());
+          if (canNotifyTimestamps.length > MAX_CAN_NOTIFY_RECORDS) {
+            canNotifyTimestamps.splice(0, canNotifyTimestamps.length - MAX_CAN_NOTIFY_RECORDS);
+          }
+          break;
+        }
+      }
+    } catch { /* 观测失败不影响原解码逻辑 */ }
+    return decoded;
+  }
+  observedDecode.__canClaimObserved = true;
+  type.decode = observedDecode;
+}
+
+function hasCanNotifySince(ts) {
+  return canNotifyTimestamps.some(at => at >= ts);
+}
+
+function getClaimAccountKey() {
+  return String(process.env.FARM_ACCOUNT_ID || 'default')
+    .trim().replace(/[^\w-]/g, '_') || 'default';
+}
+
+function loadClaimDoneDate() {
+  if (claimDoneDateKey !== null) return claimDoneDateKey;
+  try {
+    const state = readJsonFile(CLAIM_STATE_FILE(), () => ({}));
+    claimDoneDateKey = String((state && state[getClaimAccountKey()]) || '');
+  } catch {
+    claimDoneDateKey = '';
+  }
+  return claimDoneDateKey;
+}
+
+function markClaimDoneToday() {
+  const key = getDateKey();
+  claimDoneDateKey = key;
+  try {
+    const loaded = readJsonFile(CLAIM_STATE_FILE(), () => ({}));
+    const state = (loaded && typeof loaded === 'object' && !Array.isArray(loaded)) ? loaded : {};
+    state[getClaimAccountKey()] = key;
+    writeJsonFileAtomic(CLAIM_STATE_FILE(), state, 2);
+  } catch (err) {
+    log('分享', `领取状态持久化失败: ${err && err.message || err}`, {
+      module: 'task', event: DAILY_KEY, result: 'error'
+    });
+  }
+}
+
+/**
+ * 每日首次分享领奖：只做「检查可领 → 领取」，绝不伪造分享动作。
+ *
+ * - 不调用 ReportShare / ReportArkClick 等任何伪造上报。
+ * - 不依赖 ClaimShareRewardReply.success（wire2 嵌套导致不可靠）。
+ * - 成功判据：CheckCanShare=true → ClaimShareReward(errorCode=0) →
+ *   近期 ItemNotify(80021, delta>=5) 到账确认。
+ * - 1009001 /「已经领取」视为今日完成并持久化。
+ * - 超时 / 回包不明：不重试、不标记，下次例行任务重查 CheckCanShare。
+ *
+ * @param {object} [automation=null] 可选的自动化配置；显式为 false 时不执行（worker 侧已 gate，此处为防御性检查）。
+ * @returns {Promise<boolean>} 是否确认领取到账
+ */
+async function claimDailyShareRewardIfAvailable(automation = null) {
+  if (automation && automation.share_claim_daily === false) return false;
+  if (loadClaimDoneDate() === getDateKey()) return false;
+
+  installCanNotifyObserver();
+
+  let canShareResult;
+  try {
+    canShareResult = await checkCanShare();
+  } catch (err) {
+    log('分享', `每日分享领奖-检查失败: ${err && err.message || err}`, {
+      module: 'task', event: DAILY_KEY, result: 'error'
+    });
+    return false;
+  }
+  if (!canShareResult || !canShareResult.can_share) {
+    log('分享', '每日分享领奖-当前无可领取分享', {
+      module: 'task', event: DAILY_KEY, result: 'none'
+    });
+    return false;
+  }
+
+  // sendMsgAsync 在 errorCode!==0 时抛错，因此此处 resolved 即代表 errorCode=0
+  const notifySince = Date.now();
+  try {
+    await claimShareReward();
+  } catch (err) {
+    if (isAlreadyClaimedError(err)) {
+      markClaimDoneToday();
+      log('分享', '每日分享领奖-今日已领取', {
+        module: 'task', event: DAILY_KEY, result: 'none'
+      });
+      return false;
+    }
+    log('分享', `每日分享领奖-领取失败: ${err && err.message || err}`, {
+      module: 'task', event: DAILY_KEY, result: 'error'
+    });
+    return false;
+  }
+
+  // 回包不明（无到账通知）：不重试、不标记，下次重查状态
+  if (!hasCanNotifySince(notifySince)) {
+    log('分享', '每日分享领奖-未收到到账通知，稍后重查', {
+      module: 'task', event: DAILY_KEY, result: 'unknown'
+    });
+    return false;
+  }
+
+  markClaimDoneToday();
+  log('分享', `每日分享领奖成功 → 罐头x${CAN_EXPECTED_DELTA}`, {
+    module: 'task', event: DAILY_KEY, result: 'ok'
+  });
+  return true;
+}
+
 // ---- 主逻辑 ----
 
 /**
@@ -164,9 +317,11 @@ async function performDailyShare(force = false) {
 
 module.exports = {
   performDailyShare,
+  claimDailyShareRewardIfAvailable,
   getShareDailyState: () => ({
     key: DAILY_KEY,
     doneToday: isDoneToday(),
+    claimDoneToday: loadClaimDoneDate() === getDateKey(),
     lastCheckAt,
     lastClaimAt,
   }),

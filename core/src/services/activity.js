@@ -17,7 +17,10 @@ const { getDataDir } = require('../config/runtime-paths');
 const { createModuleLogger } = require('./logger');
 const { readJsonFile, writeJsonFileAtomic } = require('./json-db');
 const { getBag, getBagItems, useItem } = require('./warehouse');
-const solarTermNames = new Map(require('../gameConfig/SolarTerms.json').terms.map(term => [term.id, term.name]));
+const solarTermConfig = require('../gameConfig/SolarTerms.json').terms;
+const solarTermNames = new Map(solarTermConfig.map(term => [term.id, term.name]));
+// 节令文案（含冬季节令）来自官方配置，回包里只有 id / 时间 / 奖励，说明文字要靠本地表补齐。
+const solarTermMeta = new Map(solarTermConfig.map(term => [term.id, term]));
 const wishSignRewards = require('../gameConfig/WishSignRewards.json');
 
 const activityLogger = createModuleLogger('activity');
@@ -2634,6 +2637,7 @@ function normalizeSolarTerm(rawBytes) {
     endTime: getProtoNumber(entries, 4),
     rewards: getProtoBytesAll(entries, 5).map(parseActivityItemMessage).filter(Boolean),
     title: getProtoString(entries, 6, '') || solarTermNames.get(getProtoNumber(entries, 1)) || '节令赠礼',
+    description: solarTermMeta.get(getProtoNumber(entries, 1))?.description || '',
   };
 }
 
