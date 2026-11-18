@@ -99,7 +99,8 @@ WORKDIR /app/core
 ENV NODE_ENV=production
 ENV TZ=Asia/Shanghai
 
-RUN apk add --no-cache tzdata && \
+RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://mirrors.aliyun.com/alpine|g' /etc/apk/repositories && \
+    apk add --no-cache tzdata && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone && \
     apk del tzdata

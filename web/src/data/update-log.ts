@@ -11,9 +11,10 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.18.3'
+export const APP_VERSION = '2.18.4'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  { version: '2.18.4', date: '2026-11-18', items: ['容器安装 tzdata 前改用阿里云 HTTPS Alpine 软件源，保留原有上海时区设置逻辑'] },
   {
     version: '2.18.3',
     date: '2026-11-18',
