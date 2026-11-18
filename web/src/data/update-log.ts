@@ -11,9 +11,19 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.18.1'
+export const APP_VERSION = '2.18.2'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.18.2',
+    date: '2026-11-18',
+    items: [
+      '修复幼崽入栏确认弹窗未渲染选择内容与确认禁用状态的问题',
+      '自动出售在收获后先完成清仓，仓库已满时停止本轮购种并修复错误码识别与日志节流',
+      'NapCat 拉取超时调整为 30 分钟，Node 默认基础镜像改为 node:24-alpine',
+    ],
+  },
+
   {
     version: '2.18.1',
     date: '2026-11-18',

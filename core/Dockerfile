@@ -14,7 +14,7 @@
 # 或者换成本机能访问的任意加速前缀，例如：
 #   NODE_IMAGE=docker.xuanyuan.me/library/node:24-alpine
 #   NODE_IMAGE=docker.m.daocloud.io/library/node:24-alpine
-ARG NODE_IMAGE=docker.1ms.run/library/node:24-alpine
+ARG NODE_IMAGE=node:24-alpine
 FROM ${NODE_IMAGE} AS pnpm-base
 
 WORKDIR /app

@@ -8,7 +8,7 @@ services:
         NPM_REGISTRY: "${NPM_REGISTRY:-https://registry.npmmirror.com}"
         NPM_REGISTRY_FALLBACK: "${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org}"
         # node 基础镜像（含加速前缀），换源时在 .env 里写 NODE_IMAGE=...
-        NODE_IMAGE: "${NODE_IMAGE:-docker.1ms.run/library/node:24-alpine}"
+        NODE_IMAGE: "${NODE_IMAGE:-node:24-alpine}"
     image: qq-farm-bot:latest
     container_name: qq-farm-bot
     restart: unless-stopped

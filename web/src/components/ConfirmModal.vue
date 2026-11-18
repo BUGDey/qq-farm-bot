@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
   isAlert?: boolean
   type?: ModalType
   confirmationCode?: string
+  confirmDisabled?: boolean
 }>(), {
   title: '\u786E\u8BA4\u64CD\u4F5C',
   message: '\u786E\u5B9A\u8981\u6267\u884C\u6B64\u64CD\u4F5C\u5417\uFF1F',
@@ -37,7 +38,7 @@ const dialogId = useId()
 useModalFocus(() => props.show, surface, closeModal)
 
 const confirmDisabled = computed(() => {
-  if (props.loading)
+  if (props.loading || props.confirmDisabled)
     return true
   return false
 })
@@ -103,6 +104,9 @@ function confirm() {
             <p :id="`${dialogId}-message`" class="confirm-modal-message">
               {{ message }}
             </p>
+            <div v-if="$slots.default" class="confirm-modal-extra">
+              <slot />
+            </div>
           </div>
 
           <div class="confirm-modal-actions" :class="{ 'is-alert': isAlert }">

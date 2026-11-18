@@ -272,8 +272,8 @@ resolve_napcat_image() {
   local -a tags ranked_prefixes
   local -A tried=()
   command -v timeout >/dev/null 2>&1 || { printf '缺少 timeout，请先安装 coreutils。\n' >&2; return 1; }
-  local NAPCAT_PULL_TIMEOUT="${NAPCAT_PULL_TIMEOUT_SECONDS:-600}"
-  [[ "$NAPCAT_PULL_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || NAPCAT_PULL_TIMEOUT=600
+  local NAPCAT_PULL_TIMEOUT="${NAPCAT_PULL_TIMEOUT_SECONDS:-1800}"
+  [[ "$NAPCAT_PULL_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || NAPCAT_PULL_TIMEOUT=1800
   current="$(grep -E '^NAPCAT_IMAGE=' .env 2>/dev/null | head -1 | cut -d= -f2- || true)"
   current="${current%$'\r'}"
   current="${current%\"}"; current="${current#\"}"

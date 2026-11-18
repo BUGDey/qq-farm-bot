@@ -9,6 +9,7 @@ const { analyzeLands, resolveRemovableHarvestedLands } = require('./farm-land-an
 const { runFertilizerByConfig } = require('./farm-fertilizer');
 const { autoPlantEmptyLands } = require('./planting-service');
 const { startFertilizerBuyCheckTimer, stopFertilizerBuyCheckTimer } = require('./farm-scheduler');
+const { sellAllFruits } = require('./warehouse');
 
 // ─── 状态标记 ───
 
@@ -53,7 +54,6 @@ function handleWarehouseFull() {
     });
   }
   farmScheduler.setTimeoutTask('farm_warehouse_full_pause', WAREHOUSE_FULL_PAUSE_MS, async () => {
-    warehouseFullState.lastAt = 0;
     if (farmLoopRunning && !externalSchedulerMode) scheduleNextFarmCheck(1000);
   });
 }
@@ -163,6 +163,7 @@ async function runFarmOperation(opType) {
   let harvestedLands = [];
   let harvestResult = null;
   let removeResult = null;
+  let warehouseFull = false;
 
   if (opType === 'all' || opType === 'harvest') {
     if (analysis.harvestable.length > 0) {
@@ -176,6 +177,10 @@ async function runFarmOperation(opType) {
         recordOperation('harvest', analysis.harvestable.length);
         harvestedLands = [...analysis.harvestable];
 
+        // 收获后必须先等待自动出售完成，再进入铲除/购种，避免 BuyGoods 在仓库满时继续失败。
+        if (isAutomationOn('sell')) {
+          await sellAllFruits();
+        }
         networkEvents.emit('farmHarvested', {
           count: analysis.harvestable.length,
           landIds: [...analysis.harvestable],
@@ -184,7 +189,9 @@ async function runFarmOperation(opType) {
         require('./capital-mode').handleFarmHarvested();
       } catch (err) {
         if (isWarehouseFullError(err)) {
+          warehouseFull = true;
           handleWarehouseFull();
+          if (isAutomationOn('sell')) await sellAllFruits();
         } else {
           logWarn('收获', `收获失败：${err.message}；本轮已跳过，稍后自动重试`, {
             module: 'farm', event: '收获作物', result: 'error'
@@ -195,7 +202,7 @@ async function runFarmOperation(opType) {
   }
 
   // ── 种植 ──
-  if (opType === 'all' || opType === 'plant') {
+  if (!warehouseFull && (opType === 'all' || opType === 'plant')) {
     const emptyLands = [...new Set(analysis.empty)];
     let deadLands = [...new Set(analysis.dead)];
 
