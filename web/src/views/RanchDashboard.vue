@@ -92,8 +92,8 @@ const resourceCards = computed(() => [
   { key: 'crop', label: '普通图鉴', icon: '/game-config/resource-icons/illustrated-crop.png', amount: illustratedData.value?.currentLevel != null ? `Lv.${illustratedData.value.currentLevel}` : '未知' },
   { key: 'mutant', label: '巨大图鉴', icon: '/game-config/resource-icons/illustrated-mutant.png', amount: illustratedData.value?.weightScore?.currentId != null ? `Lv.${illustratedData.value.weightScore.currentId}` : '未知' },
 ])
-// 巡查项文案：running→巡查中；enabled+nextAt→下次巡查时刻（title 里带倒计时）；未启用/未下发时间→等待巡查。
-// nextAt 兼容秒/毫秒（小于 1e12 视为秒）。
+// 巡查项文案：running→巡查中；enabled+nextAt→剩余倒计时（到点显示即将巡查，绝对时刻放悬浮提示）；
+// 未启用/未下发时间→等待巡查。nextAt 兼容秒/毫秒（小于 1e12 视为秒）。
 function nextCheckState(queue: any): { value: string, hint: string } {
   if (!queue)
     return { value: '等待巡查', hint: '等待下发巡查时间' }
@@ -111,8 +111,8 @@ function nextCheckState(queue: any): { value: string, hint: string } {
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0')
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
   const remain = Math.max(0, Math.ceil((nextAt - clock.value) / 1000))
-  const countdown = remain >= 60 ? `约 ${Math.ceil(remain / 60)} 分钟后` : remain > 0 ? `${remain} 秒后` : '即将巡查'
-  return { value: `下次 ${time}`, hint: `下次巡查 ${time}（${countdown}）` }
+  const countdown = remain > 0 ? `${pad(remain / 3600)}:${pad(remain % 3600 / 60)}:${pad(remain % 60)} 后` : '即将巡查'
+  return { value: countdown, hint: `巡查时刻 ${time}` }
 }
 const checks = computed(() => [
   { key: 'farm', label: '牧场巡查', icon: 'i-fas-paw' },

@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.18.2'
+export const APP_VERSION = '2.18.3'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.18.3',
+    date: '2026-11-18',
+    items: [
+      '巡查状态改为显示实时倒计时，并在悬浮提示中保留下次巡查时刻',
+      '启动脚本与发行包中的 start.sh 默认可直接执行，减少部署后的权限问题',
+    ],
+  },
+
   {
     version: '2.18.2',
     date: '2026-11-18',

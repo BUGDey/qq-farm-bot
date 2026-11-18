@@ -22,6 +22,10 @@ set -Eeuo pipefail
 APP_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$APP_DIR"
 
+# 默认权限 777：无论经 zip 解压、git clone 还是 scp 得到本文件，首次执行即自动修正，
+# 之后可直接 ./start.sh 运行（chmod 失败不影响脚本继续执行）
+chmod 777 "${APP_DIR}/start.sh" 2>/dev/null || true
+
 PORT="${ADMIN_PORT:-3007}"
 NAPCAT_PORT="${NAPCAT_WEBUI_PORT:-6099}"
 # NapCat 设备名（QQ 登录记录里显示的名字），固定为 qq-farm-bot，可在 .env 中覆盖

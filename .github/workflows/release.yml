@@ -207,13 +207,15 @@ jobs:
           else
             rm -f "${STAGE}/start.bat" "${STAGE}/stop.bat"
             find "${STAGE}" -type f -name '*.sh' -exec chmod +x {} \;
+            # start.sh 默认 777：解压后无需 chmod 直接 ./start.sh 即可运行
+            chmod 777 "${STAGE}/start.sh"
           fi
 
           # 包里放一份纯文本快速上手说明（解压后第一眼能看到，不用翻网页）
           if [ "${TARGET}" = "win" ]; then
             LAUNCH_TEXT='双击 start.bat 启动；停止服务双击 stop.bat'
           else
-            LAUNCH_TEXT='执行 chmod +x start.sh && ./start.sh 启动；停止服务 ./start.sh stop'
+            LAUNCH_TEXT='执行 ./start.sh 启动；停止服务 ./start.sh stop（默认已 777，无需 chmod）'
           fi
           cat > "${STAGE}/使用说明.txt" <<EOF
           QQ 农场智能助手 ${NAME}
