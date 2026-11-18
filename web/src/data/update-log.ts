@@ -11,9 +11,18 @@ export interface UpdateLogEntry {
 }
 
 /** 当前面板版本号 */
-export const APP_VERSION = '2.18.0'
+export const APP_VERSION = '2.18.1'
 
 export const UPDATE_LOGS: UpdateLogEntry[] = [
+  {
+    version: '2.18.1',
+    date: '2026-11-18',
+    items: [
+      '修复 NapCat 镜像拉取在 90 秒后过早切换：默认等待 10 分钟，支持 NAPCAT_PULL_TIMEOUT_SECONDS 自定义',
+      '镜像拉取前按 ping 延迟排序，当前来源失败或 Ctrl+C 中止后再尝试下一个来源',
+    ],
+  },
+
   {
     version: '2.17.0',
     date: '2026-11-16',

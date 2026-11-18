@@ -238,18 +238,42 @@ napcat_ref_ok() {
     printf '  使用本地镜像: %s\n' "$1" >&2
     return 0
   fi
-  printf '  拉取镜像: %s（单次最多 %s 秒）\n' "$1" "$NAPCAT_PULL_TIMEOUT" >&2
-  timeout --kill-after=10 "$NAPCAT_PULL_TIMEOUT" docker pull "$1" >&2
+  printf '  拉取镜像: %s（单次最多 %s 秒，Ctrl+C 可跳过当前来源）\n' "$1" "$NAPCAT_PULL_TIMEOUT" >&2
+  # --foreground 让 Ctrl+C 传递给 docker pull；中断后返回非零，由上层继续下一个来源。
+  timeout --foreground --preserve-status --kill-after=10 "$NAPCAT_PULL_TIMEOUT" docker pull "$1" >&2
 }
 
+# 先探测所有镜像主机，按 ICMP 延迟排序；不响应 ping 的地址排到最后。
+napcat_host_from_prefix() {
+  local prefix="$1"
+  [ -n "$prefix" ] || { printf 'registry-1.docker.io'; return; }
+  printf '%s' "$prefix" | cut -d/ -f1
+}
+
+rank_napcat_mirrors() {
+  local prefix host latency
+  local -a ranked=()
+  for prefix in "${NAPCAT_MIRROR_PREFIXES[@]}"; do
+    host="$(napcat_host_from_prefix "$prefix")"
+    latency="$(ping -c 1 -W 2 "$host" 2>/dev/null | awk -F'time=' '/time=/{print $2; exit}' | awk '{print $1}')"
+    if [[ "$latency" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+      ranked+=("$latency|$prefix")
+      printf '  镜像测速: %s = %sms\n' "$host" "$latency" >&2
+    else
+      ranked+=("999999|$prefix")
+      printf '  镜像测速: %s = 不可达（排最后）\n' "$host" >&2
+    fi
+  done
+  printf '%s\n' "${ranked[@]}" | sort -n -t'|' -k1,1 | cut -d'|' -f2-
+}
 # 每次最多试各镜像源的首选版本，再逐个回退旧 tag；进度不写入返回值。
 resolve_napcat_image() {
-  local current host tag ref
-  local -a tags
+  local current host tag ref prefix
+  local -a tags ranked_prefixes
   local -A tried=()
   command -v timeout >/dev/null 2>&1 || { printf '缺少 timeout，请先安装 coreutils。\n' >&2; return 1; }
-  local NAPCAT_PULL_TIMEOUT="${NAPCAT_PULL_TIMEOUT_SECONDS:-90}"
-  [[ "$NAPCAT_PULL_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || NAPCAT_PULL_TIMEOUT=90
+  local NAPCAT_PULL_TIMEOUT="${NAPCAT_PULL_TIMEOUT_SECONDS:-600}"
+  [[ "$NAPCAT_PULL_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || NAPCAT_PULL_TIMEOUT=600
   current="$(grep -E '^NAPCAT_IMAGE=' .env 2>/dev/null | head -1 | cut -d= -f2- || true)"
   current="${current%$'\r'}"
   current="${current%\"}"; current="${current#\"}"
@@ -262,9 +286,10 @@ resolve_napcat_image() {
     aarch64|arm64) tags=("${NAPCAT_TAGS_ARM[@]}") ;;
     *) tags=("${NAPCAT_TAGS_X86[@]}") ;;
   esac
+  mapfile -t ranked_prefixes < <(rank_napcat_mirrors)
   for tag in "${tags[@]}"; do
-    for host in "${NAPCAT_MIRROR_PREFIXES[@]}"; do
-      if [ -z "$host" ]; then ref="${NAPCAT_REPO}:$tag"; else ref="$host/${NAPCAT_REPO}:$tag"; fi
+    for prefix in "${ranked_prefixes[@]}"; do
+      if [ -z "$prefix" ]; then ref="${NAPCAT_REPO}:$tag"; else ref="$prefix/${NAPCAT_REPO}:$tag"; fi
       [ -z "${tried[$ref]:-}" ] || continue
       tried["$ref"]=1
       if napcat_ref_ok "$ref"; then printf '%s\n' "$ref"; return 0; fi
