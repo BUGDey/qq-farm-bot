@@ -1939,6 +1939,8 @@ async function startBot(config) {
         initTaskSystem();
         startDailyRoutineTimer();
         startStarActivityClaimTimer();
+        // connect() 异步完成登录后才能注册牧场心跳；重连成功也会在此重建唯一任务。
+        startRanchAutomationTimer();
         startMugeAutomationTimer();
         startMysteryShopAutoBuyTimer();
     startPetAutoFeedTimer();
@@ -1954,7 +1956,6 @@ async function startBot(config) {
 
     // 定期同步状态
     workerScheduler.setIntervalTask('status_sync', resourcePolicy.statusSyncIntervalMs, syncStatus, { preventOverlap: true });
-    startRanchAutomationTimer();
 }
 
 async function stopBot() {
