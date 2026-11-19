@@ -1,4 +1,4 @@
-import { defineConfig, presetAttributify, presetIcons, presetUno, presetWebFonts } from 'unocss'
+import { defineConfig, presetAttributify, presetIcons, presetUno } from 'unocss'
 
 export default defineConfig({
   content: {
@@ -44,13 +44,6 @@ export default defineConfig({
         fas: () => import('@iconify-json/fa-solid/icons.json').then(i => i.default),
         fab: () => import('@iconify-json/fa-brands/icons.json').then(i => i.default),
         'svg-spinners': () => import('@iconify-json/svg-spinners/icons.json').then(i => i.default),
-      },
-    }),
-    presetWebFonts({
-      fonts: {
-        sans: 'DM Sans',
-        serif: 'DM Serif Display',
-        mono: 'DM Mono',
       },
     }),
   ],

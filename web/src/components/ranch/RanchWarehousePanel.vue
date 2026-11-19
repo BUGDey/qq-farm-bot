@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import type { WarehouseAction } from '@/utils/ranch-warehouse'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { useAccountStore } from '@/stores/account'
 import { useRanchStore } from '@/stores/ranch'
-import { canConfirmWarehouseAction, warehouseItemKey as key, validWarehouseCount } from '@/utils/ranch-warehouse'
+import { canConfirmWarehouseAction, warehouseItemKey as key, validWarehouseCount, warehouseSaleRewards } from '@/utils/ranch-warehouse'
 
 const store = useRanchStore()
 const account = useAccountStore()
@@ -29,25 +30,27 @@ watch(() => account.currentAccountId, reset, { flush: 'sync' })
 watch(() => store.data, () => {
   pending.value = null
 }, { flush: 'sync' })
-function request(item: any) {
-  if (store.busy || store.loading || item.locked || (!item.canSell && !item.canUseCan))
+function request(item: any, action: WarehouseAction) {
+  if (store.busy || store.loading || item.locked || !(action === 'sell' ? item.manualSellPrices?.length : item.canUseCan))
     return
-  pending.value = { ...item, accountId: account.currentAccountId }
+  pending.value = { ...item, action, accountId: account.currentAccountId, manualSellPrices: item.manualSellPrices?.map((price: any) => ({ ...price })) }
   itemCount.value = 1
 }
-const valid = computed(() => pending.value && validWarehouseCount(itemCount.value, pending.value.count))
+const rewards = computed(() => pending.value?.action === 'sell' ? warehouseSaleRewards(pending.value.manualSellPrices, itemCount.value) : [])
+const valid = computed(() => pending.value && validWarehouseCount(itemCount.value, pending.value.count)
+  && (pending.value.action !== 'sell' || rewards.value.length > 0))
 async function confirm() {
   const item = pending.value
   if (!valid.value || !item || item.accountId !== account.currentAccountId || store.busy || store.loading)
     return
-  const live = items.value.find(i => key(i) === key(item))
-  if (!canConfirmWarehouseAction(item, live, itemCount.value, account.currentAccountId)) {
+  const matches = items.value.filter(i => key(i) === key(item))
+  if (!canConfirmWarehouseAction(item, matches.length === 1 ? matches[0] : undefined, itemCount.value, account.currentAccountId)) {
     pending.value = null
     return
   }
-  const count = itemCount.value
+  const payload = { action: item.action, itemId: item.id, uid: item.uid || '0', count: itemCount.value, ...(item.action === 'sell' ? { expectedRewards: rewards.value.map(({ id, count }) => ({ id, count })) } : {}) }
   pending.value = null
-  await store.mutate('/api/ranch/action', { action: item.canUseCan ? 'useCan' : 'sell', itemId: item.id, uid: item.uid || '0', count })
+  await store.mutate('/api/ranch/action', payload)
 }
 </script>
 
@@ -78,8 +81,11 @@ async function confirm() {
           #{{ item.id }}
         </div>
         <div class="absolute right-1 top-1 flex gap-1">
-          <button v-if="!item.locked && (item.canSell || item.canUseCan)" class="rounded px-1.5 py-0.5 text-[10px] text-white opacity-70 transition disabled:opacity-40 hover:opacity-100" :class="item.canUseCan ? 'bg-green-500 dark:bg-green-600' : 'bg-red-500 dark:bg-red-600'" :title="item.canUseCan ? '装填罐头' : '出售产物'" :disabled="store.busy || store.loading" @click="request(item)">
-            {{ item.canUseCan ? '用' : '售' }}
+          <button v-if="!item.locked && item.canUseCan" class="rounded bg-green-500 px-1.5 py-0.5 text-[10px] text-white opacity-70 transition dark:bg-green-600 disabled:opacity-40 hover:opacity-100" title="装填罐头" :disabled="store.busy || store.loading" @click="request(item, 'useCan')">
+            用
+          </button>
+          <button v-if="!item.locked && item.manualSellPrices?.length" class="rounded bg-red-500 px-1.5 py-0.5 text-[10px] text-white opacity-70 transition dark:bg-red-600 disabled:opacity-40 hover:opacity-100" title="出售物品" :disabled="store.busy || store.loading" @click="request(item, 'sell')">
+            售
           </button>
         </div>
         <div class="mb-2 mt-6 h-16 w-16 flex items-center justify-center rounded-full bg-gray-50 dark:bg-gray-700/50">
@@ -94,15 +100,18 @@ async function confirm() {
         <div class="mb-2 max-w-full flex flex-col items-center gap-0.5 text-xs text-gray-400">
           <span v-if="item.uid && String(item.uid) !== '0'" class="max-w-full break-all">UID: {{ item.uid }}</span>
           <span v-if="item.locked">已锁定</span>
-          <span v-if="item.detail?.ranchProduct">特殊产物，暂不开放出售</span>
+          <span v-if="item.detail?.ranchProduct">特殊产物</span>
         </div>
         <div class="mt-auto text-gray-600 font-medium dark:text-gray-300">
           x{{ item.count ?? item.num ?? '—' }}
         </div>
       </div>
     </div>
-    <ConfirmModal :show="!!pending" :title="pending?.canUseCan ? '装填罐头' : '出售产物'" :message="pending ? `确认${pending.canUseCan ? '使用' : '出售'} ${pending.name} × ${itemCount}？${pending.canUseCan ? '装入对应罐头容器，不购买额外道具。' : '仅出售当前选中的普通产物，不处理锁定或特殊实例。'}` : ''" :loading="store.busy" :confirm-disabled="!valid || store.loading" @confirm="confirm" @cancel="pending = null" @close="pending = null">
+    <ConfirmModal :show="!!pending" :title="pending?.action === 'useCan' ? '装填罐头' : '出售物品'" :message="pending ? `确认${pending.action === 'useCan' ? '使用' : '出售'} ${pending.name} × ${itemCount}？${pending.action === 'useCan' ? '装入对应罐头容器，不购买额外道具。' : '仅出售选中的批次；若报价变化，不会提交。'}` : ''" :loading="store.busy" :confirm-disabled="!valid || store.loading" @confirm="confirm" @cancel="pending = null" @close="pending = null">
       <label class="flex items-center gap-3 text-sm">数量<input v-model.number="itemCount" type="number" min="1" :max="Math.min(Number(pending?.count || 0), 99999)" class="w-28 border rounded-lg bg-transparent p-2"></label>
+      <p v-if="valid && pending?.action === 'sell'" class="mt-2 text-sm">
+        预计获得：{{ rewards.map(r => `${r.name || `物品 ${r.id}`} ×${r.count}`).join('、') }}
+      </p>
       <p v-if="!valid" class="mt-2 text-sm text-red-500">
         请输入库存范围内的整数数量
       </p>

@@ -14,6 +14,7 @@ const {
 } = require('../models/store');
 const {
     checkAndClaimEmails,
+    shouldRetryEmailCheck,
     getEmailDailyState
 } = require('../services/email');
 const {
@@ -230,6 +231,7 @@ let ranchAutomationEpoch = 0;
 let nextRanchHealthCheckAt = 0;
 let mugeAutomationRunning = false;
 let mugeAutomationEpoch = 0;
+const mugeSubmitted = new Set();
 let lastStatusHash = '';
 let lastStatusSentAt = 0;
 let onSellGain = null;
@@ -373,6 +375,13 @@ function startDailyRoutineTimer() {
             // 分享资格在服务端日切后可能延迟刷新；服务内部有 10 分钟冷却，
             // 持续检查可避免零点单次未命中后必须重连才能领取。
             performDailyShare(false).catch(() => null);
+            if (!friendSyncPaused && getAutomation()?.mail_claim !== false && shouldRetryEmailCheck()) {
+                withAutomationLock('daily-routine', () => {
+                    if (loginReady && !friendSyncPaused && getAutomation()?.mail_claim !== false && shouldRetryEmailCheck()) {
+                        return checkAndClaimEmails();
+                    }
+                }).catch(() => null);
+            }
             if (!friendSyncPaused) require('../services/mall-gift-auto-buy').autoBuyCouponGifts().catch(() => null);
             return;
         }
@@ -1354,8 +1363,9 @@ async function tickMugeAutomation() {
                     getState: () => service.getMugeActivity(),
                     operate: (action, input, options) => service.operateMugeActivity(action, input, options),
                     getAutomation: () => getAutomation() || {},
-                    isReady: () => loginReady && !friendSyncPaused,
+                    isReady: () => epoch === mugeAutomationEpoch && loginReady && !friendSyncPaused,
                     assertScene: () => {},
+                    submitted: mugeSubmitted,
                 });
                 await runner();
             }, { lockTimeoutMs: 30000, taskTimeoutMs: 120000 });
@@ -1940,8 +1950,9 @@ async function startBot(config) {
         startDailyRoutineTimer();
         startStarActivityClaimTimer();
         startMugeAutomationTimer();
+        startRanchAutomationTimer();
         startMysteryShopAutoBuyTimer();
-    startPetAutoFeedTimer();
+        startPetAutoFeedTimer();
 
         // 登录启动序列：串行执行，避免登录瞬间多个任务同时发包把网关卡住
         runStartupSequence().catch(() => null);
@@ -1954,7 +1965,6 @@ async function startBot(config) {
 
     // 定期同步状态
     workerScheduler.setIntervalTask('status_sync', resourcePolicy.statusSyncIntervalMs, syncStatus, { preventOverlap: true });
-    startRanchAutomationTimer();
 }
 
 async function stopBot() {
@@ -2763,7 +2773,9 @@ function syncStatus() {
         friendRemainSec: Math.max(helpRemainSec, stealRemainSec)
     };
     try {
-        stats.ranchNextChecks = require('../services/ranch').getRanchService().getAutomationSchedule();
+        const ranchService = require('../services/ranch').getRanchService();
+        stats.ranchNextChecks = ranchService.getAutomationSchedule();
+        stats.ranchStats = ranchService.getOperationStats();
     } catch {
         stats.ranchNextChecks = null;
     }

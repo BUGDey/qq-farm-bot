@@ -3,26 +3,27 @@ const assert = require('node:assert/strict');
 const { createRanchService } = require('../src/services/ranch');
 const { createRanchSession } = require('../src/services/ranch-session');
 const { createRanchProtocol } = require('../src/services/ranch-protocol');
-function fixture(settings = {}) {
+function fixture(settings = {}, roster = {}) {
     const calls = []; const logs = [];
     const ranch = { ranch_inst_id: '9007199254740993', husbandry_type: 1, capacity: 4, animal_count: 1,
         animals: [{ animal_inst_id: 35, animal_id: '60004', stage: 3, mutation: { mutation_type: 0, strokable: true, stroked_gids: [] } }],
         shelves: [{ slot_index: 0, can_steal: true, lots: [] }], hazards: [{ hazard_id: '7' }] };
     const cells = { facilities: [{ instance_id: '999', facility_id: 6001001, ranch: { ranch_inst_id: ranch.ranch_inst_id } }] };
     const responses = {
-        GetAll: { game_friends: [{ gid: '456' }], blocked_players: [] },
-        GetGameFriends: { friends: [{ gid: '456' }] },
+        GetAll: { game_friends: [{ gid: '456', big_farm_status: {} }], blocked_players: [] },
+        GetGameFriends: { friends: [{ gid: '456', big_farm_status: {} }] },
         EnterHomestead: { homestead_cells: cells }, LeaveHomestead: {}, AllCells: cells,
         GetRanchDetail: { ranches: [ranch] },
         GetRanchOpTimes: { ops: [{ op_id: '11003', remaining_times: '97' }, { op_id: '11009', remaining_times: '10' }] },
         StealProduce: { op_results: [{ rewards: [{ id: '1060004', count: '1' }] }] },
         StrokeAnimal: { triggered: false, remaining_times: '9', op_result: { rewards: [{ id: '1102', count: '1' }] } },
         PutHazard: { actual_count: '1', remaining_times: '96' }, CleanAllRanch: { op_results: [] },
-        GetBag: { physical_items: [{ id: '2060001', uid: '9007199254740995', count: '3' }, { id: '80031', uid: '101', count: '60' }, { id: '80021', uid: '102', count: '40' }] },
-        GetBagTab: {}, GetOrderPanel: {}, BatchUse: { got_items: [{ id: '7004', count: '3600' }] }, Sell: { get_items: [{ id: '1007', count: '3' }] },
+        GetBag: { global_scene_id: 2, physical_items: [{ id: '2060001', uid: '9007199254740995', count: '3', show: { sells: [{ id: '1007', count: '3' }] } }, { id: '80031', uid: '101', count: '60' }, { id: '80021', uid: '102', count: '40' }] },
+        GetBagTab: {}, GetOrderPanel: {}, BatchUse: { got_items: [{ id: '7004', count: '3600' }] },
+        Sell: ({ items }) => ({ sell_items: items, get_items: [{ id: '1007', count: String(BigInt(items[0].count) * 3n) }] }),
         InteractRecords: { records: [{ time: '1794810000', interact_type: '1', opr_nickname: '固定访客' }] },
     };
-    const service = createRanchService({ session: createRanchSession(), getSettings: () => settings, getUserState: () => ({ gid: '123' }), log: (...args) => logs.push(args), rpc: async (method, params) => {
+    const service = createRanchService({ getKnownFriendGids: () => [], ...roster, session: createRanchSession(), getSettings: () => settings, getUserState: () => ({ gid: '123' }), log: (...args) => logs.push(args), rpc: async (method, params) => {
         calls.push({ method, params });
         const value = responses[method];
         if (value instanceof Error) throw value;
@@ -75,6 +76,29 @@ test('friend actions reject self, unknown and blocked hosts before entering', as
     f.responses.GetAll.blocked_players = [{ gid: '456' }];
     await assert.rejects(f.service.action(f.input('steal')), /不是可访问/);
     assert.equal(f.calls.some(c => c.method === 'EnterHomestead'), false);
+});
+
+test('QQ farm hints and non-ranch rows never authorize entry; only scoped fallback may', async () => {
+    const f = fixture({}, { getPlatform: () => 'qq', getKnownFriendGids: () => ['456'] });
+    f.responses.GetAll = { game_friends: [{ gid: '456', big_farm_level: '20' }] };
+    f.responses.GetGameFriends = { friends: [{ gid: '456', big_farm_level: '20' }, { gid: '789', big_farm_status: {} }] };
+    assert.deepEqual((await f.service.getResource('friends')).friends, []);
+    await assert.rejects(f.service.action(f.input('steal')), /不是可访问/);
+    assert.equal(f.calls.some(c => c.method === 'EnterHomestead'), false);
+    f.responses.GetGameFriends.friends[0].big_farm_status = {};
+    await f.service.action(f.input('visitFriend'));
+    assert.deepEqual(f.calls.find(c => c.method === 'GetGameFriends').params, { friend_gids: ['456'], global_scene_id: 2 });
+    f.responses.GetGameFriends.friends.shift();
+    await assert.rejects(f.service.action(f.input('steal')), /不是可访问/);
+    assert.equal(f.calls.filter(c => c.method === 'EnterHomestead').length, 1);
+});
+
+test('non-QQ ranch rosters never look up farm seeds', async () => {
+    const f = fixture({}, { getPlatform: () => 'wx', getKnownFriendGids: () => assert.fail('read farm seeds') });
+    f.responses.GetAll = { game_friends: [{ gid: '456', big_farm_level: '20' }] };
+    assert.deepEqual((await f.service.getResource('friends')).friends, []);
+    await assert.rejects(f.service.action(f.input('steal')), /不是可访问/);
+    assert.equal(f.calls.some(c => ['EnterHomestead', 'GetGameFriends'].includes(c.method)), false);
 });
 
 test('stale and ineligible friend targets never produce mutation requests', async () => {
@@ -135,7 +159,7 @@ test('inventory shows precise capabilities and sells only selected ordinary unlo
     const status = await f.service.getStatus();
     assert.equal(status.items[0].canSell, true);
     assert.equal(status.items[1].canUseCan, true);
-    const result = await f.service.action({ action: 'sell', itemId: '2060001', uid: '9007199254740995', count: 2 });
+    const result = await f.service.action({ action: 'sell', itemId: '2060001', uid: '9007199254740995', count: 2, expectedRewards: [{ id: '1007', count: '6' }] });
     assert.deepEqual(f.calls.find(c => c.method === 'Sell').params, { items: [{ id: '2060001', uid: '9007199254740995', count: '2' }] });
     assert.equal(result.reply.getItems[0].name, '金券');
 });
@@ -158,7 +182,7 @@ test('inventory refuses wrong uid, excess/fractional amounts, locks, conditional
     ]) await assert.rejects(f.service.action(payload));
     for (const patch of [{ is_locked: true }, { show: { sell_cond: [{ type: 'unknown' }] } }]) {
         f.responses.GetBag.physical_items[0] = { id: '2060001', uid: '9007199254740995', count: '3', ...patch };
-        await assert.rejects(f.service.action({ action: 'sell', itemId: '2060001', uid: '9007199254740995', count: 1 }));
+        await assert.rejects(f.service.action({ action: 'sell', itemId: '2060001', uid: '9007199254740995', count: 1, expectedRewards: [{ id: '1007', count: '3' }] }));
     }
     f.responses.GetBag.physical_items[1].is_locked = true;
     await assert.rejects(f.service.action({ action: 'useCan', itemId: '80031', uid: '101', count: 1 }));
@@ -170,11 +194,65 @@ test('special ranch products sell by exact uid while locked special products sta
     const item = f.responses.GetBag.physical_items[0];
     item.item_detail = { ranch_product: { weight_x10: 300 } };
     assert.equal((await f.service.getStatus()).items[0].canSell, true);
-    await f.service.action({ action: 'sell', itemId: item.id, uid: item.uid, count: 1 });
+    const sale = { action: 'sell', itemId: item.id, uid: item.uid, count: 1, expectedRewards: [{ id: '1007', count: '3' }] };
+    await f.service.action(sale);
     assert.deepEqual(f.calls.find(c => c.method === 'Sell').params, { items: [{ id: item.id, uid: item.uid, count: '1' }] });
     item.is_locked = true;
-    await assert.rejects(f.service.action({ action: 'sell', itemId: item.id, uid: item.uid, count: 1 }));
+    await assert.rejects(f.service.action(sale), /已锁定/);
     assert.equal(f.calls.filter(c => c.method === 'Sell').length, 1);
+});
+
+test('manual sale quotes exact physical lots without widening bulk eligibility', async () => {
+    const f = fixture();
+    const bag = f.responses.GetBag;
+    const can = bag.physical_items[1];
+    can.show = { sells: [{ id: '1007', count: '9007199254740993' }, { id: '1007', count: '1' }, { id: '1002', count: '1' }] };
+    bag.virtual_items = [{ id: '80031', uid: '700', count: '5', show: can.show }];
+    const status = await f.service.getStatus();
+    assert.equal(status.items[1].canUseCan, true);
+    assert.equal(status.items[1].canSell, false);
+    assert.deepEqual(status.items[1].manualSellPrices.map(({ id, count }) => ({ id, count })), [{ id: '1002', count: '1' }, { id: '1007', count: '9007199254740994' }]);
+    assert.deepEqual(status.items.at(-1).manualSellPrices, []);
+    const sale = { action: 'sell', itemId: can.id, uid: can.uid, count: 2, expectedRewards: [{ id: '1007', count: '18014398509481988' }, { id: '1002', count: '2' }] };
+    await assert.rejects(f.service.action({ action: 'sell', items: [sale] }), /仅支持出售/);
+    await assert.rejects(f.service.action({ ...sale, uid: '700' }), /物品已变化/);
+    await assert.rejects(f.service.action({ ...sale, expectedRewards: undefined }), /无效的单项出售数据/);
+    f.responses.Sell = ({ items }) => ({ sell_items: items, get_items: [{ id: '1007', count: '18014398509481987' }, { id: '1002', count: '2' }, { id: '1007', count: '1' }] });
+    await f.service.action(sale);
+    const sellAt = f.calls.findIndex(c => c.method === 'Sell');
+    assert.equal(f.calls[sellAt - 1].method, 'GetBag');
+    assert.deepEqual(f.calls[sellAt].params.items, [{ id: can.id, uid: can.uid, count: '2' }]);
+});
+
+test('manual sale rejects changed live state before mutation and uncertain receipts after mutation', async () => {
+    const sale = { action: 'sell', itemId: '2060001', uid: '9007199254740995', count: 1, expectedRewards: [{ id: '1007', count: '3' }] };
+    for (const change of [
+        bag => { bag.physical_items[0].show.sells[0].count = '4'; },
+        bag => { bag.physical_items[0].show.cond_sells = [{ id: '1007', count: '3' }]; },
+        bag => { bag.physical_items[0].show.sell_cond = [{ type: 'unknown' }]; },
+        bag => { bag.physical_items[0].show.sells.push({ id: '1007', count: '0' }); },
+        bag => { bag.physical_items[0].count = '0'; },
+        bag => { bag.physical_items[0].is_locked = true; },
+        bag => { bag.physical_items.push({ ...bag.physical_items[0], id: '80031' }); },
+        bag => { bag.global_scene_id = 1; },
+    ]) {
+        const f = fixture();
+        assert.equal((await f.service.getStatus()).items[0].manualSellPrices.length, 1);
+        change(f.responses.GetBag);
+        await assert.rejects(f.service.action(sale), /请刷新仓库/);
+        assert.equal(f.calls.some(c => c.method === 'Sell'), false);
+    }
+    for (const response of [
+        ({ items }) => ({ sell_items: items.map(row => ({ ...row, uid: '123' })), get_items: sale.expectedRewards }),
+        ({ items }) => ({ sell_items: items, get_items: [{ id: '1007', count: '4' }] }),
+        new Error('REQUEST_TIMEOUT'),
+    ]) {
+        const f = fixture();
+        f.responses.Sell = response;
+        await assert.rejects(f.service.action(sale), /请勿直接重试/);
+        assert.equal(f.calls.filter(c => c.method === 'Sell').length, 1);
+        assert.equal(f.logs.some(l => l[2].event === 'sell' && l[2].result === 'ok'), false);
+    }
 });
 
 test('visitors are ranch-scoped and read failures are distinct from empty records', async () => {

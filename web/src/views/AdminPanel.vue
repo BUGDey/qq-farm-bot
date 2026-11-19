@@ -6,7 +6,9 @@ import AdminCardPanel from '@/components/admin/AdminCardPanel.vue'
 import AdminGlobalSettingsPanel from '@/components/admin/AdminGlobalSettingsPanel.vue'
 import AdminInvitePanel from '@/components/admin/AdminInvitePanel.vue'
 import AdminMailPanel from '@/components/admin/AdminMailPanel.vue'
-import AdminPluginsPanel from '@/components/admin/AdminPluginsPanel.vue'
+// 插件系统暂时关闭（后端 PLUGIN_SYSTEM_ENABLED=false）：面板与入口整体注释保留，
+// 恢复时取消本行与下方 tabs / 渲染行三处注释，并置 PLUGIN_SYSTEM_ENABLED=true 后重启。
+// import AdminPluginsPanel from '@/components/admin/AdminPluginsPanel.vue'
 import AdminUserPanel from '@/components/admin/AdminUserPanel.vue'
 import { useToastStore } from '@/stores/toast'
 import { useUserStore } from '@/stores/user'
@@ -25,7 +27,8 @@ const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'settings', label: '全局设置', icon: 'i-carbon-settings' },
   { key: 'announcement', label: '公告', icon: 'i-carbon-notification' },
   { key: 'mail', label: '邮件通知', icon: 'i-carbon-send-alt' },
-  { key: 'plugins', label: '插件', icon: 'i-carbon-plug' },
+  // 插件系统暂时关闭：导航入口注释保留（PLUGIN_SYSTEM_ENABLED=false）
+  // { key: 'plugins', label: '插件', icon: 'i-carbon-plug' },
 ]
 
 const redemptions = ref<Redemption[]>([])
@@ -292,10 +295,10 @@ onMounted(() => {
     <!-- 全局设置 -->
     <AdminGlobalSettingsPanel v-else-if="tab === 'settings'" />
 
-    <!-- 插件管理（活动插件 / 素材插件） -->
     <AdminAnnouncementPanel v-else-if="tab === 'announcement'" />
     <AdminMailPanel v-else-if="tab === 'mail'" />
-    <AdminPluginsPanel v-else-if="tab === 'plugins'" />
+    <!-- 插件管理（活动插件 / 素材插件）：插件系统暂时关闭，恢复时取消注释 -->
+    <!-- <AdminPluginsPanel v-else-if="tab === 'plugins'" /> -->
   </div>
 </template>
 

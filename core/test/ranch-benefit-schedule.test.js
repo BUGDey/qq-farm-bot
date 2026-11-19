@@ -54,3 +54,17 @@ test('账号维度隔离', () => {
     // a 无任何状态 → 视为首次开启（不是复用 b 的状态）
     assert.equal(r.reason, 'first-enable');
 });
+
+test('an ambiguous midnight dispatch allows only reads until the noon window', () => {
+    const accountId = 'a';
+    const all = { a: { enabledBefore: true, attempts: { midnight: '2026-11-18' } } };
+    const midnight = schedule.plan({ enabled: true, accountId, now: at('2026-11-18', 0, 59), all });
+    assert.equal(midnight.shouldClaim, true);
+    assert.equal(midnight.readOnly, true);
+    assert.equal(all.a.midnightDate, undefined);
+    const noon = schedule.plan({ enabled: true, accountId, now: at('2026-11-18', 11, 30), all });
+    assert.equal(noon.reason, 'noon');
+    assert.equal(noon.readOnly, false);
+    const tomorrow = schedule.plan({ enabled: true, accountId, now: at('2026-11-19', 0, 0), all });
+    assert.equal(tomorrow.readOnly, false);
+});

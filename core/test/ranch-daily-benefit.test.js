@@ -1,6 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const proto = require('../src/utils/proto');
+const { createRanchService } = require('../src/services/ranch');
+const { createRanchSession } = require('../src/services/ranch-session');
+const { SETTINGS_KEYS } = require('../src/services/ranch-settings');
+const schedule = require('../src/services/ranch-benefit-schedule');
 const { describeGoods, createRanchDailyBenefit, GOODS_ID } = require('../src/services/ranch-daily-benefit');
 
 // 真实抓包（2026-11-18 00:38 HAR）里 slot_type=6 的「每日福利」商品字节。
@@ -100,4 +107,101 @@ test('already claimed or missing goods stop before any purchase', async () => {
     const missing = createRanchDailyBenefit({ send: async () => listResponse([]) });
     await assert.rejects(() => missing.claim(), /未下发每日福利商品/);
     assert.equal(purchases, 0);
+});
+
+async function automationFixture(t, time = '2026-11-18T12:00:00+08:00') {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ranch-benefit-'));
+    const previous = process.env.FARM_DATA_DIR;
+    process.env.FARM_DATA_DIR = dir;
+    t.after(() => {
+        if (previous === undefined) delete process.env.FARM_DATA_DIR;
+        else process.env.FARM_DATA_DIR = previous;
+        fs.rmSync(dir, { recursive: true, force: true });
+    });
+    const goods = await goodsFromHar();
+    const accountId = '123';
+    const key = SETTINGS_KEYS.autoDailyBenefit;
+    const settings = { [key]: true };
+    const f = { accountId, setEnabled: value => { settings[key] = value; }, at: Date.parse(time), reads: 0, purchases: 0, beforeList: () => {}, onPurchase: () => {} };
+    f.createService = () => createRanchService({
+        session: createRanchSession(), getUserState: () => ({ gid: accountId }), getSettings: () => settings, now: () => f.at,
+        rpc: async () => ({}),
+        send: async (_service, method) => {
+            if (method === 'GetMallListBySlotType') {
+                f.beforeList(++f.reads);
+                goods.purchase_limit.bought_count = f.claimed ? '1' : '0';
+                return listResponse([goods]);
+            }
+            assert.equal(method, 'Purchase');
+            f.purchases++;
+            f.onPurchase();
+            return proto.types.RanchMallPurchaseResponse.encode({ goods_id: GOODS_ID, success: true }).finish();
+        },
+    });
+    f.service = f.createService();
+    return f;
+}
+
+test('auto purchase timeout is not confirmed; a new service only rechecks in the same window', async t => {
+    const f = await automationFixture(t);
+    assert.equal(schedule.confirm({ accountId: f.accountId, state: { enabledBefore: true } }), true);
+    let attemptAtSend;
+    f.onPurchase = () => {
+        attemptAtSend = schedule.getState(f.accountId).attempts?.noon;
+        throw Object.assign(new Error('timed out'), { code: 'REQUEST_TIMEOUT' });
+    };
+    await f.service.runAutomation('farm');
+    assert.equal(f.purchases, 1);
+    assert.equal(attemptAtSend, '2026-11-18');
+    assert.equal(schedule.getState(f.accountId).noonDate, undefined);
+    f.setEnabled(false);
+    await f.service.tickAutomation();
+    assert.equal(schedule.getState(f.accountId).enabledBefore, false);
+    f.setEnabled(true);
+    f.service = f.createService();
+    await f.service.runAutomation('farm');
+    assert.equal(f.reads, 3);
+    assert.equal(f.purchases, 1);
+    f.claimed = true;
+    await f.service.runAutomation('farm');
+    assert.equal(f.reads, 4);
+    assert.equal(f.purchases, 1);
+    assert.equal(schedule.getState(f.accountId).noonDate, '2026-11-18');
+    await f.service.runAutomation('farm');
+    assert.equal(f.reads, 4);
+});
+
+test('disable during the final mall read prevents Purchase without consuming the window', async t => {
+    const f = await automationFixture(t);
+    f.beforeList = count => { if (count === 2) f.setEnabled(false); };
+    await f.service.runAutomation('farm');
+    assert.equal(f.reads, 2);
+    assert.equal(f.purchases, 0);
+    assert.equal(schedule.getState(f.accountId).attempts, undefined);
+    assert.equal(schedule.getState(f.accountId).noonDate, undefined);
+    f.setEnabled(true);
+    await f.service.runAutomation('farm');
+    assert.equal(f.purchases, 1);
+    assert.equal(schedule.getState(f.accountId).noonDate, '2026-11-18');
+});
+
+test('off tick records disable; reopening outside a window checks again and manual claim ignores the auto switch', async t => {
+    const f = await automationFixture(t, '2026-11-18T10:00:00+08:00');
+    f.claimed = true;
+    await f.service.tickAutomation();
+    assert.equal(schedule.getState(f.accountId).enabledBefore, true);
+    f.setEnabled(false);
+    await f.service.tickAutomation();
+    assert.equal(schedule.getState(f.accountId).enabledBefore, false);
+    assert.equal(f.reads, 1);
+    f.setEnabled(true);
+    await f.service.tickAutomation();
+    assert.equal(f.reads, 2);
+    assert.equal(f.purchases, 0);
+    assert.equal(schedule.getState(f.accountId).enabledBefore, true);
+    f.setEnabled(false);
+    f.claimed = false;
+    const result = await f.service.action({ action: 'dailyBenefit' });
+    assert.equal(result.reply.claimed, true);
+    assert.equal(f.purchases, 1);
 });

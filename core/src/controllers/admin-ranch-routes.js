@@ -1,4 +1,5 @@
 const { CAPABILITIES } = require('../services/ranch');
+const { describeRanchIllustrated } = require('./admin-ranch-illustrated');
 const { normalizeSettings, SETTINGS_KEYS, normalizePolicy, getPolicyOptions, LIMITS } = require('../services/ranch-settings');
 
 function registerAdminRanchRoutes({ app, provider, store, adminLogger, getAccountIdFromRequest, canAccessAccount, sendProviderError }) {
@@ -19,9 +20,10 @@ function registerAdminRanchRoutes({ app, provider, store, adminLogger, getAccoun
     });
 
     // 路径用短横线，资源名保持 camelCase，避免前端 URL 和内部标识混用。
-    for (const [path, resource] of [['friends', 'friends'], ['activity', 'activity'], ['shop', 'shop'], ['illustrated', 'illustrated'], ['analytics', 'analytics'], ['profile', 'profile'], ['daily-benefit', 'dailyBenefit']]) {
+    for (const [path, resource] of [['friends', 'friends'], ['activity', 'activity'], ['shop', 'shop'], ['analytics', 'analytics'], ['profile', 'profile'], ['daily-benefit', 'dailyBenefit']]) {
         route('get', `/api/ranch/${path}`, id => provider.getRanchResource(id, resource));
     }
+    route('get', '/api/ranch/illustrated', async id => describeRanchIllustrated(await provider.getRanchResource(id, 'illustrated')));
     route('get', '/api/ranch/status', id => provider.getRanchStatus(id));
     route('post', '/api/ranch/connect', id => provider.connectRanch(id));
     route('post', '/api/ranch/disconnect', id => provider.disconnectRanch(id));
@@ -31,10 +33,11 @@ function registerAdminRanchRoutes({ app, provider, store, adminLogger, getAccoun
         const automation = store.getAutomation(id);
         return {
             ...normalizeSettings(automation),
+            autoClaimShareReward: automation.share_claim_daily === true,
             policy: normalizePolicy(automation.ranch_policy),
             policyOptions: getPolicyOptions(),
             policyLimits: LIMITS,
-            capabilities: CAPABILITIES,
+            capabilities: { ...CAPABILITIES, dailyShareReward: true },
         };
     };
     route('get', '/api/ranch/settings', id => settings(id));
@@ -47,8 +50,9 @@ function registerAdminRanchRoutes({ app, provider, store, adminLogger, getAccoun
                 patch.ranch_policy = normalizePolicy({ ...normalizePolicy(current.ranch_policy), ...value }, true);
                 continue;
             }
-            if (!SETTINGS_KEYS[key] || typeof value !== 'boolean') throw new Error('无效牧场设置');
-            patch[SETTINGS_KEYS[key]] = value;
+            const automationKey = key === 'autoClaimShareReward' ? 'share_claim_daily' : (Object.hasOwn(SETTINGS_KEYS, key) ? SETTINGS_KEYS[key] : null);
+            if (!automationKey || typeof value !== 'boolean') throw new Error('无效牧场设置');
+            patch[automationKey] = value;
         }
         if (patch.ranch_policy?.mode === 'simple') {
             patch.ranch_auto_buy = false;

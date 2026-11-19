@@ -2,12 +2,34 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { createRuntimeState } = require('../src/runtime/runtime-state');
 
-function createState() {
-  const store = new Proxy({}, {
-    get: () => () => ({}),
-  });
+function createState(store = new Proxy({}, {
+  get: () => () => ({}),
+})) {
   return createRuntimeState({ store, operationKeys: [] });
 }
+
+test('runtime configuration snapshot includes all fertilizer and golden-bug controls', () => {
+  const values = {
+    bagSeedKnownIds: [1, 2],
+    fertilizerBuyOrganicCount: 3,
+    fertilizerBuyOrganicThresholdHours: 4,
+    fertilizerBuyNormalCount: 5,
+    fertilizerBuyNormalThresholdHours: 6,
+    fertilizerBuyCheckIntervalMinutes: 7,
+    goldenBugKeepCount: 8,
+    goldenBugRoundLimit: 9,
+  };
+  const store = new Proxy({}, {
+    get: (_target, key) => key === 'getConfigSnapshot'
+      ? () => ({ ...values })
+      : () => ({}),
+  });
+  const snapshot = createState(store).buildConfigSnapshotForAccount('account-1');
+
+  for (const [key, value] of Object.entries(values)) {
+    assert.deepEqual(snapshot[key], value, `snapshot should contain ${key}`);
+  }
+});
 
 test('runtime logs expose stable timestamp, level and source fields', () => {
   const state = createState();

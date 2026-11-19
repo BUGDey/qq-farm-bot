@@ -26,6 +26,53 @@ function fixture(options = {}) {
     return { service, calls, session, ranch, responses, automation };
 }
 
+test('due patrol queues behind active reads and ahead of later reads without starvation', async () => {
+    const session = createRanchSession();
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    let first = true;
+    const events = [];
+    const service = createRanchService({ session, getUserState: () => ({ gid: '123' }),
+        getSettings: () => ({ ranch_auto_collect: true }),
+        rpc: async method => {
+            if (method === 'AllCells') {
+                events.push('read');
+                if (first) { first = false; await gate; }
+                return { facilities: [] };
+            }
+            return {};
+        },
+    });
+    const read = service.getStatus();
+    const patrol = service.tickAutomation();
+    const laterRead = service.getStatus();
+    assert.equal(session.snapshot().queued, 2, 'patrol must enqueue despite active/queued readers');
+    release();
+    await Promise.all([read, patrol, laterRead]);
+    assert.deepEqual(events, ['read', 'read', 'read']);
+    assert.equal(service.getAutomationSchedule().farm.intervalSec >= 2, true, 'patrol completed rather than deferring for the queued read');
+    assert.equal(session.snapshot().activeScene, null);
+});
+
+test('idle patrol summaries are rate limited and do not invent operation counts', async () => {
+    let time = 100000;
+    const logs = [];
+    const f = fixture({ now: () => time, log: (...args) => logs.push(args) });
+    f.automation.ranch_auto_collect = true;
+    f.ranch.shelves[0].can_collect = false;
+    await f.service.tickAutomation();
+    assert.equal(logs.filter(args => args[2]?.event === 'patrol').length, 1);
+    assert.match(logs[0][1], /自动巡查完成/);
+    await f.service.tickAutomation();
+    assert.equal(logs.length, 1);
+    time += 60000;
+    f.automation.ranch_auto_collect = false;
+    await f.service.tickAutomation();
+    assert.equal(logs.length, 2);
+    assert.match(logs[1][1], /自动任务未开启/);
+    assert.deepEqual(f.service.getOperationStats().operations, {});
+});
+
 test('status works immediately without scene login; settings remain strict opt-in', async () => {
     const f = fixture();
     assert.equal((await f.service.getStatus()).sceneReady, true);
@@ -148,12 +195,13 @@ test('bundled ranch runtime config matches pinned output digest and tables remai
 test('HAR-confirmed ranch resources use ranch scene IDs, shops and illustrated type', async () => {
     const f = fixture(); await f.service.connect();
     Object.assign(f.responses, {
-        GetAll: { game_friends: [{ gid: '9007199254740993' }] }, GetGameFriends: { friends: [] },
+        GetAll: { game_friends: [{ gid: '9007199254740993', big_farm_status: {} }] },
         ShopInfo: { goods_list: [] }, RotationShopInfo: { opened: true, goods: [] },
         GetIllustratedListV2: { list: [], type: 101 }, GetIllustratedLevelListV2: {}, GetRanchWeightScoreV2: {},
     });
-    await f.service.getResource('friends');
-    assert.deepEqual(f.calls.find(c => c.method === 'GetGameFriends').params, { friend_gids: ['9007199254740993'], global_scene_id: 2 });
+    assert.deepEqual((await f.service.getResource('friends')).friends.map(friend => friend.gid), ['9007199254740993']);
+    assert.deepEqual(f.calls.find(c => c.method === 'GetAll').params, { global_scene_id: 2 });
+    assert.equal(f.calls.some(c => c.method === 'GetGameFriends'), false);
     await f.service.getResource('shop');
     assert.deepEqual(f.calls.filter(c => c.method === 'ShopInfo').map(c => c.params.shop_id), [5, 6]);
     assert.equal(f.calls.find(c => c.method === 'RotationShopInfo').params.shop_id, 7);
@@ -313,6 +361,26 @@ test('reward automation calls each distinct reward action only when enabled', as
     assert.equal(f.calls.some(c => c.method === 'HarvestRanch' || c.method === 'TriggerProduce'), false);
 });
 
+test('ranch harvest precedes reward checks and a failed normal lookup does not block weight rewards', async () => {
+    const f = fixture();
+    f.automation.ranch_auto_harvest = true;
+    f.automation.ranch_auto_claim_illustrated = true;
+    f.automation.ranch_auto_claim_weight = true;
+    f.ranch.animals[0].can_harvest = true;
+    Object.assign(f.responses, {
+        GetIllustratedListV2: new Error('normal book unavailable'),
+        GetRanchWeightScoreV2: { levels: [{ id: 1, can_claim: true, claimed: false }] },
+        ClaimRanchWeightScoreRewardV2: {},
+    });
+    await f.service.runAutomation();
+    const methods = f.calls.map(c => c.method);
+    const harvest = methods.indexOf('HarvestRanch');
+    const normal = methods.indexOf('GetIllustratedListV2');
+    const weight = methods.indexOf('ClaimRanchWeightScoreRewardV2');
+    assert.ok(harvest >= 0 && harvest < normal && normal < weight);
+    assert.equal(methods.includes('ClaimAllRewardsV2'), false);
+});
+
 test('official wire item is_locked and item_detail cannot bypass inventory safeguards', async () => {
     const f = fixture();
     f.responses.GetBag.physical_items = [{ id: '60001', count: '2', is_locked: true }, { id: '1060001', count: '3', item_detail: { ranch_product: { weight_x10: 999 } } }];
@@ -433,7 +501,7 @@ test('animal cards expose official inventory icons and configured phase duration
  test('ranch friends resolve saved QQ GIDs when GetAll is empty and exclude blocked/self', async () => {
     const f = fixture({ getKnownFriendGids: () => ['9007199254740993', '9007199254740993', '99', '12345'] });
     f.responses.GetAll = { game_friends: [], blocked_players: [{ gid: '99' }] };
-    f.responses.GetGameFriends = { friends: [{ gid: '9007199254740993', name: '好友', big_farm_level: '5' }] };
+    f.responses.GetGameFriends = { friends: [{ gid: '9007199254740993', name: '好友', big_farm_level: '5', big_farm_status: {} }] };
     const result = await f.service.getResource('friends');
     assert.equal(result.friends[0].gid, '9007199254740993');
     assert.equal(result.friends[0].bigFarmLevel, '5');
@@ -671,7 +739,7 @@ test('shed lifecycle activates, upgrades from a fresh pass, then completes after
 test('ranch resolves known GIDs when legacy GetAll rejects parameters', async () => {
     const f = fixture({ getKnownFriendGids: () => ['12345', '0', 'invalid', '9007199254740993', '9007199254740993'] });
     f.responses.GetAll = new Error('gamepb.friendpb.FriendService.GetAll 错误: code=1000020 请求参数错误');
-    f.responses.GetGameFriends = { friends: [{ gid: '9007199254740993', name: '好友' }] };
+    f.responses.GetGameFriends = { friends: [{ gid: '9007199254740993', name: '好友', big_farm_status: {} }] };
     const result = await f.service.getResource('friends');
     assert.equal(result.friends[0].gid, '9007199254740993');
     assert.deepEqual(f.calls.find(c => c.method === 'GetGameFriends').params,
@@ -703,6 +771,12 @@ test('ranch account statistics survive restart and day rollover without leaking 
         let state = await first.service.getStatus();
         assert.equal(state.operations.collect, 1);
         assert.equal(state.operationsTotal.collect, 1);
+        const readsBeforeStats = first.calls.length;
+        const pushed = first.service.getOperationStats();
+        assert.equal(pushed.operationsTotal.collect, 1);
+        assert.equal(first.calls.length, readsBeforeStats, 'statistics must not depend on scene RPCs');
+        pushed.operationsTotal.collect = 999;
+        assert.equal(first.service.getOperationStats().operationsTotal.collect, 1, 'return isolated copies');
         first.service.flushTotalOperations();
         const saved = JSON.parse(fs.readFileSync(path.join(dir, 'stats', 'ranch-ranch-test-1.json'), 'utf8'));
         assert.equal(saved.totalOperations.collect, 1);

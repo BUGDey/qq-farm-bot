@@ -389,11 +389,14 @@ function createDataProvider(deps) {
             };
         },
 
-        syncAccountConfig: (ref) => {
+        syncAccountConfig: (ref, { rescheduleAutoCodeRefresh = false } = {}) => {
             const id = resolveAccountId(ref);
             if (!id) return false;
             nextConfigRevision();
             broadcastConfigToWorkers(id);
+            if (rescheduleAutoCodeRefresh && typeof scheduleAutoCodeRefresh === 'function') {
+                scheduleAutoCodeRefresh(id);
+            }
             return true;
         },
 

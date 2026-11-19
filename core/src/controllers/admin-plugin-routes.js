@@ -10,15 +10,23 @@
  */
 
 const multer = require('multer');
+const { PLUGIN_SYSTEM_ENABLED } = require('../plugins/feature-flag');
 
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 120 * 1024 * 1024, files: 1 },
 });
 
+// 插件系统暂时关闭：清单恒为空（前端活动中心按内置活动工作），
+// 管理操作一律 403；注册表与插件目录保留，恢复开关后即恢复正常。
+const PLUGIN_DISABLED_RESPONSE = { ok: false, error: '插件系统已关闭（PLUGIN_SYSTEM_ENABLED=false）' };
+
 function registerAdminPluginRoutes({ app, pluginHost, provider, requireAdminRole, sendProviderError }) {
     app.get('/api/plugins', (req, res) => {
         try {
+            if (!PLUGIN_SYSTEM_ENABLED) {
+                return res.json({ ok: true, plugins: [] });
+            }
             res.json({ ok: true, plugins: pluginHost.listForApi() });
         } catch (error) {
             sendProviderError(res, error);
@@ -27,6 +35,9 @@ function registerAdminPluginRoutes({ app, pluginHost, provider, requireAdminRole
 
     app.post('/api/plugins/upload', requireAdminRole, upload.single('file'), async (req, res) => {
         try {
+            if (!PLUGIN_SYSTEM_ENABLED) {
+                return res.status(403).json(PLUGIN_DISABLED_RESPONSE);
+            }
             if (!req.file || !req.file.buffer || !req.file.buffer.length) {
                 return res.status(400).json({ ok: false, error: '请上传插件 zip 包' });
             }
@@ -47,6 +58,9 @@ function registerAdminPluginRoutes({ app, pluginHost, provider, requireAdminRole
 
     const wrap = handler => async (req, res) => {
         try {
+            if (!PLUGIN_SYSTEM_ENABLED) {
+                return res.status(403).json(PLUGIN_DISABLED_RESPONSE);
+            }
             const pluginId = String(req.params.id || '');
             const result = await handler(pluginId);
             res.json({ ok: true, ...(result || {}) });

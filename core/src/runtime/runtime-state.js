@@ -49,6 +49,7 @@ function createRuntimeState(deps) {
 
     /** 为指定账号构建配置快照 */
     function buildConfigSnapshotForAccount(accountId) {
+        const config = store.getConfigSnapshot(accountId);
         return {
             automation: store.getAutomation(accountId),
             plantingStrategy: store.getPlantingStrategy(accountId),
@@ -60,7 +61,14 @@ function createRuntimeState(deps) {
             plantBlacklist: store.getPlantBlacklist(accountId),
             knownFriendGids: store.getKnownFriendGids(accountId),
             bagSeedPriority: store.getBagSeedPriority(accountId),
-            bagSeedKnownIds: store.getConfigSnapshot(accountId).bagSeedKnownIds,
+            bagSeedKnownIds: config.bagSeedKnownIds,
+            fertilizerBuyOrganicCount: config.fertilizerBuyOrganicCount,
+            fertilizerBuyOrganicThresholdHours: config.fertilizerBuyOrganicThresholdHours,
+            fertilizerBuyNormalCount: config.fertilizerBuyNormalCount,
+            fertilizerBuyNormalThresholdHours: config.fertilizerBuyNormalThresholdHours,
+            fertilizerBuyCheckIntervalMinutes: config.fertilizerBuyCheckIntervalMinutes,
+            goldenBugKeepCount: config.goldenBugKeepCount,
+            goldenBugRoundLimit: config.goldenBugRoundLimit,
             bagSeedFallbackStrategy: store.getBagSeedFallbackStrategy(accountId),
             autoAcceptFriendMinLevel: store.getAutoAcceptFriendMinLevel(accountId),
             capitalMode: store.getCapitalMode(accountId),

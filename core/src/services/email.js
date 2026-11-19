@@ -16,6 +16,7 @@ const DAILY_KEY = 'email_rewards';
 // 每日状态追踪
 let doneDateKey = '';
 let lastCheckAt = 0;
+let running = false;
 
 // 两次检查最小间隔：5分钟
 const CHECK_COOLDOWN_MS = 5 * 60 * 1000;
@@ -30,12 +31,16 @@ function getDateKey() {
   return `${year}-${month}-${day}`;
 }
 
-function markDoneToday() {
-  doneDateKey = getDateKey();
+function markDoneToday(dateKey) {
+  doneDateKey = dateKey;
 }
 
 function isDoneToday() {
   return doneDateKey === getDateKey();
+}
+
+function shouldRetryEmailCheck() {
+  return !running && lastCheckAt > 0 && !isDoneToday() && Date.now() - lastCheckAt >= CHECK_COOLDOWN_MS;
 }
 
 // ---- RPC 调用 ----
@@ -124,22 +129,25 @@ function getRewardSummary(items) {
  */
 async function checkAndClaimEmails(force = false) {
   const now = Date.now();
+  const dateKey = getDateKey();
   const emptyResult = { claimed: 0, rewardItems: 0 };
 
-  if (!force && isDoneToday()) return emptyResult;
+  if (running || (!force && isDoneToday())) return emptyResult;
 
   const result = { claimed: 0, rewardItems: 0 };
 
   if (!force && now - lastCheckAt < CHECK_COOLDOWN_MS) return result;
 
   lastCheckAt = now;
+  if (doneDateKey === dateKey) doneDateKey = '';
+  running = true;
 
   try {
-    // 同时获取两种邮箱类型的列表
-    const [boxType1Reply, boxType2Reply] = await Promise.all([
-      getEmailList(1).catch(() => ({ emails: [] })),
-      getEmailList(2).catch(() => ({ emails: [] })),
-    ]);
+    // 查询失败不是空邮箱。等两条读取都结束，再决定是否可以开始领取。
+    const replies = await Promise.allSettled([getEmailList(1), getEmailList(2)]);
+    const failed = replies.find(reply => reply.status === 'rejected');
+    if (failed) throw failed.reason;
+    const [boxType1Reply, boxType2Reply] = replies.map(reply => reply.value);
 
     // 合并去重邮件
     const merged = new Map();
@@ -164,7 +172,7 @@ async function checkAndClaimEmails(force = false) {
     const claimable = collectClaimableEmails({ emails: [...merged.values()] });
 
     if (claimable.length === 0) {
-      markDoneToday();
+      markDoneToday(dateKey);
       log('邮箱', '今日暂无可领取邮箱奖励', { module: 'task', event: DAILY_KEY, result: 'none' });
       return { claimed: 0, rewardItems: 0 };
     }
@@ -180,33 +188,36 @@ async function checkAndClaimEmails(force = false) {
       groupedByBox.get(box).push(email);
     }
 
-    // 先尝试批量领取
+    let incomplete = false;
     for (const [boxType, emails] of groupedByBox.entries()) {
       try {
-        const firstId = String(emails[0] && emails[0].id || '');
-        if (firstId) {
-          const batchResult = await batchClaimEmail(boxType, firstId);
-          if (Array.isArray(batchResult.items) && batchResult.items.length > 0) {
-            allItems.push(...batchResult.items);
-          }
-          claimed += 1;
-        }
+        const reply = await batchClaimEmail(boxType, String(emails[0].id));
+        allItems.push(...(reply.items || []));
       } catch (_) {
-        // 批量领取失败，下面逐个重试
+        // A lost response does not mean the server did not claim the rewards.
       }
-    }
 
-    // 逐个领取（回退）
-    for (const email of claimable) {
-      const boxType = normalizeBoxType(email && email.__boxType);
+      let fresh;
       try {
-        const result = await claimEmail(boxType, String(email.id || ''));
-        if (Array.isArray(result.items) && result.items.length > 0) {
-          allItems.push(...result.items);
+        fresh = await getEmailList(boxType);
+      } catch (err) {
+        incomplete = true;
+        log('邮箱', `批量领取后无法核对邮箱，暂不重复领取: ${err.message}`, { module: 'task', event: DAILY_KEY, result: 'error' });
+        continue;
+      }
+      const pending = new Set(collectClaimableEmails(fresh).map(email => email.id));
+      const confirmed = new Set((fresh.emails || []).filter(email => email.claimed === true).map(email => email.id));
+      for (const email of emails) {
+        if (confirmed.has(email.id)) claimed += 1;
+        if (!pending.has(email.id)) continue;
+        try {
+          const reply = await claimEmail(boxType, String(email.id));
+          allItems.push(...(reply.items || []));
+          claimed += 1;
+        } catch (err) {
+          incomplete = true;
+          log('邮箱', `单封奖励领取未完成，下次先核对邮箱: ${err.message}`, { module: 'task', event: DAILY_KEY, result: 'error' });
         }
-        claimed += 1;
-      } catch (_) {
-        // 单个失败跳过
       }
     }
 
@@ -218,8 +229,8 @@ async function checkAndClaimEmails(force = false) {
           : `[邮箱领取] 领取成功 ${claimed} 封`,
         { module: 'task', event: DAILY_KEY, result: 'ok', count: claimed }
       );
-      markDoneToday();
     }
+    if (!incomplete) markDoneToday(dateKey);
 
     return { claimed, rewardItems: allItems.length };
   } catch (err) {
@@ -227,6 +238,8 @@ async function checkAndClaimEmails(force = false) {
       module: 'task', event: DAILY_KEY, result: 'error',
     });
     return { claimed: 0, rewardItems: 0 };
+  } finally {
+    running = false;
   }
 }
 
@@ -235,6 +248,7 @@ module.exports = {
   claimEmail,
   batchClaimEmail,
   checkAndClaimEmails,
+  shouldRetryEmailCheck,
   getEmailDailyState: () => ({
     key: DAILY_KEY,
     doneToday: isDoneToday(),

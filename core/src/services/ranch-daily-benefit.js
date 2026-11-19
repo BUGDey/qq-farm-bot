@@ -90,7 +90,7 @@ function createRanchDailyBenefit({ send } = {}) {
         return { ...state, missing: false };
     }
 
-    async function claim(now = Date.now()) {
+    async function claim(now = Date.now(), { beforePurchase } = {}) {
         const before = await read(now);
         if (before.missing) throw new Error('服务端未下发每日福利商品，暂不领取');
         if (before.claimed) throw new Error('今天的牧场每日福利已经领过了');
@@ -99,11 +99,14 @@ function createRanchDailyBenefit({ send } = {}) {
             goods_id: GOODS_ID,
             count: 1,
         })).finish();
-        const replyBody = await send(SERVICE, METHOD_PURCHASE, body, DEFAULT_TIMEOUT);
-        const reply = types.RanchMallPurchaseResponse.decode(replyBody);
-        // 回包必须对上商品：拿不到确认就说拿不到，别把「可能已领」当成「没领」再点一次。
-        if (String(reply.goods_id) !== GOODS_ID || reply.success !== true) {
-            const err = new Error('领取回包未能确认，请刷新核对，勿重复提交');
+        beforePurchase?.();
+        let reply;
+        try {
+            const replyBody = await send(SERVICE, METHOD_PURCHASE, body, DEFAULT_TIMEOUT);
+            reply = types.RanchMallPurchaseResponse.decode(replyBody);
+            if (String(reply.goods_id) !== GOODS_ID || reply.success !== true) throw new Error('Purchase reply did not confirm the requested goods');
+        } catch (cause) {
+            const err = new Error('领取回包未能确认，请刷新核对，勿重复提交', { cause });
             err.code = 'RANCH_DAILY_BENEFIT_UNKNOWN';
             throw err;
         }

@@ -11,17 +11,26 @@ const options: { value: GameSpace, label: string, icon: string }[] = [
   { value: 'ranch', label: '牧场', icon: 'i-carbon-cattle' },
 ]
 
-function switchSpace(space: GameSpace) {
-  const currentSection = route.path.startsWith('/ranch/') ? route.path.split('/')[2] : ''
-  gameSpace.setSpace(space)
-  if (route.path === '/activity' || route.path === '/settings') return
-  if (space === 'ranch') {
-    const ranchSection = currentSection || ({ '/': '', '/personal': 'personal', '/friends': 'friends', '/shop': 'shop', '/illustrated': 'illustrated', '/analytics': 'analytics' }[route.path] ?? '')
-    router.push({ path: ranchSection ? `/ranch/${ranchSection}` : '/ranch', query: route.query, hash: route.hash })
+async function switchSpace(space: GameSpace) {
+  if (route.path === '/activity' || route.path === '/settings') {
+    gameSpace.setSpace(space)
     return
   }
-  const farmPath = currentSection ? ({ personal: '/personal', friends: '/friends', shop: '/shop', illustrated: '/illustrated', analytics: '/analytics', activity: '/activity' }[currentSection] ?? '/') : ({ '/ranch/personal': '/personal', '/ranch/friends': '/friends', '/ranch/shop': '/shop', '/ranch/illustrated': '/illustrated', '/ranch/analytics': '/analytics', '/ranch/activity': '/activity' }[route.path] ?? (route.path === '/ranch' ? '/' : ''))
-  if (farmPath) router.push({ path: farmPath, query: route.query, hash: route.hash })
+  const currentSection = route.path.startsWith('/ranch/') ? route.path.split('/')[2] : ''
+  if (space === 'ranch') {
+    const ranchSection = currentSection || ({ '/': '', '/personal': 'personal', '/friends': 'friends', '/shop': 'shop', '/illustrated': 'illustrated', '/analytics': 'analytics' }[route.path] ?? '')
+    await router.push({ path: ranchSection ? `/ranch/${ranchSection}` : '/ranch', query: route.query, hash: route.hash })
+    return
+  }
+  const farmPath = currentSection ? ({ personal: '/personal', friends: '/friends', shop: '/shop', illustrated: '/illustrated', analytics: '/analytics', activity: '/activity' }[currentSection] ?? '/') : (route.path === '/ranch' ? '/' : '')
+  if (!farmPath) {
+    gameSpace.setSpace('farm')
+    return
+  }
+  const failure = await router.push({ path: farmPath, query: route.query, hash: route.hash })
+  // The router syncs scene routes; the shared activity page keeps its current space.
+  if (!failure && farmPath === '/activity' && route.path === farmPath)
+    gameSpace.setSpace('farm')
 }
 </script>
 

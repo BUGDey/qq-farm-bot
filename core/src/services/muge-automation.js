@@ -1,12 +1,13 @@
 'use strict';
 
-// Only existing, evidenced operations. Ordinary gameplay advances handbook tasks;
-// this runner never manufactures task progress, invitations, shares or answers.
+// Use existing validated operations only. Questionnaire automation fills missing
+// answers with the first configured option; never reset progress or fake shares.
 const AUTO_ACTIONS = Object.freeze({
     muge_task_claim: 'claimTask',
     muge_celebration_claim: 'claimCelebration',
     muge_friend_claim: 'claimFriends',
     muge_personality_settle: 'settle',
+    muge_auto_answer: 'autoAnswer',
     muge_handbook_claim: 'claimHandbook',
 });
 const questions = require('../activity-data/muge-20261117.json').questions;
@@ -29,10 +30,8 @@ function fingerprint(state, action) {
 }
 
 function createMugeAutomation({ getState, operate, getAutomation, isReady = () => true,
-    assertScene = () => {}, now = Date.now, budgetMs = 20000 } = {}) {
-    // Keep submitted fingerprints even after an ambiguous response or a failed refresh.
-    // There is no safe evidence that an unknown mutation may be replayed.
-    const submitted = new Set();
+    assertScene = () => {}, now = Date.now, budgetMs = 20000, submitted = new Set() } = {}) {
+    // The worker shares fingerprints between ticks, including across reconnects.
     let running = false;
     return async function runMugeAutomation() {
         if (running || !isReady() || !Object.keys(AUTO_ACTIONS).some(key => getAutomation()?.[key] === true)) return;
@@ -50,6 +49,50 @@ function createMugeAutomation({ getState, operate, getAutomation, isReady = () =
                 guard(key);
                 const state = await getState();
                 guard(key);
+                if (action === 'autoAnswer') {
+                    const survey = state.personality;
+                    if (!state.active || !survey || survey.personalityId !== 0 || survey.settleCount !== 0) continue;
+                    const answers = {};
+                    for (const question of questions) {
+                        const saved = survey.answers?.[String(question.id)];
+                        if (question.options.some(option => option.value === saved)) continue;
+                        // Preserve saved choices; fill only unanswered questions deterministically.
+                        if (saved != null && saved !== 0) continue;
+                        if (question.options.length) answers[String(question.id)] = question.options[0].value;
+                    }
+                    if (Object.keys(answers).length) {
+                        const stamp = JSON.stringify([state.activityId, state.startTime, 'saveAnswers', survey.answers, answers]);
+                        if (submitted.has(stamp)) continue;
+                        await operate('saveAnswers', { answers, clear: false }, {
+                            guard: () => guard(key),
+                            beforeWrite: fresh => {
+                                guard(key);
+                                const current = fresh.personality;
+                                if (!fresh.active || !current || current.personalityId !== 0 || current.settleCount !== 0
+                                    || Object.keys(answers).some(id => current.answers?.[id] != null && current.answers[id] !== 0)) {
+                                    throw Object.assign(new Error('问卷进度已变化，下一轮重新核对'), { code: 'MUGE_AUTO_STOPPED' });
+                                }
+                                submitted.add(stamp);
+                            },
+                        });
+                    }
+                    guard(key);
+                    const fresh = await getState();
+                    guard(key);
+                    const stamp = fingerprint(fresh, 'settle');
+                    if (!fresh.active || !claimable(fresh, 'settle') || submitted.has(stamp)) continue;
+                    await operate('settle', {}, {
+                        guard: () => guard(key),
+                        beforeWrite: latest => {
+                            guard(key);
+                            if (!latest.active || !claimable(latest, 'settle') || submitted.has(fingerprint(latest, 'settle'))) {
+                                throw Object.assign(new Error('问卷结算状态已变化'), { code: 'MUGE_AUTO_STOPPED' });
+                            }
+                            submitted.add(fingerprint(latest, 'settle'));
+                        },
+                    });
+                    continue;
+                }
                 if (!state.active || !claimable(state, action) || submitted.has(fingerprint(state, action))) continue;
                 await operate(action, {}, {
                     guard: () => guard(key),

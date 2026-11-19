@@ -796,7 +796,18 @@ function startAdminServer(dataProvider) {
     return sendPluginFile(res, path.join(entry.dir, "assets"), rest);
   });
 
-  pluginHost.restoreAll();
+  // 插件系统暂时关闭（PLUGIN_SYSTEM_ENABLED 默认 false）：跳过启动激活与自举安装，
+  // 注册表与已安装目录保留。恢复时置环境变量 PLUGIN_SYSTEM_ENABLED=true 并
+  // 打开 web/src/views/AdminPanel.vue 中被注释的「插件」入口。
+  const { PLUGIN_SYSTEM_ENABLED } = require("../plugins/feature-flag");
+  if (PLUGIN_SYSTEM_ENABLED) {
+    pluginHost.restoreAll();
+  } else {
+    adminLogger.info(
+      "插件系统已关闭（PLUGIN_SYSTEM_ENABLED=false）：跳过插件启动激活",
+      { module: "plugin", tag: "系统" },
+    );
+  }
   const { registerAdminPluginRoutes } = require("./admin-plugin-routes");
   registerAdminPluginRoutes({
     app,

@@ -10,10 +10,9 @@ import BaseSelect from '@/components/ui/BaseSelect.vue'
 import { useAccountStore } from '@/stores/account'
 import { useStatusStore } from '@/stores/status'
 import { useToastStore } from '@/stores/toast'
-import { ranchLogBelongs } from '@/utils/ranch-display'
 import { compactRuntimeLogs, matchesRuntimeLog, normalizeRuntimeLog } from '@/utils/runtime-log'
 
-const props = withDefaults(defineProps<{ scene?: 'farm' | 'ranch' }>(), { scene: 'farm' })
+defineProps<{ scene?: 'farm' | 'ranch' }>()
 const statusStore = useStatusStore()
 const accountStore = useAccountStore()
 const toastStore = useToastStore()
@@ -26,7 +25,6 @@ const refreshingLogs = ref(false)
 const pendingLogCount = ref(0)
 const logScrollStates = new Map<string, { top: number, atBottom: boolean }>()
 
-const scope = ref<'scene' | 'all'>('all')
 const filter = reactive({
   module: '',
   event: '',
@@ -48,9 +46,8 @@ const allLogs = computed(() => {
   return [...unique.values()].sort((a, b) => a.ts - b.ts)
 })
 
-const filteredLogs = computed(() => allLogs.value.filter((log) => {
-  return (scope.value === 'all' || ranchLogBelongs(log, props.scene)) && matchesRuntimeLog(log, filter)
-}))
+// Logs belong to the account, not the currently selected farm/ranch space.
+const filteredLogs = computed(() => allLogs.value.filter(log => matchesRuntimeLog(log, filter)))
 
 const visibleLogs = computed(() => compactRuntimeLogs(filteredLogs.value))
 
@@ -296,7 +293,6 @@ useIntervalFn(() => {
       </div>
 
       <div class="flex flex-wrap items-center gap-2 text-sm">
-        <BaseSelect v-model="scope" :options="[{ label: '当前场景与系统', value: 'scene' }, { label: '全部场景', value: 'all' }]" class="w-40" />
         <BaseSelect v-model="filter.level" :options="[{ label: '全部级别', value: '' }, { label: '信息', value: 'info' }, { label: '警告', value: 'warn' }, { label: '错误', value: 'error' }]" class="w-28" />
         <BaseInput
           v-model="filter.keyword"

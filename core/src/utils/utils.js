@@ -73,6 +73,7 @@ function normalizeMeta(meta) {
 function resolveModuleTag(moduleName) {
     const moduleMap = {
         farm: '农场',
+        ranch: '牧场',
         friend: '好友',
         warehouse: '仓库',
         task: '任务',
@@ -88,6 +89,7 @@ function inferModuleFromTag(tag) {
     const t = String(tag || '').trim();
     const tagMap = {
         农场: 'farm',
+        牧场: 'ranch',
         商店: 'warehouse',
         购买: 'warehouse',
         仓库: 'warehouse',
@@ -126,7 +128,7 @@ function log(arg1, arg2, arg3 = null) {
     const { tag, msg, meta } = normalizeLogArgs(arg1, arg2, arg3);
     const safeMeta = normalizeMeta(meta);
     if (!safeMeta.module) safeMeta.module = inferModuleFromTag(tag);
-    const displayTag = resolveModuleTag(safeMeta.module);
+    const displayTag = safeMeta.scene === 'ranch' ? '牧场' : resolveModuleTag(safeMeta.module);
     coreLogger.info(msg, { tag: displayTag, ...safeMeta });
     if (logHook) {
         try { logHook(displayTag, msg, false, safeMeta); } catch {}
@@ -142,7 +144,7 @@ function logDebug(arg1, arg2, arg3 = null) {
     const { tag, msg, meta } = normalizeLogArgs(arg1, arg2, arg3);
     const safeMeta = normalizeMeta(meta);
     if (!safeMeta.module) safeMeta.module = inferModuleFromTag(tag);
-    const displayTag = resolveModuleTag(safeMeta.module);
+    const displayTag = safeMeta.scene === 'ranch' ? '牧场' : resolveModuleTag(safeMeta.module);
     coreLogger.debug(msg, { tag: displayTag, ...safeMeta });
 }
 
@@ -150,7 +152,7 @@ function logWarn(arg1, arg2, arg3 = null) {
     const { tag, msg, meta } = normalizeLogArgs(arg1, arg2, arg3);
     const safeMeta = normalizeMeta(meta);
     if (!safeMeta.module) safeMeta.module = inferModuleFromTag(tag);
-    const displayTag = resolveModuleTag(safeMeta.module);
+    const displayTag = safeMeta.scene === 'ranch' ? '牧场' : resolveModuleTag(safeMeta.module);
     coreLogger.warn(msg, { tag: displayTag, ...safeMeta });
     if (logHook) {
         try { logHook(displayTag, msg, true, safeMeta); } catch {}

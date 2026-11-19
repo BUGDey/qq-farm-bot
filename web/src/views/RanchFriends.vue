@@ -237,11 +237,6 @@ const visible = computed(() => friends.value.slice((Math.min(currentPage.value, 
               </p>
             </template>
           </div>
-          <div class="flex flex-wrap gap-2 px-4 pb-4">
-            <button v-for="item in quickActions" :key="item.action" class="ranch-friend-action rounded-lg px-3 py-2 text-sm transition disabled:opacity-40" :class="item.style" :disabled="locked" @click="requestBatch(String(friend.gid), item.action)">
-              {{ item.label }}
-            </button>
-          </div>
         </article>
       </div>
       <div v-if="!friends.length" class="ui-card rounded-lg p-8 text-center text-gray-500">

@@ -358,6 +358,7 @@ const DEFAULT_AUTOMATION = {
     muge_friend_claim: false,
     muge_handbook_claim: false,
     muge_personality_settle: false,
+    muge_auto_answer: false,
     ...Object.fromEntries([...RANCH_AUTOMATION_KEYS].map(key => [key, false]))
 };
 
@@ -2215,7 +2216,7 @@ function setUserDefaultAccountPlan(username, rawConfig, options = {}) {
 function applyUserDefaultAccountPlan(username, accountId) {
     const plan = getUserDefaultAccountPlan(username);
     if (!plan.exists) throw new Error('尚未保存默认方案');
-    setAccountConfigSnapshot(accountId, plan.config);
+    setAccountConfigSnapshot(accountId, { ...getAccountConfigSnapshot(accountId), ...plan.config });
     return getConfigSnapshot(accountId);
 }
 

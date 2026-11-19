@@ -110,7 +110,9 @@ const homeLogs = computed(() => compactRuntimeLogs(allLogs.value.filter((log) =>
   if (homeLogFilter.level && log.level !== homeLogFilter.level)
     return false
   const kw = homeLogFilter.keyword.trim().toLowerCase()
-  if (kw && !`${log.tag} ${log.event || ''} ${log.msg}`.toLowerCase().includes(kw))
+  const keywords = kw.split(/\s+/).filter(Boolean)
+  const searchText = [log.tag, log.event, log.msg, log.module, log.action].filter(Boolean).join(' ').toLowerCase()
+  if (keywords.some(keyword => !searchText.includes(keyword)))
     return false
   return true
 })))
@@ -141,6 +143,7 @@ onMounted(() => {
 const modules = [
   { label: '全部模块', value: '' },
   { label: '农场', value: 'farm' },
+  { label: '牧场', value: 'ranch' },
   { label: '好友', value: 'friend' },
   { label: '仓库', value: 'warehouse' },
   { label: '商城', value: 'shop' },
@@ -2014,8 +2017,11 @@ useIntervalFn(updateCountdowns, 1000)
   white-space: nowrap;
 }
 
-/* 与牧场账号统计样式一致：右侧纯数字（绿色等宽字体），不再显示彩色胶囊 */
+/* 数字固定靠统计项右侧，名称和图标在左侧，中间保留弹性留白。 */
 .home-stat-value {
+  margin-left: auto;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
   color: #166534;
   font-size: 14px;

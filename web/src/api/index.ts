@@ -25,8 +25,8 @@ api.interceptors.request.use((config) => {
     config.headers['x-admin-token'] = token
   }
   const accountId = accountIdRef.value
-  if (accountId) {
-    config.headers['x-account-id'] = accountId
+  if (accountId && !config.headers.has('x-account-id')) {
+    config.headers.set('x-account-id', accountId)
   }
   return config
 }, error => Promise.reject(error))

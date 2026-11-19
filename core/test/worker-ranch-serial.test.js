@@ -263,6 +263,57 @@ test('restarting ranch timer resets the health-check deadline', async () => {
     assert.equal(h.state.nextRanchHealthCheckAt, 0);
 });
 
+test('ranch timer is installed only after asynchronous login, including reconnect', async () => {
+    const timers = new Map();
+    const noop = () => {};
+    let ready;
+    let ranchRuns = 0;
+    let installs = 0;
+    const h = harness({
+        loginReady: false, isRunning: false, CONFIG: {},
+        loadProto: noop, applyRuntimeConfig: noop, getConfigSnapshot: noop,
+        initStatusBar: noop, setStatusPlatform: noop, networkEvents: { on: noop, off: noop },
+        onWsError: null, onReconnectFailed: noop, onKickout: noop, onClientVersionUpdate: null,
+        onDisconnectHandler: null, accountRunStartedAt: 0, onSellGain: null,
+        onFarmHarvested: null, onDogSkillGiftPending: null,
+        getBag: async () => { throw new Error('mock unavailable'); },
+        getUserState: () => ({}), process: { env: {} },
+        initStatsWithPersistence: noop, resetSessionGains: noop, processInviteCodes: noop,
+        startFarmCheckLoop: noop, startFriendCheckLoop: noop, unifiedSchedulerRunning: false,
+        startUnifiedScheduler: noop, initTaskSystem: noop, startDailyRoutineTimer: noop,
+        startStarActivityClaimTimer: noop, startMysteryShopAutoBuyTimer: noop, startPetAutoFeedTimer: noop,
+        mugeAutomationEpoch: 0, mugeAutomationRunning: false,
+        runStartupSequence: async () => {}, resourcePolicy: { statusSyncIntervalMs: 5000 },
+        ranchTask: async () => { ranchRuns++; },
+        connect: (_code, onReady) => { ready = onReady; },
+        workerScheduler: {
+            clear: name => timers.delete(name),
+            setIntervalTask: (name, _ms, fn) => {
+                if (name === 'ranch_automation') installs++;
+                timers.set(name, fn);
+            },
+        },
+    });
+    const startSource = workerSource.slice(workerSource.indexOf('async function startBot('), workerSource.indexOf('async function stopBot('));
+    vm.runInContext(startSource, h.state);
+    await h.state.startBot({ code: 'mock' });
+    assert.equal(timers.has('ranch_automation'), false);
+    await ready();
+    assert.equal(installs, 1);
+    await timers.get('ranch_automation')();
+    assert.equal(ranchRuns, 1);
+
+    h.state.onDisconnectHandler();
+    await timers.get('ranch_automation')();
+    assert.equal(ranchRuns, 1, 'a timer tick cannot start a ranch run while disconnected');
+    assert.equal(h.permits(), 1, 'a disconnected account must not request a task permit');
+
+    await ready();
+    assert.equal(installs, 2);
+    await timers.get('ranch_automation')();
+    assert.equal(ranchRuns, 2);
+});
+
 function manualHarness(overrides = {}) {
     const events = [];
     const responses = [];

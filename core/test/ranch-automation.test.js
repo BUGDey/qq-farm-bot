@@ -4,7 +4,7 @@ const { createRanchService } = require('../src/services/ranch');
 const { createRanchSession } = require('../src/services/ranch-session');
 const { normalizePolicy, normalizeSettings, SETTINGS_KEYS } = require('../src/services/ranch-settings');
 const MUTATIONS = new Set(['Sell', 'BatchUse', 'AddFeed', 'PlaceAnimal', 'BuyGoods', 'RotationBuyGoods', 'StealProduce', 'CleanAllRanch', 'StrokeAnimal', 'PutHazard']);
-function fixture(clock = Date.now, serverClock = clock) {
+function fixture(clock = Date.now, serverClock = clock, roster = {}) {
     const calls = []; const logs = [];
     const automation = { ranch_policy: normalizePolicy() };
     const items = [
@@ -26,7 +26,7 @@ function fixture(clock = Date.now, serverClock = clock) {
             case 'GetRanchDetail': return { ranches: [params.host_gid === '123' ? own : friend] };
             case 'GetBag': return { physical_items: items };
             case 'GetBagTab': case 'GetOrderPanel': case 'InteractRecords': case 'LeaveHomestead': case 'ShopProfiles': return {};
-            case 'GetAll': return { game_friends: friends };
+            case 'GetAll': return { game_friends: friends.map(row => ({ big_farm_status: {}, ...row })) };
             case 'GetGameFriends': return { friends };
             case 'EnterHomestead': return { homestead_cells: { facilities: [{ instance_id: '8', facility_id: 6001001, ranch: friend }] } };
             case 'GetRanchOpTimes': return { ops: [{ op_id: '11003', remaining_times: '100' }, { op_id: '11009', remaining_times: '10' }] };
@@ -48,7 +48,7 @@ function fixture(clock = Date.now, serverClock = clock) {
         }
     };
     const session = createRanchSession();
-    const service = createRanchService({ session, now: clock, getUserState: () => ({ gid: '123' }), getSettings: () => automation,
+    const service = createRanchService({ getKnownFriendGids: () => [], ...roster, session, now: clock, getUserState: () => ({ gid: '123' }), getSettings: () => automation,
         serverNow: serverClock, log: (...args) => logs.push(args), rpc: async (method, params) => {
             calls.push({ method, params });
             if (overrides[method] instanceof Error) throw overrides[method];
@@ -58,6 +58,39 @@ function fixture(clock = Date.now, serverClock = clock) {
     const setPolicy = patch => { automation.ranch_policy = normalizePolicy({ ...automation.ranch_policy, ...patch }, true); };
     return { service, session, calls, logs, automation, enable, setPolicy, own, friend, items, overrides, responses, setFriends: value => { friends = value; } };
 }
+
+test('QQ ranch patrol yields to queued farm work and resumes at the next roster batch', async () => {
+    const seeds = Array.from({ length: 71 }, (_, i) => String(1000 + i));
+    const f = fixture(Date.now, Date.now, { getPlatform: () => 'qq', getKnownFriendGids: () => seeds });
+    f.enable('autoSteal');
+    f.setFriends([]);
+    f.setPolicy({ friendIncludeGids: [seeds.at(-1)] });
+    let startBatch, releaseBatch;
+    const started = new Promise(resolve => { startBatch = resolve; });
+    const gate = new Promise(resolve => { releaseBatch = resolve; });
+    f.overrides.GetGameFriends = async ({ friend_gids }) => {
+        if (friend_gids.length === 35 && friend_gids[0] === seeds[0]) {
+            startBatch();
+            await gate;
+        }
+        return { friends: friend_gids.map(gid => ({ gid, big_farm_status: {} })) };
+    };
+    const patrol = f.service.runAutomation('steal');
+    await started;
+    const farm = f.session.inFarm(() => { f.calls.push({ method: 'FarmWork' }); }, { manual: true });
+    releaseBatch();
+    assert.equal((await patrol).status, 'yielded');
+    await farm;
+    assert.deepEqual(f.calls.map(c => c.method), ['GetAll', 'GetGameFriends', 'FarmWork']);
+    assert.equal((await f.service.runAutomation('steal')).status, 'completed');
+    assert.deepEqual(f.calls.filter(c => c.method === 'GetGameFriends').slice(0, 3).map(c => c.params), [
+        { friend_gids: seeds.slice(0, 35), global_scene_id: 2 },
+        { friend_gids: seeds.slice(35, 70), global_scene_id: 2 },
+        { friend_gids: seeds.slice(70), global_scene_id: 2 },
+    ]);
+    assert.deepEqual(f.calls.filter(c => c.method === 'EnterHomestead').map(c => c.params.host_gid), [seeds.at(-1), seeds.at(-1)]);
+    assert.equal(f.calls.some(c => c.method === 'InteractRecords'), false);
+});
 
 test('all opt-ins default off, empty rules never consume resources merely by enabling', async () => {
     assert.equal(Object.keys(SETTINGS_KEYS).length, 25);
@@ -183,7 +216,9 @@ test('switch-off and policy changes during awaited reads are rechecked immediate
 test('concurrent automation triggers are deduplicated and extended action budget is enforced', async () => {
     const f = fixture(); f.enable('autoSteal', 'autoHelp', 'autoStroke', 'autoPutHazard'); f.setPolicy({ maxActionsPerRun: 1 });
     await Promise.all([f.service.runAutomation(), f.service.runAutomation()]);
-    assert.equal(f.calls.filter(c => MUTATIONS.has(c.method)).length, 1);
+    assert.deepEqual(f.calls.filter(c => MUTATIONS.has(c.method)).map(c => c.method), ['StealProduce']);
+    await f.service.runAutomation();
+    assert.deepEqual(f.calls.filter(c => MUTATIONS.has(c.method)).map(c => c.method), ['StealProduce', 'CleanAllRanch']);
 });
 
 test('strict policies reject malformed IDs, negative limits, duplicates and unbounded merchant rules', () => {

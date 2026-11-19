@@ -7,7 +7,7 @@ import { useRanchSync } from '@/composables/useRanchSync'
 import { useAccountStore } from '@/stores/account'
 import { useStatusStore } from '@/stores/status'
 import { formatCouponAmount } from '@/utils/number-format'
-import { ranchActionLabels, ranchLogBelongs } from '@/utils/ranch-display'
+import { ranchActionLabels } from '@/utils/ranch-display'
 import { compactRuntimeLogs, matchesRuntimeLog, normalizeRuntimeLog } from '@/utils/runtime-log'
 
 const ranch = useRanchSync()
@@ -155,7 +155,9 @@ function getOpColor(key: string) {
 // 与农场 stats 逻辑一致：改用全期累计 operationsTotal（跨天/重启永久保留），
 // 常驻展示全部统计项（没有数据显示 0），顺序按 ranchActionLabels 定义。
 const operationStatItems = computed(() => {
-  const totals = (snapshot.value?.operationsTotal || {}) as Record<string, number>
+  // Worker pushes statistics independently of the slow scene/inventory snapshot.
+  const live = status.currentStatusReady ? status.status?.ranchStats : null
+  const totals = (live?.operationsTotal ?? snapshot.value?.operationsTotal ?? {}) as Record<string, number>
   return Object.keys(ranchActionLabels).map(key => ({
     key,
     value: Number(totals[key]) || 0,
@@ -171,7 +173,6 @@ function formatDuration(seconds: number) {
 // Mirror the farm home log presentation, with read-only controls and the existing account-scoped log store.
 const homeLogContainer = ref<HTMLElement | null>(null)
 const autoScroll = ref(true)
-const logScope = ref('all')
 const logFilter = reactive({ module: '', event: '', level: '', keyword: '' })
 const allLogs = computed(() => {
   if (!account.currentAccountId || !status.currentStatusReady)
@@ -179,7 +180,7 @@ const allLogs = computed(() => {
   const entries = [...(status.logs || []).map((log: any) => normalizeRuntimeLog(log)), ...(status.accountLogs || []).map((log: any) => normalizeRuntimeLog(log, true))]
   return [...new Map(entries.map(log => [log.id, log])).values()].sort((a, b) => a.ts - b.ts)
 })
-const homeLogs = computed(() => compactRuntimeLogs(allLogs.value.filter(log => (logScope.value === 'all' || ranchLogBelongs(log, 'ranch')) && matchesRuntimeLog(log, logFilter))))
+const homeLogs = computed(() => compactRuntimeLogs(allLogs.value.filter(log => matchesRuntimeLog(log, logFilter))))
 const logEvents = computed(() => [...new Set(allLogs.value.map(log => log.event).filter(Boolean))].sort())
 const logModules = computed(() => [...new Set(allLogs.value.map(log => log.module).filter(Boolean))].sort())
 const hasLogFilter = computed(() => !!(logFilter.module || logFilter.event || logFilter.level || logFilter.keyword))
@@ -331,7 +332,6 @@ useIntervalFn(() => {
       <div class="home-log-panel">
         <div class="home-log-head"><h3>运行日志</h3><button class="home-log-latest" @click="scrollToLatest">最新<span class="i-carbon-arrow-down" /></button></div>
         <div class="home-log-filters">
-          <select v-model="logScope" class="home-log-filter-item" aria-label="日志场景"><option value="all">全部场景</option><option value="scene">牧场与系统</option></select>
           <select v-model="logFilter.module" class="home-log-filter-item" aria-label="日志模块"><option value="">全部模块</option><option v-for="module in logModules" :key="module" :value="module">{{ module }}</option></select>
           <select v-model="logFilter.event" class="home-log-filter-item" aria-label="日志事件"><option value="">全部事件</option><option v-for="event in logEvents" :key="event" :value="event">{{ ranchActionLabels[event] || event }}</option></select>
           <select v-model="logFilter.level" class="home-log-filter-item" aria-label="日志级别"><option value="">全部级别</option><option value="info">信息</option><option value="warn">警告</option><option value="error">错误</option></select>
@@ -416,7 +416,7 @@ useIntervalFn(() => {
 .feature-icon { width: 46px; height: 46px; border-radius: 14px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 3px 6px rgba(31,38,80,.15)); }
 .feature-info { flex: 1; min-width: 0; }.feature-title { font-size: 14px; font-weight: 700; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.feature-subtitle { font-size: 12px; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .home-stats-panel,.home-log-panel { display: flex; flex-direction: column; gap: 10px; border-radius: 20px; padding: 16px 18px; background: linear-gradient(180deg,rgba(186,226,248,.35),rgba(255,255,255,.08) 45%,rgba(134,214,152,.4)),linear-gradient(165deg,rgba(255,255,255,.55),rgba(255,255,255,.26)); border: 1.5px solid rgba(255,255,255,.65); box-shadow: 0 10px 28px rgba(31,38,80,.12),inset 0 1.5px 0 rgba(255,255,255,.85); backdrop-filter: blur(24px) saturate(1.35); -webkit-backdrop-filter: blur(24px) saturate(1.35); overflow: hidden; }
-.home-stats-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px 10px; }.home-stat-item { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.35); }.home-stat-icon { flex-shrink: 0; }.home-stat-label { min-width: 0; flex: 1; overflow: hidden; color: #4b5563; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }.home-stat-value { flex-shrink: 0; color: #166534; font-size: 14px; font-weight: 700; font-family: 'DM Mono','Courier New',monospace; }.home-stats-empty { display: flex; min-height: 120px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; padding: 20px; text-align: center; background: rgba(255,255,255,.35); }.home-stat-value-pill { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; min-width: 52px; border-radius: 999px; padding: 4px 12px; background: linear-gradient(135deg,#34d399,#10b981); color: #fff; font-size: 14px; font-weight: 800; font-family: 'DM Mono','Courier New',monospace; box-shadow: 0 3px 8px rgba(31,38,80,.18); }
+.home-stats-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px 10px; }.home-stat-item { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.35); }.home-stat-icon { flex-shrink: 0; }.home-stat-label { min-width: 0; flex: 1; overflow: hidden; color: #4b5563; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }.home-stat-value { margin-left: auto; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; color: #166534; font-size: 14px; font-weight: 700; font-family: 'DM Mono','Courier New',monospace; }.home-stats-empty { display: flex; min-height: 120px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; padding: 20px; text-align: center; background: rgba(255,255,255,.35); }.home-stat-value-pill { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; min-width: 52px; border-radius: 999px; padding: 4px 12px; background: linear-gradient(135deg,#34d399,#10b981); color: #fff; font-size: 14px; font-weight: 800; font-family: 'DM Mono','Courier New',monospace; box-shadow: 0 3px 8px rgba(31,38,80,.18); }
 .stats-note { font-size: 11px; color: #6b7280; }
 .home-log-panel { min-height: 320px; max-height: 440px; }.home-log-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.home-log-head h3 { font-size: 20px; font-weight: 800; color: #166534; margin: 0; letter-spacing: 1px; }.home-log-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }.home-log-filter-item { min-width: 0; border: 1px solid rgba(255,255,255,.7); border-radius: 10px; padding: 4px 8px; background: rgba(255,255,255,.72); color: #374151; font-size: 12px; line-height: 1.4; }.home-log-filter-item:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }select.home-log-filter-item { max-width: 128px; cursor: pointer; }.home-log-keyword { flex: 1; min-width: 96px; }.home-log-clear { color: #b91c1c; }.home-log-list { flex: 1; min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; border-radius: 12px; padding: 4px 6px; background: rgba(255,255,255,.35); overscroll-behavior: contain; }.home-log-empty { display: flex; min-height: 120px; align-items: center; justify-content: center; color: #6b7280; font-size: 13px; }.home-log-row { display: flex; align-items: baseline; gap: 8px; padding: 4px 6px; border-radius: 8px; font-size: 13px; line-height: 1.5; }.home-log-time { flex-shrink: 0; color: #6b7280; font-size: 12px; font-family: 'DM Mono','Courier New',monospace; white-space: nowrap; }.home-log-tag { flex-shrink: 0; padding: 1px 6px; border-radius: 4px; color: #166534; background: rgba(220,252,231,.8); font-size: 12px; font-weight: 700; }.home-log-msg { min-width: 0; flex: 1; overflow-wrap: anywhere; color: #374151; }.log-error .home-log-msg { color: #dc2626; }.log-warn .home-log-msg { color: #b45309; }.home-log-latest { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; border: 0; border-radius: 999px; padding: 9px 18px; background: linear-gradient(135deg,#34d399,#10b981); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 5px 14px rgba(16,185,129,.45),inset 0 0 0 2px rgba(255,255,255,.55); }
 .feature-card,.farm-status-card { transition: transform .25s ease,box-shadow .25s ease; }.feature-card:hover,.farm-status-card:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(31,38,80,.16),inset 0 1.5px 0 rgba(255,255,255,.95); }

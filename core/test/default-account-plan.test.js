@@ -115,8 +115,18 @@ test('a saved plan can be applied to an existing account', () => {
     automation: { task: true },
   });
   const account = store.getAccountsByUser('bob').accounts[0];
+  const other = store.getAccountsByUser('alice').accounts[0];
+  store.applyConfigSnapshot({ friendBlacklist: [10001], plantBlacklist: [10002] }, { accountId: account.id });
+  store.applyConfigSnapshot({ friendBlacklist: [10003] }, { accountId: other.id });
+
   const config = store.applyUserDefaultAccountPlan('bob', account.id);
+  const persisted = JSON.parse(fs.readFileSync(path.join(dataDir, 'store.json'), 'utf8'));
 
   assert.equal(config.plantingStrategy, 'level');
   assert.equal(config.automation.task, true);
+  assert.deepEqual(config.friendBlacklist, [10001]);
+  assert.deepEqual(config.plantBlacklist, [10002]);
+  assert.deepEqual(persisted.accountConfigs[account.id].friendBlacklist, [10001]);
+  assert.deepEqual(persisted.accountConfigs[account.id].plantBlacklist, [10002]);
+  assert.deepEqual(store.getConfigSnapshot(other.id).friendBlacklist, [10003]);
 });

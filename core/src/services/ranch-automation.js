@@ -61,15 +61,11 @@ async function runRanchExtraAutomation(ctx) {
         // 避免每轮巡查都打商城接口；服务端 available 仍是防重复的最终闸门。
         const decision = benefitSchedule.plan({ enabled: true, accountId: ctx.accountId, now: ctx.now ? ctx.now() : Date.now() });
         if (!decision.shouldClaim) return;
-        const benefit = await service.getResource('dailyBenefit');
-        // 服务端说今天已领：本次窗口完成，落盘避免重复查询。
-        if (benefit?.claimed) {
-            benefitSchedule.confirm({ accountId: ctx.accountId, state: decision.state });
-            return;
-        }
-        // 确实可领才发购买；领取后落盘。未下发/暂不可领不落盘，下一窗口再试。
-        if (benefit?.available) {
-            await perform({ action: 'dailyBenefit' });
+        const benefit = await service.getResource('dailyBenefit', { fresh: decision.readOnly || decision.reason === 'first-enable' });
+        if (!enabled('autoDailyBenefit')) return;
+        // An ambiguous Purchase leaves this window open for status checks only.
+        const result = benefit?.available && !decision.readOnly ? await perform({ action: 'dailyBenefit' }) : null;
+        if ((benefit?.claimed === true || result?.reply?.claimed === true) && settings().autoDailyBenefit) {
             benefitSchedule.confirm({ accountId: ctx.accountId, state: decision.state });
         }
     });
@@ -231,7 +227,9 @@ async function runRanchExtraAutomation(ctx) {
         let friends, size, start;
         if (continuation?.friendBatch) ({ friends, size, start } = continuation.friendBatch);
         else {
-            const all = (await service.getResource('friends')).friends || [];
+            const roster = await (ctx.readFriendRoster ? ctx.readFriendRoster() : service.getResource('friends'));
+            if (!roster) return; // Saved scan will resume on the next ranch lease.
+            const all = roster.friends || [];
             friends = all.filter(f => !p.friendExcludeGids.includes(String(f.gid)) && (!p.friendIncludeGids.length || p.friendIncludeGids.includes(String(f.gid))));
             if (ctx.maturityPlan) friends = ctx.maturityPlan.select(friends, p.friendBatchSize, settings(), p);
             size = Math.min(friends.length, p.friendBatchSize);
@@ -257,17 +255,24 @@ async function runRanchExtraAutomation(ctx) {
             let hazardsRemaining = hazardQuota(visit.friend);
             for (const ranch of visit.friend?.ranches || []) {
                 const base = { hostGid, ranchId: ranch.ranchInstId };
-                if (enabled('autoHelp') && (!ctx.maturityPlan || ctx.maturityPlan.canHelp(hostGid)) && ranch.hazards?.length) await perform({ ...base, action: 'help' });
+                const stealAvailable = async shelves => {
+                    if (enabled('autoSteal') && (!ctx.maturityPlan || ctx.maturityPlan.canSteal(hostGid))) {
+                        for (const shelf of shelves || []) if (shelf.canSteal) await perform({ ...base, action: 'steal', slotIndex: shelf.slotIndex });
+                    }
+                };
+                // Spend this slice on already-available loot before any optional interaction.
+                await stealAvailable(ranch.shelves);
                 // Production can immediately create stealable shelves. Only consume freshly
                 // queried shelves, never infer loot or retry a completed production write.
-                let stealRanch = ranch;
+                let stealRanch;
                 if (enabled('autoSteal') && (!ctx.maturityPlan || ctx.maturityPlan.canSteal(hostGid))) {
                     for (const animal of ranch.animals || []) if (animal.canTriggerProduce) {
                         const produced = await perform({ ...base, action: 'friendProduce', animalInstId: animal.animalInstId });
                         if (produced) stealRanch = produced.friend?.ranches?.find(r => String(r.ranchInstId) === String(ranch.ranchInstId)) || { shelves: [] };
                     }
                 }
-                if (enabled('autoSteal') && (!ctx.maturityPlan || ctx.maturityPlan.canSteal(hostGid))) for (const shelf of stealRanch.shelves || []) if (shelf.canSteal) await perform({ ...base, action: 'steal', slotIndex: shelf.slotIndex });
+                if (stealRanch) await stealAvailable(stealRanch.shelves);
+                if (enabled('autoHelp') && (!ctx.maturityPlan || ctx.maturityPlan.canHelp(hostGid)) && ranch.hazards?.length) await perform({ ...base, action: 'help' });
                 if (enabled('autoStroke') && (!ctx.maturityPlan || ctx.maturityPlan.canHelp(hostGid))) for (const animal of ranch.animals || []) if (animal.canStroke) await perform({ ...base, action: 'stroke', animalInstId: animal.animalInstId });
                 if (enabled('autoPutHazard') && hazardsRemaining > 0n && (!ctx.maturityPlan || ctx.maturityPlan.canHelp(hostGid))) {
                     const placed = await perform({ ...base, action: 'putHazard' });

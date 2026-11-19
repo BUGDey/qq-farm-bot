@@ -932,7 +932,12 @@ function autoRegisterBuiltinGameConfigProviders() {
 }
 
 // 启动时加载配置
-autoRegisterBuiltinGameConfigProviders();
+// 插件系统暂时关闭（PLUGIN_SYSTEM_ENABLED 默认 false）：跳过内置素材插件注册，
+// 素材插件目录保留，恢复开关后重启即自动重新合并。
+const { PLUGIN_SYSTEM_ENABLED } = require('../plugins/feature-flag');
+if (PLUGIN_SYSTEM_ENABLED) {
+    autoRegisterBuiltinGameConfigProviders();
+}
 loadConfigs();
 
 /**

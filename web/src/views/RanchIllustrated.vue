@@ -11,6 +11,8 @@ import '@/components/ranch/ranch-glass.css'
 
 const page = ref('illustrated')
 const resource = useRanchResource(page)
+const kind = ref('normal')
+const isGiant = computed(() => kind.value === 'giant')
 const tab = ref('all')
 const query = ref('')
 const pending = ref<any>(null)
@@ -26,12 +28,20 @@ async function claim() {
     await resource.mutate(payload)
 }
 
-const list = computed(() => (resource.data.value?.list || []).filter((x: any) => (tab.value === 'all' || tab.value === (x.unlocked ? 'unlocked' : 'locked')) && (!query.value || String(x.fruitId).includes(query.value) || String(x.name || '').includes(query.value))))
+const entries = computed<any[]>(() => {
+  const normal = resource.data.value?.list || []
+  if (!isGiant.value)
+    return normal
+  return normal.flatMap((entry: any) => entry.giantItem
+    ? [{ ...entry, fruitId: entry.giantItem.id, name: entry.giantItem.name, image: entry.giantItem.image, unlocked: !!entry.giant?.unlocked }]
+    : [])
+})
+const list = computed(() => entries.value.filter(entry => (tab.value === 'all' || tab.value === (entry.unlocked ? 'unlocked' : 'locked')) && (!query.value || String(entry.fruitId).includes(query.value) || String(entry.name || '').includes(query.value))))
+const unlockedCount = computed(() => entries.value.filter(entry => entry.unlocked).length)
+const totalCount = computed(() => entries.value.length)
 
 const levelRewards = computed(() => resource.data.value?.levels?.levelList || [])
 const weightRewards = computed(() => resource.data.value?.weightScore?.levels || [])
-const unlockedCount = computed(() => (resource.data.value?.list || []).filter((x: any) => x.unlocked).length)
-const totalCount = computed(() => (resource.data.value?.list || []).length)
 
 function rewardText(rewards: any[]) {
   return (rewards || []).map(r => `${r.name || `物品 ${r.id}`} ×${r.count}`).join(' · ')
@@ -89,6 +99,7 @@ onMounted(() => {
         </div>
       </div>
 
+      <SceneTabs v-model="kind" class="mb-4" :tabs="[{ value: 'normal', label: '普通图鉴' }, { value: 'giant', label: '巨大图鉴' }]" />
       <div class="ranch-illustrated-toolbar mb-4">
         <SceneTabs v-model="tab" :tabs="[{ value: 'all', label: '全部' }, { value: 'unlocked', label: '已解锁' }, { value: 'locked', label: '未解锁' }]" />
         <input v-model="query" class="border rounded-lg bg-transparent px-3 py-2" aria-label="搜索图鉴动物或 ID" placeholder="搜索动物或 ID">
@@ -108,7 +119,9 @@ onMounted(() => {
           <div class="ranch-book-entry-body">
             <h2>{{ entry.name || `动物/产物 ${entry.fruitId}` }}</h2>
             <p class="ranch-book-entry-progress">
-              {{ entry.unlocked ? '已解锁' : '未解锁' }} · 进度 {{ entry.progress ?? '—' }}
+              {{ entry.unlocked ? '已解锁' : '未解锁' }}<template v-if="!isGiant">
+                · 进度 {{ entry.progress ?? '—' }}
+              </template>
             </p>
             <p v-if="entry.giant?.unlocked" class="ranch-book-entry-weight">
               {{ weightText(entry.giant) }}

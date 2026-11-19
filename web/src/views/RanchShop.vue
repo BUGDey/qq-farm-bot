@@ -34,6 +34,18 @@ watch(() => account.currentAccountId, () => {
   exchange.value = null
 })
 const shop = computed(() => (resource.data.value?.shops || []).find((s: any) => String(s.shopId) === tab.value))
+
+function purchaseBlock(goods: { price: unknown, limitCount?: unknown, boughtNum?: unknown }) {
+  const limit = Number(goods.limitCount)
+  if (limit > 0 && Number(goods.boughtNum ?? 0) >= limit)
+    return '已达限购'
+  const balance = resource.data.value?.balance
+  if (balance == null || balance === '' || !Number.isFinite(Number(balance)))
+    return '余额未确认'
+  if (Number(goods.price) > Number(balance))
+    return '金券不足'
+  return ''
+}
 </script>
 
 <template>
@@ -78,8 +90,8 @@ const shop = computed(() => (resource.data.value?.shops || []).find((s: any) => 
             </p>
             <p class="mt-2 text-[11px] text-gray-500 leading-5 dark:text-gray-400">
               数量 ×{{ goods.itemCount }} · 已购 {{ goods.boughtNum ?? '—' }} / {{ goods.limitCount ?? '不限' }}
-            </p><BaseButton variant="primary" class="mt-auto w-full" :disabled="!goods.unlocked || goods.owned || goods.priceId !== 1007 || resource.busy.value || resource.loading.value || resource.data.value?.balance == null" @click="selected = goods">
-              {{ goods.owned ? '已拥有' : !goods.unlocked ? '未解锁' : '立即购买' }}
+            </p><BaseButton variant="primary" class="mt-auto w-full" :disabled="!goods.unlocked || goods.owned || goods.priceId !== 1007 || resource.busy.value || resource.loading.value || !!purchaseBlock(goods)" @click="selected = goods">
+              {{ goods.owned ? '已拥有' : !goods.unlocked ? '未解锁' : goods.priceId !== 1007 ? '不支持购买' : purchaseBlock(goods) || '立即购买' }}
             </BaseButton>
           </RanchShopGoodsCard>
         </div>

@@ -1,6 +1,7 @@
 import { useStorage } from '@vueuse/core'
 import NProgress from 'nprogress'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
+import { useGameSpaceStore } from '@/stores/game-space'
 import { menuRoutes } from './menu'
 import 'nprogress/nprogress.css'
 
@@ -44,7 +45,16 @@ function currentRole(): string {
   }
 }
 
-router.beforeEach(async (to) => {
+const farmSections: Record<string, string> = {
+  '/': 'overview',
+  '/personal': 'personal',
+  '/friends': 'friends',
+  '/shop': 'shop',
+  '/illustrated': 'illustrated',
+  '/analytics': 'analytics',
+}
+
+router.beforeEach((to, from) => {
   NProgress.start()
 
   const hasToken = !!adminToken.value
@@ -58,9 +68,9 @@ router.beforeEach(async (to) => {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
 
-  // Resolve shared entry links before mounting a farm view, so ranch mode never starts farm requests.
-  if (localStorage.getItem('qq-farm-game-space') === 'ranch') {
-    const section = ({ '/': 'overview', '/personal': 'personal', '/friends': 'friends', '/shop': 'shop', '/illustrated': 'illustrated', '/analytics': 'analytics' } as Record<string, string>)[to.path]
+  // Apply the stored preference at entry, not to explicit in-app navigation or history entries.
+  if ((from === START_LOCATION || from.path === '/login') && useGameSpaceStore().isRanch) {
+    const section = farmSections[to.path]
     if (section)
       return { path: section === 'overview' ? '/ranch' : `/ranch/${section}`, query: to.query, hash: to.hash }
   }
@@ -74,13 +84,22 @@ router.beforeEach(async (to) => {
   return true
 })
 
-router.afterEach(() => NProgress.done())
+router.afterEach((to, _from, failure) => {
+  NProgress.done()
+  if (failure)
+    return
+  if (to.path === '/ranch' || to.path.startsWith('/ranch/'))
+    useGameSpaceStore().setSpace('ranch')
+  else if (farmSections[to.path])
+    useGameSpaceStore().setSpace('farm')
+})
 
 // 构建更新后旧 chunk 会被删除，浏览器缓存的旧入口 JS 仍引用它，动态导入就会 404。
 // 捕获这类加载失败并刷新一次，让用户拉到最新的 index.html / 资源指纹，避免卡在旧页面。
 router.onError((error) => {
+  NProgress.done()
   const message = String(error?.message || error)
-  if (!/Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk .* failed|ChunkLoadError/i.test(message))
+  if (!/Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk .* failed|ChunkLoadError|Unable to preload CSS for/i.test(message))
     return
   const key = 'qq-farm-chunk-reload'
   const last = Number(sessionStorage.getItem(key) || 0)

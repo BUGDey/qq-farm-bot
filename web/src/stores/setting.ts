@@ -257,6 +257,8 @@ export const useSettingStore = defineStore('setting', () => {
     if (!accountId)
       return
     const requestedId = String(accountId)
+    if (!isCurrentAccount(requestedId))
+      return
     const requestId = ++fetchRequestId
     loading.value = true
     try {

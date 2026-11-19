@@ -242,8 +242,8 @@ function registerAdminSettingsRoutes({
         currentUser.username,
         accountId,
       );
-      if (provider && typeof provider.saveSettings === "function") {
-        await provider.saveSettings(accountId, data);
+      if (provider && typeof provider.syncAccountConfig === "function") {
+        provider.syncAccountConfig(accountId, { rescheduleAutoCodeRefresh: true });
       } else if (provider && typeof provider.broadcastConfig === "function") {
         provider.broadcastConfig(accountId);
       }
@@ -321,7 +321,10 @@ function registerAdminSettingsRoutes({
 
     try {
       const data = await provider.refreshAccountCode(accountId);
-      res.json({ ok: true, data: data || {} });
+      if (data?.ok !== true) {
+        return res.json({ ok: false, error: "刷新 Code 失败，请查看账号日志或重新扫码" });
+      }
+      res.json({ ok: true, data });
     } catch (error) {
       res.status(500).json({ ok: false, error: error.message });
     }

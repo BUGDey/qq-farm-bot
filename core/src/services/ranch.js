@@ -14,6 +14,7 @@ const { SETTINGS_KEYS, ACTION_SWITCH, normalizePolicy, normalizeSettings } = req
 const { feedTypes, quietNow, createRanchMaturityPlan } = require('./ranch-strategy');
 const { createRanchScheduler, inGroup } = require('./ranch-scheduler');
 const { createRanchDailyBenefit } = require('./ranch-daily-benefit');
+const benefitSchedule = require('./ranch-benefit-schedule');
 const { runRanchExtraAutomation, assertAutomationPolicy } = require('./ranch-automation');
 const itemMap = new Map(config.MCItemInfo.map(row => [String(row.id), row]));
 const animalIcons = require('../gameConfig/RanchAnimalIcons.json');
@@ -42,15 +43,33 @@ function describeResource(raw) {
     }
     return visit(value);
 }
-function normalizeItem(raw) {
+const positiveDecimal = value => (typeof value === 'string' || Number.isSafeInteger(value)) && /^[1-9]\d*$/.test(String(value));
+// Canonicalize rewards by item ID so row order and split entries do not affect equality.
+function saleRewards(rows, multiplier = 1n) {
+    if (!Array.isArray(rows) || !rows.length) return [];
+    const totals = new Map();
+    for (const row of rows) {
+        if (!positiveDecimal(row?.id) || !positiveDecimal(row?.count)) return [];
+        const id = String(row.id);
+        totals.set(id, (totals.get(id) || 0n) + BigInt(row.count) * multiplier);
+    }
+    return [...totals].sort(([a], [b]) => a.localeCompare(b)).map(([id, count]) => ({ id, count: String(count) }));
+}
+function normalizeItem(raw, physical = false, verifiedRanchBag = false) {
     const item = camelize(raw);
     const row = itemMap.get(String(item.id));
     const ids = row?.show_tab_ids;
-    return { ...item, image: getItemImageById(item.id), locked: item.isLocked === true || item.locked === true, detail: item.itemDetail || item.detail, name: row?.name || `物品 ${item.id}`, type: row?.type ?? null,
-        canUseCan: !item.isLocked && !item.locked && config.MCCanConfig.some(c => String(c.id) === String(item.id)),
-        canSell: !item.isLocked && !item.locked && [106, 107].includes(row?.type)
-            && !row.sell_cond && !row.cond_sells
-            && !item.show?.sellCond?.length && !item.show?.condSells?.length,
+    const locked = !!(item.isLocked || item.locked);
+    const unconditional = !row?.sell_cond && !row?.cond_sells
+        && !item.show?.sellCond?.length && !item.show?.condSells?.length;
+    const canSell = physical === true && !locked && unconditional && [106, 107].includes(row?.type);
+    // A manual sale requires a server quote for an exact physical lot; never infer a price from config.
+    const manualSellPrices = physical === true && verifiedRanchBag && !locked && unconditional && positiveDecimal(item.id)
+        && positiveDecimal(item.uid) && positiveDecimal(item.count)
+        ? describeResource(saleRewards(item.show?.sells)) : [];
+    return { ...item, image: getItemImageById(item.id), locked, detail: item.itemDetail || item.detail, name: row?.name || `物品 ${item.id}`, type: row?.type ?? null,
+        canUseCan: !locked && config.MCCanConfig.some(c => String(c.id) === String(item.id)),
+        canSell, manualSellPrices,
         tabIds: ids == null ? [] : Array.isArray(ids) ? ids.map(Number) : String(ids).split(/[;,]/).map(Number).filter(Number.isFinite) };
 }
 function normalizeSnapshot({ cells, ranches, bag, tabs, order, orderError, serverTime, settings, farmLevel }) {
@@ -60,7 +79,7 @@ function normalizeSnapshot({ cells, ranches, bag, tabs, order, orderError, serve
         const nextUpgradeCost = String(next?.upgrade_cost || '').split(';').filter(Boolean).map(v => { const [id, count] = v.split(':'); return { id, count, name: itemMap.get(id)?.name || `物品 ${id}` }; });
         return { ...value, visual: getFacilityVisual(row), facilityKind: row?.module_type, instId: value.instanceId, name: row?.name || `设施 ${value.facilityId}`, nextLevel: next?.level, nextUpgradeCost, nextUpgradeSeconds: next?.upgrade_secs, nextUpgradeConditions: next?.upgrade_conditions };
     });
-    const items = [...(bag.physical_items || []), ...(bag.virtual_items || [])].map(normalizeItem);
+    const items = [...(bag.physical_items || []).map(item => normalizeItem(item, true, bag.global_scene_id === 2)), ...(bag.virtual_items || []).map(item => normalizeItem(item))];
     const unlockedCount = id => items.filter(i => String(i.id) === String(id) && !i.locked && !i.detail?.ranchProduct).reduce((total, i) => total + BigInt(i.count || 0), 0n);
     const normalizedRanches = ranches.map(raw => {
         const value = camelize(raw);
@@ -83,7 +102,7 @@ function normalizeSnapshot({ cells, ranches, bag, tabs, order, orderError, serve
         orderPanel: order?.panel ? camelize(order.panel) : null, ordersError: orderError || null,
     };
 }
-function createRanchService({ rpc, send, session = ranchSession, getUserState, getSettings = () => ({}), log = () => {}, now = Date.now, serverNow = now, getKnownFriendGids = () => require('../models/store').getKnownFriendGids() } = {}) {
+function createRanchService({ rpc, send, session = ranchSession, getUserState, getSettings = () => ({}), log = () => {}, now = Date.now, serverNow = now, getKnownFriendGids = () => require('../models/store').getKnownFriendGids(), getPlatform = () => require('../config/config').CONFIG.platform } = {}) {
     const scheduler = createRanchScheduler({ now });
     let operation = 0;
     let automationRunning = false;
@@ -92,6 +111,10 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
     const maturityPlan = createRanchMaturityPlan(now);
     let planEpoch;
     const settings = () => normalizeSettings(getSettings());
+    const observeDisabledDailyBenefit = () => {
+        const accountId = getUserState().gid;
+        if (accountId && !settings().autoDailyBenefit) benefitSchedule.observeDisabled({ accountId, now: now() });
+    };
     const scheduledSettings = () => {
         const result = settings();
         if (quietNow(normalizePolicy(getSettings().ranch_policy), now())) {
@@ -139,7 +162,21 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
             operationsDate = dayKey();
         }
     }
+    // Statistics must remain readable without a scene switch or inventory RPC.
+    function getOperationStats() {
+        syncOperationsDay();
+        loadTotalOperations();
+        return { operations: { ...operations }, operationsDate, operationsTotal: { ...totalOperations } };
+    }
     let lastAutomationAt = null;
+    let lastPatrolSummaryAt = -Infinity;
+    function patrolSummary(result, reason) {
+        if (now() - lastPatrolSummaryAt < 60000) return;
+        lastPatrolSummaryAt = now();
+        log('牧场', `自动巡查${result}：${reason}（无可执行动作时不增加操作计数）`, {
+            scene: 'ranch', module: 'ranch', event: 'patrol', trigger: 'automatic', result: 'info', reason,
+        });
+    }
     function details(input, reply, context = {}) {
         return ranchOperationDetails(input, reply, { itemName: id => itemMap.get(String(id))?.name || animalMap.get(String(id))?.name || `物品 ${id}`, goodsItem: goodsMap.get(String(input.goodsId))?.item_id, ...context });
     }
@@ -153,16 +190,18 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
         log('牧场', `${trigger === 'automatic' ? '自动' : '手动'}${ACTION_NAMES[action] || action}成功${detail.text ? `：${detail.text}` : ''}`, { scene: 'ranch', module: ranchOperationModule(action), event: action, trigger, result: 'ok', resultCount: reply?.op_results?.length ?? null, ...detail.meta });
     }
     async function exclusive(fn) {
-        operation++;
-        try {
-            return await session.inRanch(async () => {
+        return session.inRanch(async () => {
+            // Count only work holding the lease. Queued reads/writes must not veto
+            // automation already waiting its turn on this same serial executor.
+            operation++;
+            try {
                 session.assertAllowed();
                 if (!getUserState().gid) throw new Error('账号尚未登录');
                 if (pendingLeave && pendingLeaveEpoch !== session.getEpoch?.()) pendingLeave = null;
                 if (pendingLeave) await leaveFriend(pendingLeave);
-                return fn();
-            });
-        } finally { operation--; }
+                return await fn();
+            } finally { operation--; }
+        });
     }
     async function snapshot(strict = true, light = false) {
         const errors = {};
@@ -191,9 +230,7 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
         state.sectionErrors = errors;
         syncOperationsDay();
         loadTotalOperations();
-        state.operations = { ...operations };
-        state.operationsDate = operationsDate;
-        state.operationsTotal = { ...totalOperations };
+        Object.assign(state, getOperationStats());
         state.lastAutomationAt = lastAutomationAt;
         state.nextChecks = scheduler.status(scheduledSettings(), normalizePolicy(getSettings().ranch_policy));
         state.capabilities = CAPABILITIES;
@@ -221,67 +258,81 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
         const rows = info.tasks?.length ? info.tasks : [...(info.growth_tasks || []), ...(info.daily_tasks || [])];
         return [...new Map(rows.filter(t => [4, 5, 6].includes(Number(t.task_type))).map(t => [String(t.id), describeResource(t)])).values()];
     }
-    async function readFriends() {
-        const knownGids = (getKnownFriendGids() || []).map(String)
-            .filter(gid => /^[1-9]\d*$/.test(gid) && gid !== String(getUserState().gid));
-        let all;
-        try {
-            all = await rpc('GetAll', { global_scene_id: 2 });
-        } catch (err) {
-            // QQ's legacy list endpoint can reject GetAll even with the official
-            // scene field. Resolve saved GIDs through the current API, as farm does.
-            // Never turn transport/auth failures or a missing seed list into success.
-            if (!/\bcode=1000020\b/.test(err.message || '') || !knownGids.length) throw err;
-            all = { game_friends: [], blocked_players: [] };
-        }
-        const blocked = new Set((all.blocked_players || []).map(f => String(f.gid)));
-        const gids = [...new Set([...(all.game_friends || []).map(f => String(f.gid)),
-            ...knownGids])]
-            .filter(gid => /^[1-9]\d*$/.test(gid) && gid !== String(getUserState().gid) && !blocked.has(gid));
-        // 短期复用 GetGameFriends 结果，降低点开好友时的批量 RPC 延迟；
-        // 黑名单由上面的 GetAll 实时获取，不受缓存影响。
-        const friends = await readFriendDetails(gids, blocked);
-        return { friends, blocked_players: all.blocked_players || [], knownGids };
-    }
-    /**
-     * 点开好友时加载慢的根因：每次进入都串行执行 GetAll -> N×GetGameFriends ->
-     * EnterHomestead -> GetRanchDetail -> GetRanchOpTimes。
-     * GetGameFriends 只按 GID 集合返回好友详情，短期（30 秒）内名单不会变，
-     * 对同一批 GID 复用结果，可省掉点击好友时最耗时的一段批量 RPC。
-     * GetAll（黑名单来源）仍每次实时请求，拉黑后立即生效。
-     */
+    const QQ_RANCH_FRIEND_BATCH_SIZE = 35;
     const FRIEND_DETAILS_CACHE_TTL_MS = 30 * 1000;
-    const friendDetailsCache = new Map();
-    async function readFriendDetails(gids, blocked) {
-        const result = [];
-        for (let offset = 0; offset < gids.length; offset += 100) {
-            const batch = gids.slice(offset, offset + 100);
-            const cacheKey = batch.join(',');
-            const cached = friendDetailsCache.get(cacheKey);
-            let entries;
-            if (cached && now() - cached.at < FRIEND_DETAILS_CACHE_TTL_MS) {
-                entries = cached.friends;
-            } else {
-                const reply = await rpc('GetGameFriends', { friend_gids: batch, global_scene_id: 2 });
-                entries = reply.friends || [];
-                friendDetailsCache.set(cacheKey, { at: now(), friends: entries });
+    let friendDetailsCache;
+    async function readFriends({ scan, checkpoint = () => true, host } = {}) {
+        const self = String(getUserState().gid);
+        const epoch = session.getEpoch?.();
+        const platform = getPlatform();
+        const validGid = gid => positiveDecimal(gid) && String(gid) !== self;
+        // Saved farm GIDs are lookup hints only, never evidence of ranch access.
+        const seeds = platform === 'qq' ? [...new Set((getKnownFriendGids() || []).filter(validGid).map(String))] : [];
+        const key = JSON.stringify([epoch, self, platform, seeds]);
+        const assertRosterScope = () => {
+            session.assertAllowed();
+            if (epoch !== session.getEpoch?.() || self !== String(getUserState().gid) || platform !== getPlatform()) {
+                throw Object.assign(new Error('牧场好友同步期间登录状态已变化'), { code: 'SCENE_CANCELLED' });
             }
-            result.push(...entries.filter(f => !blocked.has(String(f.gid))));
+        };
+        assertRosterScope();
+        if (host && !validGid(host)) return { friends: [] };
+        let current = scan?.current?.key === key ? scan.current : null;
+        if (!current) {
+            if (!checkpoint(false)) return null;
+            let all;
+            try {
+                all = await rpc('GetAll', { global_scene_id: 2 });
+            } catch (err) {
+                // Only the known QQ legacy endpoint rejection can fall back.
+                if (!seeds.length || !/\bcode=1000020\b/.test(err.message || '')) throw err;
+                all = {};
+            }
+            assertRosterScope();
+            const blockedPlayers = all.blocked_players || [];
+            const blocked = new Set([...blockedPlayers, ...(all.blocked_by_players || [])].map(f => String(f.gid)));
+            const direct = new Map();
+            const collect = (into, rows, requested) => {
+                for (const row of rows) {
+                    const gid = String(row.gid);
+                    if (validGid(row.gid) && row.big_farm_status && !row.is_banned && !blocked.has(gid) && (!requested || requested.has(gid))) {
+                        into.set(gid, { ...row, gid, name: row.name?.trim() || row.remark?.trim() || `GID:${gid}` });
+                    }
+                }
+            };
+            collect(direct, all.game_friends || []);
+            if (direct.size || !seeds.length) return { friends: [...direct.values()], blocked_players: blockedPlayers };
+            const gids = seeds.filter(gid => !blocked.has(gid));
+            if (host && !gids.includes(host)) return { friends: [], blocked_players: blockedPlayers };
+            if (!host && friendDetailsCache?.key === key && now() - friendDetailsCache.at < FRIEND_DETAILS_CACHE_TTL_MS) {
+                const details = new Map();
+                collect(details, friendDetailsCache.friends);
+                return { friends: [...details.values()], blocked_players: blockedPlayers };
+            }
+            current = { key, gids: host ? [host] : gids, offset: 0, friends: new Map(), blockedPlayers, collect };
+            if (scan) scan.current = current;
+            if (current.gids.length && !checkpoint(true)) return null;
         }
-        return result;
+        while (current.offset < current.gids.length) {
+            if (!checkpoint(false)) return null;
+            const batch = current.gids.slice(current.offset, current.offset + QQ_RANCH_FRIEND_BATCH_SIZE);
+            const reply = await rpc('GetGameFriends', { friend_gids: batch, global_scene_id: 2 });
+            assertRosterScope();
+            current.collect(current.friends, reply.friends || [], new Set(batch));
+            current.offset += batch.length;
+            if (current.offset < current.gids.length && !checkpoint(true)) return null;
+        }
+        const friends = [...current.friends.values()];
+        if (!host) friendDetailsCache = { key, friends, at: now() };
+        if (scan) scan.current = null;
+        return { friends, blocked_players: current.blockedPlayers };
     }
     async function friendAction(input, mutate, trigger) {
         const host = String(input.hostGid || '');
         if (!/^[1-9]\d*$/.test(host) || host === String(getUserState().gid)) throw new Error('无效好友牧场');
-        // 用户从好友列表点进来的 GID 可能不在 GetGameFriends 的返回里（列表接口
-        // 字段不全/剔除），但已知好友名单来自官方列表同步，仍然可信。
-        // 仍严格拒绝被拉黑的好友；对已知 GID 放宽「必须在 friends 中」的校验。
-        const all = await readFriends();
-        const blocked = (all.blocked_players || []).some(f => String(f.gid) === host);
-        if (blocked) throw new Error('目标不是可访问的好友');
-        const inKnown = (all.knownGids || []).includes(host);
-        const inFriends = all.friends.some(f => String(f.gid) === host);
-        if (!inFriends && !inKnown) throw new Error('目标不是可访问的好友');
+        const all = await readFriends({ host });
+        const officialFriend = all.friends.find(f => String(f.gid) === host);
+        if (!officialFriend) throw new Error('目标不是可访问的好友');
         const visitEpoch = session.getEpoch?.();
         const entered = await rpc('EnterHomestead', { host_gid: host, reason: 2 });
         pendingLeave = host;
@@ -330,7 +381,8 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                     if (!(capacity > 0) || count > capacity - Number(facility.feedMachine.feedCount)) throw new Error('好友牧草机剩余容量不足');
                     reply = await mutate('AddFeed', { instance_id: String(facility.instId), add_count: count, use_gold: false, host_gid: host });
                 }
-                record(input.action, reply, trigger, input, { state: normalizeSnapshot({ cells, ranches, bag: {}, tabs: {}, settings: settings() }), friendName: all.friends.find(f => String(f.gid) === host)?.name });
+                const nickname = String(entered.basic?.name || '').trim();
+                record(input.action, reply, trigger, input, { state: normalizeSnapshot({ cells, ranches, bag: {}, tabs: {}, settings: settings() }), friendName: nickname || all.friends.find(f => String(f.gid) === host)?.name });
                 // Never reclassify a completed mutation as failed if a subsequent read fails.
                 try { ranches = await load(); ops = (await rpc('GetRanchOpTimes', {})).ops || []; }
                 catch (err) { result = { refreshError: err.message }; ranches = []; ops = []; }
@@ -348,6 +400,8 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
     }
     async function action(input, automationKey = null) {
         const trigger = automationKey ? 'automatic' : 'manual';
+        const manualSale = input.action === 'sell' && !automationKey && input.items === undefined;
+        const saleAccountId = manualSale ? String(getUserState().gid) : null;
         return exclusive(() => session.inRanch(async () => {
             const autoContext = {};
             const check = () => {
@@ -374,7 +428,17 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
             if (input.action === 'dailyBenefit') {
                 // 每日福利走官方 mallpb 商城（slot_type=6），不在 ranchbridge 的 rpc 表里。
                 if (!send) throw new Error('牧场每日福利缺少网络发送器');
-                const reply = await createRanchDailyBenefit({ send }).claim(now());
+                const accountId = getUserState().gid;
+                const reply = await createRanchDailyBenefit({ send }).claim(now(), { beforePurchase: () => {
+                    session.assertAllowed();
+                    if (!getUserState().gid || getUserState().gid !== accountId) throw new Error('牧场账号已变化');
+                    if (automationKey) {
+                        observeDisabledDailyBenefit();
+                        check();
+                        if (!benefitSchedule.markAttempt({ accountId, now: now() })) throw new Error('无法记录本次自动领取，已停止提交');
+                    }
+                    dailyBenefitCache.state = null;
+                } });
                 dailyBenefitCache.day = dayKey();
                 dailyBenefitCache.at = now();
                 dailyBenefitCache.state = reply;
@@ -470,14 +534,47 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
             }
             const allowed = ['collect', 'clean', 'place', 'produce', 'harvest', 'addFeed', 'submitOrder', 'refreshOrder', 'feedAnimal', 'activateFacility', 'upgradeBuilding', 'completeUpgrade', 'sell', 'useCan'];
             if (!allowed.includes(input.action)) throw new Error('不支持的牧场动作');
+            if (manualSale) {
+                const { itemId, uid, count } = input;
+                if (String(getUserState().gid) !== saleAccountId) throw new Error('牧场账号已变化，请重新确认');
+                const expected = saleRewards(input.expectedRewards);
+                if (!positiveDecimal(itemId) || !positiveDecimal(uid) || !Number.isSafeInteger(count) || count < 1 || count > 99999 || !expected.length) {
+                    throw new Error('无效的单项出售数据，请刷新仓库并重新确认报价');
+                }
+                // Read under the same account/scene lease as Sell; never use a cached snapshot.
+                const bag = await rpc('GetBag', { global_scene_id: 2, tab_id: 0 });
+                if (bag?.global_scene_id !== 2) throw new Error('牧场背包场景不匹配，请刷新仓库后重新确认');
+                const matches = (bag.physical_items || []).filter(row => String(row.uid) === String(uid));
+                const item = matches.length === 1 ? normalizeItem(matches[0], true, true) : null;
+                const quote = saleRewards(item?.manualSellPrices, BigInt(count));
+                if (String(getUserState().gid) !== saleAccountId || !quote.length || String(item.id) !== String(itemId)
+                    || BigInt(item.count) < BigInt(count) || JSON.stringify(quote) !== JSON.stringify(expected)) {
+                    throw new Error('物品已变化、已锁定、库存不足或出售报价已变化，请刷新仓库后重新确认');
+                }
+                const sold = { id: String(itemId), uid: String(uid), count: String(count) };
+                let reply;
+                try {
+                    reply = await mutate('Sell', { items: [sold] });
+                } catch (err) {
+                    throw new Error(`无法核对出售结果，请刷新仓库确认，请勿直接重试：${err.message}`, { cause: err });
+                }
+                const soldRows = reply?.sell_items;
+                if (soldRows?.length !== 1 || Object.keys(sold).some(key => String(soldRows[0]?.[key]) !== sold[key])
+                    || JSON.stringify(saleRewards(reply?.get_items)) !== JSON.stringify(quote)) {
+                    throw new Error('出售回执与报价不一致，结果未知，请刷新仓库确认，请勿直接重试');
+                }
+                record(input.action, reply, trigger, input);
+                return { reply: describeResource(reply), status: await snapshot(false) };
+            }
             const state = await snapshot(true, !!automationKey);
             autoContext.state = state;
             let reply;
             if (input.action === 'sell' || input.action === 'useCan') {
-                const rows = input.action === 'sell' && input.items ? input.items : [input];
+                const rows = input.action === 'sell' && input.items !== undefined ? input.items : [input];
                 if (!Array.isArray(rows) || !rows.length || rows.length > 1000) throw new Error('无效出售列表');
                 const seen = new Set();
                 const items = rows.map(row => {
+                    if (!row || typeof row !== 'object') throw new Error('无效出售列表');
                     const key = `${row.itemId}:${row.uid || '0'}`;
                     if (seen.has(key)) throw new Error('出售列表包含重复物品');
                     seen.add(key);
@@ -610,12 +707,15 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
             // flooding automatic operation logs when there is simply nothing to do.
             const quietCode = { steal: '1045220', help: '1045233', putHazard: '1045230' }[input.action];
             if (trigger === 'automatic' && quietCode && new RegExp(`\\bcode=${quietCode}\\b`).test(err.message)) throw err;
-            const detail = details(input);
+            const logInput = input.action === 'sell' && input.items !== undefined
+                ? { ...input, items: Array.isArray(input.items) ? input.items.filter(row => row && typeof row === 'object') : undefined }
+                : input;
+            const detail = details(logInput);
             log('牧场', `${trigger === 'automatic' ? '自动' : '手动'}${ACTION_NAMES[input.action] || input.action}失败${detail.text ? `（${detail.text}）` : ''}：${err.message}`, { scene: 'ranch', module: ranchOperationModule(input.action), event: input.action, trigger, result: 'error', reason: err.message, ...detail.meta });
             throw err;
         });
     }
-    async function getResource(resource) {
+    async function getResource(resource, { fresh: bypassCache = false, rosterScan, rosterCheckpoint } = {}) {
         if (resource === 'analytics') {
             const animals = config.MCAnimalConfig.filter(a => a.enable_flag).map(raw => {
                 const animal = describeResource(raw);
@@ -632,7 +732,7 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
             // 每日福利一天只变一次：短期缓存避免每次刷新都打商城接口。
             const today = dayKey();
             const fresh = dailyBenefitCache.day === today && dailyBenefitCache.state && now() - dailyBenefitCache.at < 60000;
-            if (!fresh) {
+            if (bypassCache || !fresh) {
                 if (!send) throw new Error('牧场每日福利缺少网络发送器');
                 dailyBenefitCache.state = await createRanchDailyBenefit({ send }).read(now());
                 dailyBenefitCache.day = today;
@@ -659,8 +759,10 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                     levelProgress: current && next ? { current: Math.max(0, Number(exp) - current.exp), needed: next.exp - current.exp } : null };
             }
             if (resource === 'friends') {
-                const all = await readFriends();
+                const all = await readFriends({ scan: rosterScan, checkpoint: rosterCheckpoint });
+                if (!all) return null; // Automation yielded before the full roster was available.
                 const reply = { friends: all.friends };
+                if (rosterScan) return reply; // Patrol does not need visitor history.
                 let visitors = []; let visitorsError = null;
                 try { visitors = describeResource((await rpc('InteractRecords', { global_scene_id: 2 })).records || []); }
                 catch (err) { visitorsError = err.message; }
@@ -693,6 +795,14 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                 } catch (err) { errors.balance = err.message; }
                 return { shops, exchangeMarket, errors, balance, resources, capabilities: CAPABILITIES };
             }
+            if (resource === 'illustratedClaimStatus') {
+                const list = await rpc('GetIllustratedListV2', { rarity: 0, type: 101 });
+                return list.has_claimable_reward === true;
+            }
+            if (resource === 'weightClaimStatus') {
+                const score = await rpc('GetRanchWeightScoreV2', {});
+                return score.levels || [];
+            }
             if (resource === 'illustrated') {
                 const list = await rpc('GetIllustratedListV2', { rarity: 0, type: 101 });
                 const errors = {};
@@ -711,16 +821,33 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
         try { writeJsonFileAtomic(file, { totalOperations: { ...totalOperations }, savedAt: Date.now() }); } catch { }
     }
     return { connect, disconnect, action, getResource,
-        getStatus,
+        getStatus, getOperationStats,
         flushTotalOperations() { loadTotalOperations(); saveTotalOperationsNow(); },
         getAutomationSchedule() { return scheduler.status(scheduledSettings(), normalizePolicy(getSettings().ranch_policy)); },
         async tickAutomation() {
+            observeDisabledDailyBenefit();
             if (planEpoch !== session.getEpoch?.()) { maturityPlan.reset(); continuations.clear(); scheduler.reset(); planEpoch = session.getEpoch?.(); }
-            return scheduler.tick({ settings: scheduledSettings, stealDelay: () => maturityPlan.nextDelay({ autoSteal: true }), policy: () => normalizePolicy(getSettings().ranch_policy),
-                ready: () => !!getUserState().gid && !operation && !automationRunning && !session.snapshot?.().blockedScenes?.includes('ranch'),
-                run: group => this.runAutomation(group) });
+            const readyReason = () => !getUserState().gid ? '账号未登录'
+                : automationRunning ? '上轮巡查执行中'
+                    : session.snapshot?.().blockedScenes?.includes('ranch') ? '牧场场景被服务端拒绝，等待重新登录' : '';
+            // The scene executor serializes reads, manual writes and automation. Enqueue
+            // a due patrol even while another transaction holds the lease, or polling
+            // readers can keep operation > 0 forever and starve the patrol.
+            let ran = false;
+            const reason = readyReason();
+            const result = await scheduler.tick({ settings: scheduledSettings, stealDelay: () => maturityPlan.nextDelay({ autoSteal: true }), policy: () => normalizePolicy(getSettings().ranch_policy),
+                ready: () => !readyReason(),
+                run: async group => {
+                    ran = true;
+                    const outcome = await this.runAutomation(group);
+                    patrolSummary(outcome?.status === 'deferred' ? '跳过' : outcome?.cancelled ? '取消' : outcome?.status === 'yielded' ? '分片待续' : '完成', group);
+                    return outcome;
+                } });
+            if (!ran) patrolSummary('跳过', reason || (Object.values(scheduledSettings()).some(Boolean) ? '尚未到巡查时间或已有巡查等待场景' : '自动任务未开启'));
+            return result;
         },
         async runAutomation(group = 'all') {
+            observeDisabledDailyBenefit();
             return session.inRanch(async () => {
                 const runSettings = () => Object.fromEntries(Object.entries(settings()).map(([key, value]) => [key, value && inGroup(key, group)]));
                 if (!getUserState().gid || operation || automationRunning) return { status: 'deferred' };
@@ -752,7 +879,7 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                 };
                 automationRunning = true;
                 lastAutomationAt = now();
-                let cachedState, cachedBook;
+                let cachedState;
                 const readState = async () => cachedState || (cachedState = await snapshot(false, true));
                 try {
                     const attempt = async (payload, key = ACTION_SWITCH[payload.action]) => {
@@ -761,7 +888,7 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                         // Mark before sending, including uncertain failures: never replay a write
                         // merely because a slice yielded. The action still performs live validation.
                         progress.done.add(id); advanced = true; actionCount++;
-                        cachedState = null; cachedBook = null;
+                        cachedState = null;
                         try {
                             const result = await action(payload, key);
                             if (result?.status) cachedState = result.status;
@@ -771,8 +898,7 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                     const automationService = {
                         action: (...args) => this.action(...args),
                         getStatus: readState,
-                        getResource: async resource => resource === 'illustrated'
-                            ? cachedBook || (cachedBook = await this.getResource(resource)) : this.getResource(resource),
+                        getResource: (resource, options) => this.getResource(resource, options),
                     };
                     const state = group === 'farm' || group === 'all' ? await readState() : { ranches: [], orders: [] };
                     for (const ranch of state.ranches || []) {
@@ -806,21 +932,35 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                         } catch (err) { log('牧场', `自动任务领奖查询失败：${err.message}`, { scene: 'ranch', module: ranchOperationModule('claimTask'), event: 'claimTask', result: 'error' }); }
                     }
                     if (alive() && runSettings().autoClaimIllustrated) {
-                        try { const book = await automationService.getResource('illustrated'); if (book.hasClaimableReward && runSettings().autoClaimIllustrated) await attempt({ action: 'claimIllustrated' }); }
+                        try {
+                            const claimable = await automationService.getResource('illustratedClaimStatus');
+                            if (claimable && runSettings().autoClaimIllustrated) await attempt({ action: 'claimIllustrated' });
+                        }
                         catch (err) { log('牧场', `自动图鉴查询失败：${err.message}`, { scene: 'ranch', module: ranchOperationModule('claimIllustrated'), event: 'claimIllustrated', result: 'error' }); }
                     }
                     if (alive() && runSettings().autoClaimWeight) {
                         try {
-                            const book = await automationService.getResource('illustrated');
-                            for (const level of book.weightScore?.levels || []) {
+                            const levels = await automationService.getResource('weightClaimStatus');
+                            for (const level of levels) {
                                 if (!alive() || !runSettings().autoClaimWeight) break;
-                                if (level.canClaim && !level.claimed) await attempt({ action: 'claimWeight', id: level.id });
+                                if (level.can_claim && !level.claimed) await attempt({ action: 'claimWeight', id: level.id });
                             }
                         } catch (err) { log('牧场', `自动重量积分查询失败：${err.message}`, { scene: 'ranch', module: ranchOperationModule('claimWeight'), event: 'claimWeight', result: 'error' }); }
                     }
                     await runRanchExtraAutomation({
                         service: automationService, attempt, continuation: progress, hasCompleted: (payload, key) => progress.done.has(identity(payload, key)), onLimit: () => { yielded = true; }, settings: runSettings, policy: () => normalizePolicy(getSettings().ranch_policy),
                         alive, goodsMap, accountId: getUserState().gid, now,
+                        readFriendRoster: async () => {
+                            const roster = await automationService.getResource('friends', {
+                                rosterScan: progress.friendRoster ||= {},
+                                rosterCheckpoint: completedRead => {
+                                    if (completedRead) advanced = true;
+                                    return alive();
+                                },
+                            });
+                            if (roster) { advanced = true; alive(); }
+                            return roster;
+                        },
                         getCursor: () => friendCursors[group], setCursor: value => { friendCursors[group] = value; },
                         now, maturityPlan: group === 'steal' || (group === 'all' && p.mode === 'simple') ? maturityPlan : null,
                         logError: err => log('牧场', `自动任务查询失败：${err.message}`, { scene: 'ranch', module: 'ranch', event: 'automation', trigger: 'automatic', result: 'error' }),

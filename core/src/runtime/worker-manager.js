@@ -36,6 +36,9 @@ function createWorkerManager(deps) {
     // 后调用 setPluginHost；新 worker 启动时据此下发插件清单）
     let pluginHostRef = deps.pluginHost || null;
 
+    // 插件系统暂时关闭（默认 false）：不下发插件清单，worker 侧不加载任何插件后端
+    const { PLUGIN_SYSTEM_ENABLED } = require('../plugins/feature-flag');
+
     const scheduler = createScheduler('worker_manager');
     // 连接网关：开启后连接由独立子进程持有，重启 worker 不会掉线、不用重新抓码
     const gatewayManager = createGatewayManager({ fork, log: (scope, message) => log('系统', `[${scope}] ${message}`) });
@@ -44,6 +47,7 @@ function createWorkerManager(deps) {
     const credentialRefreshes = new Map();
     const permitQueue = [];
     const activePermits = new Map();
+    let workerGeneration = 0;
     const WATCHDOG_PING_MS = 30000;
     const WATCHDOG_TIMEOUT_MS = 180000;
     const DEFAULT_API_TIMEOUT_MS = 10000;
@@ -91,14 +95,36 @@ function createWorkerManager(deps) {
         }
     }
 
-    function releaseAccountPermits(accountId) {
+    function permitKey(accountId, generation, token) {
+        return `${accountId}:${generation}:${String(token || '')}`;
+    }
+
+    function releaseWorkerPermits(accountId, wrk) {
+        if (!wrk) return;
         for (let i = permitQueue.length - 1; i >= 0; i -= 1) {
-            if (String(permitQueue[i].accountId) === String(accountId)) permitQueue.splice(i, 1);
+            const request = permitQueue[i];
+            if (String(request.accountId) === String(accountId) && request.generation === wrk.generation) {
+                permitQueue.splice(i, 1);
+            }
         }
         for (const [token, request] of activePermits.entries()) {
-            if (String(request.accountId) === String(accountId)) activePermits.delete(token);
+            if (String(request.accountId) === String(accountId) && request.generation === wrk.generation) {
+                activePermits.delete(token);
+            }
         }
         drainPermitQueue();
+    }
+
+    function retireWorker(accountId, wrk, reason = 'Worker exited') {
+        if (!wrk) return;
+        releaseWorkerPermits(accountId, wrk);
+        if (wrk.requests) {
+            for (const [reqId, pending] of wrk.requests.entries()) {
+                scheduler.clear(`api_timeout_${accountId}_${wrk.generation}_${reqId}`);
+                try { pending.reject(new Error(reason)); } catch { }
+            }
+            wrk.requests.clear();
+        }
     }
 
     function cleanText(value) {
@@ -117,6 +143,10 @@ function createWorkerManager(deps) {
         }
     }
 
+    function isCurrentWorker(accountId, wrk) {
+        return !!wrk && workers[accountId]?.process === wrk.process;
+    }
+
     function isWorkerConnected(accountId) {
         const current = workers[accountId];
         if (!current || current.stopping) return false;
@@ -130,6 +160,7 @@ function createWorkerManager(deps) {
         const offlineMs = wrk.disconnectedSince ? Date.now() - wrk.disconnectedSince : 0;
 
         const sendReminder = () => {
+            if (!isCurrentWorker(accountId, wrk)) return;
             triggerOfflineReminder({
                 accountId,
                 accountName: wrk.name,
@@ -137,6 +168,7 @@ function createWorkerManager(deps) {
                 reason: normalizedReason,
                 offlineMs
             });
+            if (!isCurrentWorker(accountId, wrk)) return;
             if (action && message) {
                 addAccountLog(action, message, accountId, wrk.name, { reason: normalizedReason });
             }
@@ -152,8 +184,9 @@ function createWorkerManager(deps) {
                 reason: normalizedReason
             });
             const cancelReminder = (note) => {
+                if (!isCurrentWorker(accountId, wrk)) return;
                 const current = workers[accountId];
-                if (current) current.offlineReminderTriggered = false;
+                current.offlineReminderTriggered = false;
                 log('系统', `微信账号 ${wrk.name} 已自动恢复在线，撤销下线提醒`, {
                     accountId: String(accountId),
                     accountName: wrk.name,
@@ -369,8 +402,10 @@ function createWorkerManager(deps) {
         }
 
         // 注册 Worker 记录
+        const generation = ++workerGeneration;
         workers[account.id] = {
             process: proc,
+            generation,
             status: null,
             logs: [],
             requests: new Map(),
@@ -403,17 +438,19 @@ function createWorkerManager(deps) {
                 type: 'config_sync',
                 config: buildConfigSnapshotForAccount(account.id)
             });
-            // 下发已启用的活动插件清单，worker 据此加载插件后端
-            proc.send({ type: 'plugin_sync', plugins: pluginHostRef ? pluginHostRef.listForWorkerSync() : [] });
+            // 下发已启用的活动插件清单，worker 据此加载插件后端（插件系统关闭时恒为空）
+            proc.send({ type: 'plugin_sync', plugins: PLUGIN_SYSTEM_ENABLED && pluginHostRef ? pluginHostRef.listForWorkerSync() : [] });
         } catch { }
 
         // 监听 Worker 消息
         proc.on('message', (msg) => {
-            handleWorkerMessage(account.id, msg);
+            handleWorkerMessage(account.id, proc, msg);
         });
 
         // 监听 Worker 错误
         proc.on('error', (err) => {
+            const current = workers[account.id];
+            if (!current || current.process !== proc) return;
             log('系统', `账号 ${  account.name  } 子进程启动失败: ${ 
                 err && err.message ? err.message : err}`, {
                 accountId: String(account.id),
@@ -424,7 +461,11 @@ function createWorkerManager(deps) {
         // 监听 Worker 退出
         proc.on('exit', (code, signal) => {
             const wrk = workers[account.id];
-            const displayName = wrk && wrk.name ? wrk.name : account.name;
+            if (!wrk || wrk.process !== proc) {
+                // 旧代退出不能清理当前代的定时器、请求、许可或离线状态。
+                return;
+            }
+            const displayName = wrk.name ? wrk.name : account.name;
 
             log('系统', `账号 ${  displayName  } 进程退出 (code=${  code 
                 }, signal=${  signal || 'none'  })`, {
@@ -433,7 +474,7 @@ function createWorkerManager(deps) {
                 runtimeMode: threadMode ? 'thread' : 'fork'
             });
 
-            if (wrk && !wrk.stopping) {
+            if (!wrk.stopping) {
                 const reason = `worker_exit:code=${code == null ? 'unknown' : code},signal=${signal || 'none'}`;
                 notifyAbnormalOffline(account.id, wrk, reason, 'worker_unexpected_exit',
                     `账号 ${displayName} 异常掉线（Worker 进程意外退出）`);
@@ -441,20 +482,8 @@ function createWorkerManager(deps) {
 
             scheduler.clear(`force_kill_${  account.id}`);
             scheduler.clear(`restart_fallback_${  account.id}`);
-            releaseAccountPermits(account.id);
-
-            // 清理所有未完成的 API 请求
-            if (wrk && wrk.requests && wrk.requests.size > 0) {
-                for (const [reqId, pending] of wrk.requests.entries()) {
-                    scheduler.clear(`api_timeout_${  account.id  }_${  reqId}`);
-                    try { pending.reject(new Error('Worker exited')); } catch { }
-                }
-                wrk.requests.clear();
-            }
-
-            if (wrk && wrk.process === proc) {
-                delete workers[account.id];
-            }
+            retireWorker(account.id, wrk);
+            delete workers[account.id];
         });
 
         return true;
@@ -532,6 +561,7 @@ function createWorkerManager(deps) {
             const current = workers[accountId];
             if (current && current.process === targetProc) {
                 current.process.kill();
+                retireWorker(accountId, current, 'Worker stopped');
                 delete workers[accountId];
             }
         });
@@ -576,6 +606,7 @@ function createWorkerManager(deps) {
             if (!current) return startWorker(account);
             if (current.process !== targetProc) return;
 
+            retireWorker(accountId, current, 'Worker restarted');
             delete workers[accountId];
             startWorker(account);
         };
@@ -584,6 +615,7 @@ function createWorkerManager(deps) {
             const current = workers[accountId];
             if (!current || current.process !== targetProc) return false;
             try { current.process.kill(); } catch { }
+            retireWorker(accountId, current, 'Worker restarted');
             delete workers[accountId];
             return true;
         };
@@ -608,16 +640,16 @@ function createWorkerManager(deps) {
     /**
      * 处理 Worker 消息
      */
-    function handleWorkerMessage(accountId, msg) {
+    function handleWorkerMessage(accountId, proc, msg) {
         const wrk = workers[accountId];
-        if (!wrk) return;
+        if (!wrk || wrk.process !== proc) return;
 
         if (msg.type === 'task_permit_request') {
-            const token = `${accountId}:${String(msg.token || '')}`;
-            permitQueue.push({ accountId, token, proc: wrk.process, requestedAt: Date.now() });
+            const token = permitKey(accountId, wrk.generation, msg.token);
+            permitQueue.push({ accountId, token, proc, generation: wrk.generation, requestedAt: Date.now() });
             drainPermitQueue();
         } else if (msg.type === 'task_permit_release') {
-            activePermits.delete(`${accountId}:${String(msg.token || '')}`);
+            activePermits.delete(permitKey(accountId, wrk.generation, msg.token));
             drainPermitQueue();
         } else if (msg.type === 'qq_code_consumed') {
             if (wrk) wrk.codeConsumedAt = Date.now();
@@ -761,15 +793,23 @@ function createWorkerManager(deps) {
                 resetLoginSince(accountId);
                     wrk.stopping = true;
                     stopWorker(accountId);
-                } else if (typeof refreshAccountCode === 'function' && !credentialRefreshes.has(accountId)) {
-                    const task = Promise.resolve(refreshAccountCode(accountId, 'ws_400'))
-                        .then(ok => {
-                            if (!ok && typeof scheduleAutoRelogin === 'function') {
-                                scheduleAutoRelogin(accountId, 'ws_400_refresh_failed');
-                            }
-                        })
-                        .finally(() => credentialRefreshes.delete(accountId));
-                    credentialRefreshes.set(accountId, task);
+                } else if (typeof refreshAccountCode === 'function') {
+                    const existingRefresh = credentialRefreshes.get(accountId);
+                    if (existingRefresh?.proc !== proc) {
+                        const task = Promise.resolve(refreshAccountCode(accountId, 'ws_400'))
+                            .then(ok => {
+                                if (!isCurrentWorker(accountId, wrk)) return;
+                                if (!ok && typeof scheduleAutoRelogin === 'function') {
+                                    scheduleAutoRelogin(accountId, 'ws_400_refresh_failed');
+                                }
+                            })
+                            .finally(() => {
+                                if (credentialRefreshes.get(accountId)?.task === task) {
+                                    credentialRefreshes.delete(accountId);
+                                }
+                            });
+                        credentialRefreshes.set(accountId, { proc, task });
+                    }
                 }
             }
         } else if (msg.type === 'watchdog_pong') {
@@ -860,7 +900,7 @@ function createWorkerManager(deps) {
         } else if (msg.type === 'api_response') {
             // API 响应
             const { id, result, error } = msg;
-            scheduler.clear(`api_timeout_${  accountId  }_${  id}`);
+            scheduler.clear(`api_timeout_${  accountId  }_${  wrk.generation  }_${  id}`);
 
             const pending = wrk.requests.get(id);
             if (pending) {
@@ -980,7 +1020,7 @@ function createWorkerManager(deps) {
             wrk.requests.set(reqId, { resolve, reject });
 
             // API 超时保护
-            scheduler.setTimeoutTask(`api_timeout_${  accountId  }_${  reqId}`, timeoutMs, () => {
+            scheduler.setTimeoutTask(`api_timeout_${  accountId  }_${  wrk.generation  }_${  reqId}`, timeoutMs, () => {
                 if (wrk.requests.has(reqId)) {
                     wrk.requests.delete(reqId);
                     reject(new Error('API Timeout'));

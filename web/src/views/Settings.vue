@@ -230,17 +230,38 @@ function buildCurrentAccountConfig() {
   }
 }
 
-async function saveCurrentAccountSettings(_module?: string, quiet = false) {
-  if (!currentAccountId.value || accountSettingsSaving.value)
+async function saveCurrentAccountSettings(_module?: string, quiet = false, automationPatch?: Record<string, unknown>) {
+  const accountId = String(currentAccountId.value || '')
+  if (!accountId || accountSettingsSaving.value)
     return
   accountSettingsSaving.value = true
   try {
-    const result = await settingStore.saveSettings(String(currentAccountId.value), buildCurrentAccountConfig())
+    if (automationPatch) {
+      if (!Object.keys(automationPatch).length)
+        return
+      const { data } = await api.post('/api/automation', automationPatch, { headers: { 'x-account-id': accountId } })
+      if (!data?.ok)
+        throw new Error(data?.error || '保存失败')
+      if (String(currentAccountId.value || '') === accountId)
+        window.dispatchEvent(new CustomEvent('automation-updated', { detail: { accountId, automation: automationPatch } }))
+      return
+    }
+    const draft = buildCurrentAccountConfig()
+    // RanchSettings owns these keys; a stale farm draft must not overwrite them.
+    const config = {
+      ...draft,
+      automation: Object.fromEntries(
+        Object.entries(draft.automation || {}).filter(([key]) => !key.startsWith('ranch_') && key !== 'share_claim_daily'),
+      ),
+    }
+    const result = await settingStore.saveSettings(accountId, config)
     if (!result.ok)
       throw new Error(result.error || '保存失败')
-    window.dispatchEvent(new CustomEvent('automation-updated', { detail: { accountId: currentAccountId.value, automation: { ...localAutomationSettings.value.automation } } }))
-    if (!quiet)
-      showAlert('账号设置已保存')
+    if (String(currentAccountId.value || '') === accountId) {
+      window.dispatchEvent(new CustomEvent('automation-updated', { detail: { accountId, automation: { ...config.automation } } }))
+      if (!quiet)
+        showAlert('账号设置已保存')
+    }
   }
   catch (error: any) {
     showAlert(error.response?.data?.error || error.message || '账号设置保存失败', 'danger')
@@ -445,25 +466,44 @@ onMounted(async () => {
         <div v-else-if="activeTab === 'account-config'" class="space-y-6">
           <section class="space-y-4" aria-labelledby="farm-settings-title">
             <h2 id="farm-settings-title" class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100"><span class="i-carbon-sprout text-[var(--theme-primary)]" />农场</h2>
-        <AccountFeatureSettings
-          v-model:strategy="localStrategySettings"
-          v-model:automation="localAutomationSettings"
-          :current-account-name="currentAccountName"
-          :current-account-id="currentAccountId"
-          :loading="settingsLoading"
-          :saving="accountSettingsSaving"
-          :is-readonly="!isCurrentAccountEditable"
-          :planting-strategy-options="plantingStrategyOptions"
-          :bag-fallback-strategy-options="bagFallbackStrategyOptions"
-          :strategy-preview-label="strategyPreviewLabel"
-          :fertilizer-land-type-options="fertilizerLandTypeOptions"
-          :fertilizer-options="fertilizerOptions"
-          @save="saveCurrentAccountSettings"
-        />
+            <AccountFeatureSettings
+              v-model:strategy="localStrategySettings"
+              v-model:automation="localAutomationSettings"
+              :current-account-name="currentAccountName"
+              :current-account-id="currentAccountId"
+              :loading="settingsLoading"
+              :saving="accountSettingsSaving"
+              :is-readonly="!isCurrentAccountEditable"
+              :planting-strategy-options="plantingStrategyOptions"
+              :bag-fallback-strategy-options="bagFallbackStrategyOptions"
+              :strategy-preview-label="strategyPreviewLabel"
+              :fertilizer-land-type-options="fertilizerLandTypeOptions"
+              :fertilizer-options="fertilizerOptions"
+              @save="saveCurrentAccountSettings"
+            />
           </section>
           <section class="space-y-4" aria-labelledby="ranch-settings-title">
             <h2 id="ranch-settings-title" class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100"><span class="i-carbon-wheat text-[var(--theme-primary)]" />牧场</h2>
             <RanchSettings :readonly="!isCurrentAccountEditable" />
+          </section>
+          <section class="space-y-4" aria-labelledby="event-settings-title">
+            <h2 id="event-settings-title" class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100"><span class="i-carbon-events text-[var(--theme-primary)]" />活动</h2>
+            <AccountFeatureSettings
+              section="events"
+              v-model:strategy="localStrategySettings"
+              v-model:automation="localAutomationSettings"
+              :current-account-name="currentAccountName"
+              :current-account-id="currentAccountId"
+              :loading="settingsLoading"
+              :saving="accountSettingsSaving"
+              :is-readonly="!isCurrentAccountEditable"
+              :planting-strategy-options="plantingStrategyOptions"
+              :bag-fallback-strategy-options="bagFallbackStrategyOptions"
+              :strategy-preview-label="strategyPreviewLabel"
+              :fertilizer-land-type-options="fertilizerLandTypeOptions"
+              :fertilizer-options="fertilizerOptions"
+              @save="saveCurrentAccountSettings"
+            />
           </section>
         </div>
 

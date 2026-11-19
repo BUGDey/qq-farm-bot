@@ -15,34 +15,25 @@ function readAll() {
     return readJsonFile(STATE_FILE(), () => ({})) || {};
 }
 
-/**
- * 返回 { shouldClaim, reason, state }。
- * state 是"如果这次真的领取成功应当落盘的状态"，由调用方在确认领取/今日已领后 confirm()。
- * 领取失败时不确认，下一次巡查会在同一窗口内重试（服务端 available 仍是最终防重复闸门）。
- */
+// Completion and purchase dispatch are separate: an unconfirmed dispatch allows
+// later status reads, but must not authorize another purchase in the same window.
 function plan({ enabled, accountId, now = Date.now(), all = readAll() } = {}) {
-    const key = accountKey(accountId);
-    const state = { ...(all[key] || {}) };
+    const { attempts, ...state } = all[accountKey(accountId)] || {};
+    if (!enabled) return { shouldClaim: false, reason: 'disabled', state: { ...state, enabledBefore: false }, changed: state.enabledBefore === true };
     const today = dateKey(now);
     const minute = minuteOfDay(now);
-    if (!enabled) {
-        state.enabledBefore = false;
-        return { shouldClaim: false, reason: 'disabled', state };
-    }
+    const window = minute < 60 ? 'midnight' : minute >= 690 && minute < 750 ? 'noon' : 'first-enable';
+    const dateField = window === 'first-enable' ? null : `${window}Date`;
+    const reason = state.enabledBefore !== true ? 'first-enable' : dateField && state[dateField] !== today ? window : 'idle';
     const armed = { ...state, enabledBefore: true };
-    // 首次开启：从关闭切成开启后立刻执行一次。
-    if (state.enabledBefore !== true) return { shouldClaim: true, reason: 'first-enable', state: armed };
-    // 每日凌晨窗口 00:00–00:59，每天最多一次。
-    if (minute < 60 && state.midnightDate !== today) return { shouldClaim: true, reason: 'midnight', state: { ...armed, midnightDate: today } };
-    // 中午补领窗口 11:30–12:29，每天最多一次。
-    if (minute >= 690 && minute < 750 && state.noonDate !== today) return { shouldClaim: true, reason: 'noon', state: { ...armed, noonDate: today } };
-    return { shouldClaim: false, reason: 'idle', state: armed };
+    if (reason === 'idle') return { shouldClaim: false, reason, state: armed };
+    if (dateField) armed[dateField] = today;
+    return { shouldClaim: true, reason, state: armed, window, readOnly: attempts?.[window] === today };
 }
 
-function confirm({ accountId, state }) {
+function save(all, key, patch) {
     try {
-        const all = readAll();
-        all[accountKey(accountId)] = { ...state };
+        all[key] = { ...all[key], ...patch };
         writeJsonFileAtomic(STATE_FILE(), all, 2);
         return true;
     } catch {
@@ -50,8 +41,27 @@ function confirm({ accountId, state }) {
     }
 }
 
+function confirm({ accountId, state }) {
+    return save(readAll(), accountKey(accountId), state);
+}
+
+function observeDisabled({ accountId, now }) {
+    const all = readAll();
+    const decision = plan({ enabled: false, accountId, now, all });
+    if (decision.changed) return save(all, accountKey(accountId), decision.state);
+    return true;
+}
+
+function markAttempt({ accountId, now }) {
+    const key = accountKey(accountId);
+    const all = readAll();
+    const decision = plan({ enabled: true, accountId, now, all });
+    if (!decision.shouldClaim || decision.readOnly) return false;
+    return save(all, key, { attempts: { ...all[key]?.attempts, [decision.window]: dateKey(now) } });
+}
+
 function getState(accountId) {
     return readAll()[accountKey(accountId)] || {};
 }
 
-module.exports = { plan, confirm, getState, accountKey, dateKey, minuteOfDay };
+module.exports = { plan, confirm, observeDisabled, markAttempt, getState, accountKey, dateKey, minuteOfDay };

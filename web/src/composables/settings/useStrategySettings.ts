@@ -140,6 +140,8 @@ export function useStrategySettings({
     if (currentAccountId.value) {
       const accountId = String(currentAccountId.value)
       await settingStore.fetchSettings(accountId)
+      if (String(currentAccountId.value || '') !== accountId)
+        return
       syncLocalStrategySettings()
       await farmStore.fetchSeeds(accountId)
     }
