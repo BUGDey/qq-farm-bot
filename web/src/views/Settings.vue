@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/api'
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -17,8 +17,9 @@ import { useStrategySettings } from '@/composables/settings/useStrategySettings'
 import { useUserSettings } from '@/composables/settings/useUserSettings'
 import { useSettingStore } from '@/stores/setting'
 import { useUserStore } from '@/stores/user'
-import AdminPanel from '@/views/AdminPanel.vue'
-import RenewalPanel from '@/views/Renewal.vue'
+
+const AdminPanel = defineAsyncComponent(() => import('@/views/AdminPanel.vue'))
+const RenewalPanel = defineAsyncComponent(() => import('@/views/Renewal.vue'))
 
 const settingStore = useSettingStore()
 const userStore = useUserStore()
@@ -211,6 +212,7 @@ const {
   bagFallbackStrategyOptions,
   strategyPreviewLabel,
   loadStrategyData,
+  loadStrategyPreview,
   resetStrategyState,
 } = useStrategySettings({
   currentAccountId,
@@ -220,6 +222,35 @@ const {
 
 const accountSettingsSaving = ref(false)
 const autoCodeRefreshSaving = ref(false)
+const loadedAccountId = ref('')
+const accountConfigError = ref('')
+const accountConfigReady = computed(() => !!loadedAccountId.value && loadedAccountId.value === String(currentAccountId.value || ''))
+let accountConfigRequest: AbortController | undefined
+
+async function loadAccountConfig() {
+  accountConfigRequest?.abort()
+  loadedAccountId.value = ''
+  accountConfigError.value = ''
+  settingStore.clearSettingsState()
+  resetStrategyState()
+  const accountId = String(currentAccountId.value || '')
+  if (!accountId)
+    return
+  const request = new AbortController()
+  accountConfigRequest = request
+  try {
+    const loaded = await loadStrategyData(accountId, request.signal)
+    if (!loaded || request.signal.aborted || String(currentAccountId.value || '') !== accountId)
+      return
+    syncLocalAutomationSettings()
+    syncLocalOfflineSettings()
+    loadedAccountId.value = accountId
+  }
+  catch (error: any) {
+    if (!request.signal.aborted && String(currentAccountId.value || '') === accountId)
+      accountConfigError.value = error.response?.data?.error || error.message || '读取账号设置失败'
+  }
+}
 
 function buildCurrentAccountConfig() {
   return {
@@ -232,7 +263,7 @@ function buildCurrentAccountConfig() {
 
 async function saveCurrentAccountSettings(_module?: string, quiet = false, automationPatch?: Record<string, unknown>) {
   const accountId = String(currentAccountId.value || '')
-  if (!accountId || accountSettingsSaving.value)
+  if (!accountId || !accountConfigReady.value || !isCurrentAccountEditable.value || accountSettingsSaving.value)
     return
   accountSettingsSaving.value = true
   try {
@@ -272,7 +303,7 @@ async function saveCurrentAccountSettings(_module?: string, quiet = false, autom
 }
 
 async function saveAutoCodeRefreshSettings() {
-  if (!currentAccountId.value || autoCodeRefreshSaving.value)
+  if (!accountConfigReady.value || autoCodeRefreshSaving.value)
     return
   autoCodeRefreshSaving.value = true
   try {
@@ -306,10 +337,7 @@ async function applyDefaultPlan(account: any) {
     if (!data?.ok)
       throw new Error(data?.error || '应用失败')
     if (String(currentAccountId.value || '') === accountId) {
-      settingStore.clearSettingsState()
-      resetStrategyState()
-      await loadStrategyData()
-      syncLocalAutomationSettings()
+      await loadAccountConfig()
     }
     showAlert(`已将默认方案应用到 ${account.name || account.id}`)
   }
@@ -363,27 +391,23 @@ function confirmDefaultPlanOperation() {
     void applyDefaultPlan(pending.account)
 }
 
-watch(currentAccountId, async () => {
-  settingStore.clearSettingsState()
-  resetStrategyState()
-  if (currentAccountId.value) {
-    await loadStrategyData()
-    syncLocalAutomationSettings()
-    syncLocalOfflineSettings()
-  }
-})
+watch(currentAccountId, () => { void loadAccountConfig() }, { immediate: true })
+watch([activeTab, loadedAccountId], ([tab, accountId]) => {
+  const signal = accountConfigRequest?.signal
+  if (tab === 'account-config' && accountConfigReady.value && signal && !signal.aborted)
+    void loadStrategyPreview(accountId, signal)
+}, { immediate: true })
+onUnmounted(() => accountConfigRequest?.abort())
+
+watch(activeTab, (tab) => {
+  if (tab === 'notification')
+    void refreshGlobalMailer()
+}, { immediate: true })
 
 onMounted(async () => {
+  void scrollActiveTabIntoView()
   await fetchAccounts()
   selectFirstAccountIfNeeded()
-  if (currentAccountId.value) {
-    await loadStrategyData()
-    syncLocalAutomationSettings()
-    syncLocalOfflineSettings()
-  }
-  // 全局邮件服务是否可用与账号无关：无论有没有选中账号都问一次
-  await refreshGlobalMailer()
-  await scrollActiveTabIntoView()
 })
 </script>
 
@@ -464,14 +488,18 @@ onMounted(async () => {
         />
 
         <div v-else-if="activeTab === 'account-config'" class="space-y-6">
-          <section class="space-y-4" aria-labelledby="farm-settings-title">
+          <div v-if="accountConfigError" class="ui-card flex flex-wrap items-center justify-between gap-3 p-4" role="alert">
+            <span>账号配置读取失败：{{ accountConfigError }}</span>
+            <BaseButton size="sm" variant="secondary" @click="loadAccountConfig">重新读取</BaseButton>
+          </div>
+          <section v-if="!accountConfigError" class="space-y-4" aria-labelledby="farm-settings-title">
             <h2 id="farm-settings-title" class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100"><span class="i-carbon-sprout text-[var(--theme-primary)]" />农场</h2>
             <AccountFeatureSettings
               v-model:strategy="localStrategySettings"
               v-model:automation="localAutomationSettings"
               :current-account-name="currentAccountName"
               :current-account-id="currentAccountId"
-              :loading="settingsLoading"
+              :loading="!!currentAccountId && !accountConfigReady"
               :saving="accountSettingsSaving"
               :is-readonly="!isCurrentAccountEditable"
               :planting-strategy-options="plantingStrategyOptions"
@@ -486,7 +514,7 @@ onMounted(async () => {
             <h2 id="ranch-settings-title" class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100"><span class="i-carbon-wheat text-[var(--theme-primary)]" />牧场</h2>
             <RanchSettings :readonly="!isCurrentAccountEditable" />
           </section>
-          <section class="space-y-4" aria-labelledby="event-settings-title">
+          <section v-if="!accountConfigError" class="space-y-4" aria-labelledby="event-settings-title">
             <h2 id="event-settings-title" class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100"><span class="i-carbon-events text-[var(--theme-primary)]" />活动</h2>
             <AccountFeatureSettings
               section="events"
@@ -494,7 +522,7 @@ onMounted(async () => {
               v-model:automation="localAutomationSettings"
               :current-account-name="currentAccountName"
               :current-account-id="currentAccountId"
-              :loading="settingsLoading"
+              :loading="!!currentAccountId && !accountConfigReady"
               :saving="accountSettingsSaving"
               :is-readonly="!isCurrentAccountEditable"
               :planting-strategy-options="plantingStrategyOptions"

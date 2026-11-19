@@ -41,10 +41,18 @@ flowchart TB
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
     BU --> BV[2026-11-18 · v2.18.1<br/>NapCat 拉取中断与测速修复] --> BW[2026-11-18 · v2.18.2<br/>入栏确认与仓库满修复] --> BX[2026-11-18 · v2.18.3<br/>巡查倒计时与启动权限修复]
     BX --> BY[2026-11-18 · v2.18.4<br/>Alpine 软件源修复] --> BZ[2026-11-19 · v2.18.5<br/>自动策略分类与牧场稳定性] --> CA[2026-11-19 · v2.18.6<br/>牧草补草修复与面板性能优化]
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV,AW,AX,AY,AZ,BA,BB,BC,BD,BE,BF,BG,BH,BI,BJ,BK,BL,BM,BN,BO,BP,BQ,BR,BS,BT,BU,BV,BW,BX,BY,BZ,CA seed;
+    CA --> CB[2026-11-20 · v2.18.7<br/>账号设置加载与保存优化]
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV,AW,AX,AY,AZ,BA,BB,BC,BD,BE,BF,BG,BH,BI,BJ,BK,BL,BM,BN,BO,BP,BQ,BR,BS,BT,BU,BV,BW,BX,BY,BZ,CA,CB seed;
 ```
 
 ## 详细记录
+
+### v2.18.7 · 账号设置加载与保存优化（2026-11-20）
+
+- 账号配置读取与选种预览分离，配置返回即可编辑，预览失败不阻塞设置。移除挂载与监听重复触发的读取。
+- 切换账号取消旧请求并校验结果归属；读取失败显示重试入口，未加载完成时阻止保存。
+- 管理与续费页面按需加载，全局邮件可用状态只在进入通知页时查询。
+- 模块开关只提交本次修改的键，保留原有分模块保存；保存过程不再将配置表单整体切换成加载状态。
 
 ### v2.18.6 · 牧草补草修复与面板性能优化（2026-11-19）
 

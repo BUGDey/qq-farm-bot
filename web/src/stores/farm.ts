@@ -68,17 +68,20 @@ export const useFarmStore = defineStore('farm', () => {
     }
   }
 
-  async function fetchSeeds(accountId: string) {
+  async function fetchSeeds(accountId: string, signal?: AbortSignal) {
     if (!accountId)
       return
     const requestedId = String(accountId)
     const { data } = await api.get('/api/seeds', {
       headers: { 'x-account-id': accountId },
+      signal,
     })
-    if (!isCurrentAccount(requestedId))
+    if (signal?.aborted || !isCurrentAccount(requestedId))
       return
-    if (data && data.ok)
+    if (data?.ok) {
       seeds.value = data.data || []
+      return true
+    }
   }
 
   async function fetchDogSkillGiftStatus(accountId: string) {

@@ -66,9 +66,15 @@ export function useStrategySettings({
   let strategyPreviewRequestId = 0
 
   const strategyPreviewLabel = ref<string | null>(null)
+  const previewAccountId = ref('')
 
-  watchEffect(async () => {
+  watchEffect(async (onCleanup) => {
     const requestId = ++strategyPreviewRequestId
+    const accountId = String(currentAccountId.value || '')
+    if (!accountId || previewAccountId.value !== accountId) {
+      strategyPreviewLabel.value = null
+      return
+    }
     let strategy = localStrategySettings.value.plantingStrategy
     if (strategy === 'bag_priority' || strategy === 'task_priority') {
       strategy = localStrategySettings.value.bagSeedFallbackStrategy || 'level'
@@ -90,16 +96,13 @@ export function useStrategySettings({
     const sortBy = analyticsSortByMap[strategy]
     if (sortBy) {
       try {
-        const accountId = currentAccountId.value
-        if (!accountId) {
-          strategyPreviewLabel.value = null
-          return
-        }
-        const requestedId = String(accountId)
+        const controller = new AbortController()
+        onCleanup(() => controller.abort())
         const res = await api.get(`/api/analytics?sort=${sortBy}`, {
           headers: { 'x-account-id': accountId },
+          signal: controller.signal,
         })
-        if (requestId !== strategyPreviewRequestId || String(currentAccountId.value || '') !== requestedId)
+        if (controller.signal.aborted || requestId !== strategyPreviewRequestId || String(currentAccountId.value || '') !== accountId)
           return
         const rankings: any[] = res.data.ok ? (res.data.data || []) : []
         const availableIds = new Set(available.map(s => s.seedId))
@@ -136,14 +139,22 @@ export function useStrategySettings({
     }
   }
 
-  async function loadStrategyData() {
-    if (currentAccountId.value) {
-      const accountId = String(currentAccountId.value)
-      await settingStore.fetchSettings(accountId)
-      if (String(currentAccountId.value || '') !== accountId)
-        return
-      syncLocalStrategySettings()
-      await farmStore.fetchSeeds(accountId)
+  async function loadStrategyData(accountId: string, signal: AbortSignal) {
+    const loaded = await settingStore.fetchSettings(accountId, signal)
+    if (!loaded || signal.aborted || String(currentAccountId.value || '') !== accountId)
+      return false
+    syncLocalStrategySettings()
+    return true
+  }
+
+  async function loadStrategyPreview(accountId: string, signal: AbortSignal) {
+    try {
+      const loaded = await farmStore.fetchSeeds(accountId, signal)
+      if (loaded && !signal.aborted && String(currentAccountId.value || '') === accountId)
+        previewAccountId.value = accountId
+    }
+    catch {
+      // 选种预览不可用时也应能继续编辑账号设置。
     }
   }
 
@@ -172,6 +183,8 @@ export function useStrategySettings({
   }
 
   function resetStrategyState() {
+    previewAccountId.value = ''
+    strategyPreviewRequestId++
     strategyPreviewLabel.value = null
   }
 
@@ -185,6 +198,7 @@ export function useStrategySettings({
     strategyPreviewLabel,
     syncLocalStrategySettings,
     loadStrategyData,
+    loadStrategyPreview,
     saveStrategySettings,
     resetStrategyState,
   }

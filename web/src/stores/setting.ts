@@ -253,7 +253,7 @@ export const useSettingStore = defineStore('setting', () => {
     loading.value = false
   }
 
-  async function fetchSettings(accountId: string) {
+  async function fetchSettings(accountId: string, signal?: AbortSignal) {
     if (!accountId)
       return
     const requestedId = String(accountId)
@@ -264,10 +264,13 @@ export const useSettingStore = defineStore('setting', () => {
     try {
       const { data } = await api.get('/api/settings', {
         headers: { 'x-account-id': accountId },
+        signal,
       })
-      if (requestId !== fetchRequestId || !isCurrentAccount(requestedId))
-        return
-      if (data && data.ok && data.data) {
+      if (signal?.aborted || requestId !== fetchRequestId || !isCurrentAccount(requestedId))
+        return false
+      if (!data?.ok || !data.data)
+        throw new Error(data?.error || '读取账号设置失败')
+      {
         const d = data.data
         settings.value.plantingStrategy = d.plantingStrategy || d.strategy || 'max_exp'
         settings.value.prioritize2x2Crops = d.prioritize2x2Crops === true
@@ -297,6 +300,7 @@ export const useSettingStore = defineStore('setting', () => {
         settings.value.bagSeedKnownIds = d.bagSeedKnownIds ?? []
         settings.value.bagSeedFallbackStrategy = d.bagSeedFallbackStrategy ?? 'level'
       }
+      return true
     }
     finally {
       if (requestId === fetchRequestId)

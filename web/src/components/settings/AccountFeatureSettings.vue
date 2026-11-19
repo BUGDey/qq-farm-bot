@@ -286,6 +286,9 @@ function moduleEnabled(key: ModuleKey) {
 }
 
 function setModuleEnabled(key: ModuleKey, enabled: boolean) {
+  if (props.saving || props.isReadonly)
+    return
+  const previous = { ...automation.value.automation }
   if (key === 'planting') {
     automation.value.automation.farm = enabled
   }
@@ -306,7 +309,9 @@ function setModuleEnabled(key: ModuleKey, enabled: boolean) {
   else {
     return
   }
-  emit('save', key, true)
+  const current = automation.value.automation
+  const patch = Object.fromEntries(Object.entries(current).filter(([name, value]) => value !== previous[name]))
+  emit('save', key, true, patch)
 }
 
 function isFertilizerLandSelected(value: string | number) {
