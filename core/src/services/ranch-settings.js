@@ -7,7 +7,7 @@ const SWITCHES = Object.freeze({
 const snake = v => v.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`);
 const SETTINGS_KEYS = Object.freeze(Object.fromEntries(Object.keys(SWITCHES).map(key => [key, `ranch_${snake(key)}`])));
 const ACTION_SWITCH = Object.freeze({ ...Object.fromEntries(Object.entries(SWITCHES).map(([k, v]) => [v === 'submitOrders' ? 'submitOrder' : v, k])), friendProduce: 'autoSteal' });
-const LIMITS = Object.freeze({ farmMin: [2, 1, 3600], farmMax: [5, 1, 3600], helpMin: [10, 1, 3600], helpMax: [15, 1, 3600], smartSeconds: [300, 30, 3600], friendBatchSize: [5, 1, 50], maxActionsPerRun: [20, 1, 100], sellKeepCount: [20, 0, 999999], sellMaxPerRun: [10, 1, 99999], canReserveCount: [10, 0, 99999], canMaxPerRun: [1, 1, 99], bucketTargetSeconds: [86400, 3600, 2592000], feedReserveCount: [0, 0, 999999], feedTargetCount: [100, 1, 999999], grassThresholdPercent: [20, 1, 100], goldReserve: [10000, 0, 999999999], poopReserve: [100, 0, 999999999], pineReserve: [100, 0, 999999999] });
+const LIMITS = Object.freeze({ farmMin: [2, 1, 3600], farmMax: [5, 1, 3600], helpMin: [10, 1, 3600], helpMax: [15, 1, 3600], smartSeconds: [300, 30, 3600], friendBatchSize: [5, 1, 50], maxActionsPerRun: [20, 1, 100], sellKeepCount: [20, 0, 999999], sellMaxPerRun: [10, 1, 99999], canReserveCount: [10, 0, 99999], canMaxPerRun: [1, 1, 99], bucketTargetSeconds: [86400, 3600, 2592000], feedReserveCount: [0, 0, 999999], feedTargetCount: [999999, 1, 999999], grassThresholdPercent: [20, 1, 100], goldReserve: [10000, 0, 999999999], poopReserve: [100, 0, 999999999], pineReserve: [100, 0, 999999999] });
 const LISTS = ['friendIncludeGids', 'friendExcludeGids', 'sellItemIds', 'canItemIds', 'cubItemIds'];
 function normalizePolicy(value = {}, strict = false) {
     const result = {};
@@ -54,7 +54,6 @@ function normalizePolicy(value = {}, strict = false) {
         result.canItemIds = options.canItems.map(i => i.id);
         result.cubItemIds = options.cubItems.map(i => i.id);
         result.sellKeepCount = 0; result.sellMaxPerRun = 99999; result.canReserveCount = 0;
-        result.feedTargetCount = 999999; result.feedReserveCount = 0;
         result.friendIncludeGids = []; result.friendExcludeGids = [];
         result.buyRules = []; result.exchangeRules = [];
     }

@@ -79,7 +79,10 @@ test('default plans preserve policy and account inheritance without sharing nest
 });
 
 test('saved policy survives a fresh process and old scalar fields are absent on disk', () => {
+  const policy = { mode: 'simple', grassThresholdPercent: 35, feedTargetCount: 432, feedReserveCount: 100 };
+  store.setAutomation('ranch_policy', policy, 'one');
   const expected = store.getAutomation('one').ranch_policy;
+  for (const [key, value] of Object.entries(policy)) assert.equal(expected[key], value, key);
   const disk = JSON.parse(fs.readFileSync(path.join(dataDir, 'store.json'), 'utf8'));
   assert.deepEqual(disk.accountConfigs.one.automation.ranch_policy, expected);
   for (const key of oldFields) assert.equal(Object.hasOwn(disk.accountConfigs.legacy, key), false, key);

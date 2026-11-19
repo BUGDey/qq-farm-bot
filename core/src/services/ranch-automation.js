@@ -6,6 +6,16 @@ const stock = (items, id, usable = false) => (items || []).filter(i => String(i.
 const cap = (...values) => Number(values.map(BigInt).reduce((a, b) => a < b ? a : b));
 const canConfig = new Map(CONFIG.MCCanConfig.map(c => [String(c.id), c]));
 const bucketId = can => can.feed_type === '有机罐头' ? '7004' : '7003';
+function maxGrassRefill(state, facility, policy) {
+    if (!facility?.feedMachine || state.sectionErrors?.warehouse) return 0;
+    const capacity = Number(facility.capacity);
+    const filled = Number(facility.feedMachine.feedCount);
+    if (!Number.isSafeInteger(capacity) || capacity <= 0 || !Number.isSafeInteger(filled) || filled < 0) return 0;
+    if (filled * 100 >= capacity * policy.grassThresholdPercent) return 0;
+    const surplus = stock(state.items, '7001', true) - BigInt(policy.feedReserveCount);
+    if (surplus <= 0n) return 0;
+    return cap(capacity - filled, policy.feedTargetCount, surplus);
+}
 function assertAutomationPolicy(input, p, { state, market, exchangeEnabled = false, simpleExchange = false } = {}) {
     const reject = () => { throw new Error('牧场自动策略已变化或超过库存/保留量/价格限制'); };
     if (['steal', 'friendProduce', 'help', 'stroke', 'putHazard'].includes(input.action)) {
@@ -19,7 +29,7 @@ function assertAutomationPolicy(input, p, { state, market, exchangeEnabled = fal
         if (!can || !p.canItemIds.includes(String(input.itemId)) || input.count > p.canMaxPerRun || stock(state.items, input.itemId, true) - BigInt(input.count) < BigInt(p.canReserveCount) || stock(state.items, bucketId(can)) + BigInt(input.count * can.speed_up_secs) > BigInt(p.bucketTargetSeconds)) reject();
     } else if (input.action === 'addFeed') {
         const machine = state.facilities.find(f => String(f.instId) === String(input.facilityInstId));
-        if (!machine?.feedMachine || Number(machine.feedMachine.feedCount) + input.count > p.feedTargetCount || stock(state.items, '7001', true) - BigInt(input.count) < BigInt(p.feedReserveCount)) reject();
+        if (!Number.isInteger(input.count) || input.count <= 0 || input.count > maxGrassRefill(state, machine, p)) reject();
     } else if (input.action === 'place') {
         if (!p.cubItemIds.includes(String(input.itemId))) reject();
     } else if (input.action === 'buy' || input.action === 'exchange') {
@@ -73,18 +83,9 @@ async function runRanchExtraAutomation(ctx) {
         const facilities = (await service.getStatus()).facilities;
         for (const original of facilities.filter(f => f.feedMachine)) {
             if (!enabled('autoAddFeed')) break;
-            const state = await service.getStatus(); const p = policy();
+            const state = await service.getStatus();
             const facility = state.facilities.find(f => String(f.instId) === String(original.instId));
-            if (!facility?.feedMachine) continue;
-            const surplus = stock(state.items, '7001', true) - BigInt(p.feedReserveCount);
-            const capacity = Number(facility.capacity);
-            const filled = Number(facility.feedMachine.feedCount);
-            // 填充率已达阈值就跳过；阈值只决定“要不要补”，补的量仍是补到栏舍上限。
-            const thresholdPercent = Number(p.grassThresholdPercent);
-            if (capacity > 0 && filled * 100 >= capacity * thresholdPercent) continue;
-            const gap = Math.min(capacity, p.feedTargetCount) - filled;
-            if (!(gap > 0) || surplus <= 0n) continue;
-            const count = cap(gap, surplus, 2147483647);
+            const count = maxGrassRefill(state, facility, policy());
             if (count > 0) await perform({ action: 'addFeed', facilityInstId: facility.instId, count });
         }
     });

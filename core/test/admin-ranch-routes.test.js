@@ -58,6 +58,36 @@ test('extended switches and structured policies save atomically and preserve unt
     assert.equal(f.writes.length, 2);
 });
 
+test('feed settings in simple mode survive save, reload and a different module patch', async () => {
+    const f = fixture(); const req = { id: 'mine', allowed: true };
+    const policy = { mode: 'simple', canStrategy: 'none', grassThresholdPercent: 35, feedTargetCount: 123, feedReserveCount: 456 };
+    const save = await f.invoke('post', '/api/ranch/settings', { ...req, body: { autoAddFeed: true, policy } });
+    assert.equal(save.code, 200);
+    const other = await f.invoke('post', '/api/ranch/settings', { ...req, body: { policy: { mode: 'simple', farmMin: 3 } } });
+    const reload = await f.invoke('get', '/api/ranch/settings', req);
+    for (const result of [save, other, reload]) {
+        assert.equal(result.body.data.autoAddFeed, true);
+        for (const [key, value] of Object.entries(policy)) assert.equal(result.body.data.policy[key], value, key);
+    }
+    for (const [key, invalid] of [['grassThresholdPercent', 101], ['feedTargetCount', 0], ['feedReserveCount', -1]]) {
+        const bad = await f.invoke('post', '/api/ranch/settings', { ...req, body: { autoAddFeed: false, policy: { [key]: invalid } } });
+        assert.equal(bad.code, 400);
+        assert.ok(bad.body.error.includes(key));
+    }
+    assert.equal(f.writes.length, 2);
+});
+
+test('switching to simple mode keeps the grass cap at fill-up default through the merge path', async () => {
+    const f = fixture(); const req = { id: 'mine', allowed: true };
+    // Fresh account starts in legacy mode; enabling feed settings merges into simple mode.
+    const switched = await f.invoke('post', '/api/ranch/settings', { ...req, body: { autoAddFeed: true, policy: { mode: 'simple', grassThresholdPercent: 20 } } });
+    assert.equal(switched.code, 200);
+    assert.equal(switched.body.data.policy.feedTargetCount, 999999);
+    assert.equal(switched.body.data.policy.feedReserveCount, 0);
+    const reload = await f.invoke('get', '/api/ranch/settings', req);
+    assert.equal(reload.body.data.policy.feedTargetCount, 999999);
+});
+
 test('simple settings disable obsolete gold shopping and rule exchange atomically', async () => {
     const f = fixture(); const req = { id: 'mine', allowed: true };
     await f.invoke('post', '/api/ranch/settings', { ...req, body: { autoBuy: true, autoExchange: true } });

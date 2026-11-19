@@ -679,25 +679,38 @@ test('invalid lease ends automation without attempting remaining friend actions'
     assert.equal(f.logs.filter(l => l[2].result === 'error').length, 1);
 });
 
-test('grass fill skips before any write when the fill ratio already reaches the threshold', async () => {
-    const f = fixture(); f.enable('autoAddFeed');
-    f.setPolicy({ grassThresholdPercent: 20 });
-    // 30% filled > 20% threshold → nothing to do.
-    f.overrides.AllCells = () => ({ facilities: [{ instance_id: '9', facility_id: 6001001, ranch: f.own }, { instance_id: '10', facility_id: 1, capacity: 1000, feed_machine: { feed_count: 300 } }] });
-    await f.service.runAutomation();
-    assert.equal(f.calls.filter(c => c.method === 'AddFeed').length, 0);
+test('grass refill handles the threshold boundary, capacity, reserve and independent switch', async () => {
+    for (const [enabled, filled, limit, reserve, expected] of [
+        [false, 20, 999999, 0, 0],
+        [true, 200, 999999, 0, 0],
+        [true, 199, 999999, 0, 801],
+        [true, 20, 200, 0, 200],
+        [true, 20, 10, 0, 10],
+        [true, 20, 200, 900, 100],
+        [true, 20, 200, 1000, 0],
+    ]) {
+        const f = fixture();
+        if (enabled) f.enable('autoAddFeed');
+        f.setPolicy({ mode: 'simple', canStrategy: 'none', grassThresholdPercent: 20, feedTargetCount: limit, feedReserveCount: reserve });
+        f.responses('AllCells').facilities[1].feed_machine.feed_count = filled;
+        await f.service.runAutomation('farm');
+        const adds = f.calls.filter(c => c.method === 'AddFeed');
+        assert.deepEqual(adds.map(c => c.params.add_count), expected ? [expected] : [], `${enabled}, ${filled}, ${limit}, ${reserve}`);
+        assert.ok(adds.every(c => c.params.use_gold === false));
+        assert.equal(f.calls.some(c => ['BatchUse', 'FeedAnimal'].includes(c.method)), false);
+    }
 });
 
-test('grass fill below the threshold tops the machine up to capacity, not to the threshold', async () => {
+test('grass action rechecks the threshold and per-request cap before automated writes', async () => {
     const f = fixture(); f.enable('autoAddFeed');
-    f.setPolicy({ grassThresholdPercent: 20, feedTargetCount: 200, feedReserveCount: 0 });
-    await f.service.runAutomation();
-    const adds = f.calls.filter(c => c.method === 'AddFeed');
-    assert.equal(adds.length, 1);
-    // capacity 1000 with 20 already in it: the threshold decides whether to act,
-    // the amount still fills the machine to capacity (bounded by the target).
-    assert.equal(adds[0].params.add_count, 180);
-    assert.equal(adds[0].params.use_gold, false);
+    f.setPolicy({ grassThresholdPercent: 20, feedTargetCount: 25 });
+    const input = { action: 'addFeed', facilityInstId: '10' };
+    await assert.rejects(f.service.action({ ...input, count: 26 }, 'autoAddFeed'), /策略已变化/);
+    f.responses('AllCells').facilities[1].feed_machine.feed_count = 200;
+    await assert.rejects(f.service.action({ ...input, count: 25 }, 'autoAddFeed'), /策略已变化/);
+    assert.equal(f.calls.some(c => c.method === 'AddFeed'), false);
+    await f.service.action({ ...input, count: 26 });
+    assert.equal(f.calls.filter(c => c.method === 'AddFeed').length, 1);
 });
 
 test('grass threshold is a validated integer percentage that defaults to 20', () => {

@@ -255,12 +255,12 @@ onUnmounted(() => {
                   <BaseInput v-if="['smart', 'smart_only', 'smart_normal'].includes(policy.canStrategy)" v-model.number="policy.smartSeconds" label="快成熟判定秒数" type="number" min="30" max="3600" :disabled="loading" />
                 </div>
                 <div class="grid gap-3 sm:grid-cols-3">
-                  <BaseInput v-model.number="policy.grassThresholdPercent" label="牧草余量低于（%）时补满" type="number" min="1" max="100" :disabled="loading" />
-                  <BaseInput v-model.number="policy.feedTargetCount" label="单次补草上限" type="number" min="1" :disabled="loading" />
-                  <BaseInput v-model.number="policy.feedReserveCount" label="牧草预留量" type="number" min="0" :disabled="loading" />
+                  <BaseInput v-model.number="policy.grassThresholdPercent" label="牧草机余量低于（%）时补草" type="number" min="1" max="100" :disabled="loading" />
+                  <BaseInput v-model.number="policy.feedTargetCount" label="单次补草上限" type="number" min="1" max="999999" :disabled="loading" />
+                  <BaseInput v-model.number="policy.feedReserveCount" label="库存牧草预留量" type="number" min="0" max="999999" :disabled="loading" />
                 </div>
                 <p class="text-xs text-gray-500">
-                  栏舍填充率低于阈值时补草，一次补到栏舍上限（受单次上限与预留量约束）；只使用库存牧草，不会用金券自动购买。
+                  开启“自动补充已有牧草”后，牧草机余量低于阈值才补草。补草量取剩余容量、单次上限和扣除预留量后的可用库存中的最小值。只使用库存牧草。罐头使用策略与自动补草独立。
                 </p>
               </section>
               <section v-if="active === 'friends'" class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">

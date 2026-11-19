@@ -31,8 +31,6 @@
   border-radius: 18px;
   background: var(--ranch-glass-card);
   box-shadow: 0 8px 24px rgba(31, 38, 80, .09), inset 0 1px 0 rgba(255, 255, 255, .7);
-  -webkit-backdrop-filter: blur(24px) saturate(1.35);
-  backdrop-filter: blur(24px) saturate(1.35);
 }
 /* Keep fixed ranch dialogs anchored to the viewport, outside filtered ancestors. */
 .ranch-glass-page .ranch-farm-panel {
@@ -66,7 +64,7 @@
 .ranch-illustrated-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: 13px; }
 /* 图鉴卡片对齐商城铺法：固定最小宽度自适应列数，卡片自身撑满，不留大片空白 */
 .ranch-illustrated-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; align-items: stretch; }
-.ranch-book-entry { display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid rgba(255, 255, 255, .7); border-radius: 10px; background: linear-gradient(165deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .48)); box-shadow: 0 8px 22px rgba(31, 38, 80, .1), inset 0 1.5px 0 rgba(255, 255, 255, .85); backdrop-filter: blur(24px) saturate(1.35); -webkit-backdrop-filter: blur(24px) saturate(1.35); overflow-wrap: anywhere; }
+.ranch-book-entry { display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid rgba(255, 255, 255, .7); border-radius: 10px; background: linear-gradient(165deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .48)); box-shadow: 0 8px 22px rgba(31, 38, 80, .1), inset 0 1.5px 0 rgba(255, 255, 255, .85); overflow-wrap: anywhere; }
 .ranch-book-entry-media { position: relative; display: grid; height: 88px; flex-shrink: 0; place-items: center; background: rgba(255, 255, 255, .5); }
 .ranch-book-entry-id { position: absolute; left: 0; top: 0; border-bottom-right-radius: 8px; background: rgba(255, 255, 255, .78); padding: 1px 7px; font-size: 10px; font-weight: 600; color: #4b5563; }
 .ranch-book-entry-badge { position: absolute; right: 0; top: 0; border-bottom-left-radius: 8px; padding: 1px 7px; font-size: 10px; font-weight: 600; }

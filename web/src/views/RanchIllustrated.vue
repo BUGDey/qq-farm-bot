@@ -113,7 +113,7 @@ onMounted(() => {
           <div class="ranch-book-entry-media">
             <span class="ranch-book-entry-id">#{{ entry.fruitId }}</span>
             <span class="ranch-book-entry-badge" :class="entry.unlocked ? 'is-unlocked' : 'is-locked'">{{ entry.unlocked ? '已解锁' : '未解锁' }}</span>
-            <img v-if="entry.image" :src="entry.image" :alt="entry.name" class="ranch-book-entry-img">
+            <img v-if="entry.image" :src="entry.image" :alt="entry.name" class="ranch-book-entry-img" loading="lazy" decoding="async">
             <span v-else class="ranch-book-entry-fallback">{{ String(entry.name || '?').slice(0, 1) }}</span>
           </div>
           <div class="ranch-book-entry-body">

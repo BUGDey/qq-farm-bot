@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { RuntimeLogEntry } from '@/utils/runtime-log'
 import { useIntervalFn } from '@vueuse/core'
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRanchResource } from '@/composables/useRanchResource'
 import { useRanchSync } from '@/composables/useRanchSync'
 import { useAccountStore } from '@/stores/account'
@@ -231,7 +231,6 @@ watch(() => account.currentAccountId, () => {
   void syncLogs()
   void syncStatus()
 }, { immediate: true })
-onMounted(() => { void syncStatus() })
 useIntervalFn(() => {
   if (!status.realtimeConnected)
     void syncStatus()
