@@ -161,7 +161,7 @@ function createScheduler(namespace = 'default', { scene = null } = {}) {
       try {
         await invoke(key, callback, options);
       } catch (err) {
-        schedulerLogger.warn(`[${ns}] timeout 任务执行失败: ${key}`, {
+        schedulerLogger.warn(`[${ns}] timeout 任务执行失败: ${key}；${err?.message || String(err)}`, {
           module: 'scheduler',
           scope: ns,
           task: key,
@@ -218,7 +218,7 @@ function createScheduler(namespace = 'default', { scene = null } = {}) {
       try {
         await invoke(key, callback, options);
       } catch (err) {
-        schedulerLogger.warn(`[${ns}] interval 任务执行失败: ${key}`, {
+        schedulerLogger.warn(`[${ns}] interval 任务执行失败: ${key}；${err?.message || String(err)}`, {
           module: 'scheduler',
           scope: ns,
           task: key,

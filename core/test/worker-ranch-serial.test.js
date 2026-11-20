@@ -327,6 +327,7 @@ function manualHarness(overrides = {}) {
         handleApiCallInScene: async msg => { events.push(`business:${msg.method}`); return msg.method; },
         sendToMaster: response => responses.push(response),
         classifyError: err => ({ errorType: err.errorType }),
+        serializeWorkerError: require('../src/utils/worker-api-error').serializeWorkerError,
         ...overrides,
     });
     const locked = h.state.withAutomationLock;

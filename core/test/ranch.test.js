@@ -558,7 +558,13 @@ test('own ranch profile rejects unavailable XP instead of inventing level one', 
             assert.equal(method, 'GetBag');
             return bag;
         } });
-        await assert.rejects(service.getResource('profile'), /有效的牧场经验/);
+        await assert.rejects(service.getResource('profile'), error => {
+            assert.equal(error.code, 'RANCH_PROFILE_INCOMPLETE');
+            assert.equal(error.method, 'GetBag');
+            assert.equal(error.scene, 'ranch');
+            assert.match(error.message, /有效的牧场经验.*1102/);
+            return true;
+        });
     }
 });
 

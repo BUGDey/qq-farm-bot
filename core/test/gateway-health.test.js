@@ -38,3 +38,18 @@ test('background yields to active or queued business and scene transactions', ()
     assert.equal(canRunBackground({ healthy: true, ...busy }), false);
   }
 });
+
+test('background idle ignores control-plane traffic and the caller\'s own scene lease', () => {
+  const { isIdleForBackground } = require('../src/utils/gateway-health');
+  // ACE 上报/心跳走独立闸门，不占 requestGate 水位，后台补数据可以发车。
+  assert.equal(isIdleForBackground({ healthy: true, queue: { active: 0, queued: 0 } }), true);
+  // 调度器里有在途或排队请求时必须让路。
+  assert.equal(isIdleForBackground({ healthy: true, queue: { active: 1, queued: 0 } }), false);
+  assert.equal(isIdleForBackground({ healthy: true, queue: { active: 0, queued: 1 } }), false);
+  // 场景事务：调用方就在该事务里时不算争用（好友同步整段跑在农场场景内）。
+  assert.equal(isIdleForBackground({ healthy: true, sceneActive: true }), false);
+  assert.equal(isIdleForBackground({ healthy: true, sceneActive: true, insideScene: true }), true);
+  // 有切场在排队时一律让路。
+  assert.equal(isIdleForBackground({ healthy: true, sceneQueued: 1, insideScene: true }), false);
+  assert.equal(isIdleForBackground({ healthy: false }), false);
+});

@@ -325,6 +325,11 @@ async function handleFetchDogInfo() {
   }
   toast.info('开始获取好友狗信息，请耐心等待，处理中请勿频繁访问好友界面...')
   const result = await friendStore.fetchFriendsDogInfo(currentAccountId.value)
+  if (result.deferredCount > 0) {
+    const retrySec = Math.max(1, Math.round((result.retryMs || 0) / 1000))
+    toast.info(`网关繁忙，本轮只补了一部分，剩余 ${result.deferredCount} 个好友留到下一轮（约 ${retrySec} 秒后再试）`)
+    return
+  }
   if (result.ok) {
     const guardText = Number.isFinite(result.guardDogCount)
       ? `，护主犬 ${result.guardDogCount} 个`

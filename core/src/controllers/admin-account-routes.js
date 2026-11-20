@@ -344,18 +344,6 @@ function registerAdminAccountRoutes({
           }
         }
       } catch { /* 计时锚点清理失败不影响保存 */ }
-      // 新号第一次绑定挂机账号 → 结算邀请人的待定奖励（失败不影响建号）
-      if (!isUpdate && currentUser?.username) {
-        try {
-          const inviteRewards = require("../services/invite-rewards");
-          const createdAccount = isUpdate ? null : (data.accounts.at(-1) || nextAccount);
-          inviteRewards.markInviteeBound(currentUser.username, userStore, inviteRewards.identityFromAccount(createdAccount || {}));
-        } catch (error) {
-          if (provider.addAccountLog) {
-            provider.addAccountLog("info", `邀请奖励结算失败: ${error.message}`, "", "");
-          }
-        }
-      }
       const clientVersionUpdated = syncGatewayClientVersion(gateway, store, updateRuntimeConfig);
       if (body.wxSessionId && body.wxid && currentUser) {
         const wxLoginAdapter = require("../services/wx-login-adapter");

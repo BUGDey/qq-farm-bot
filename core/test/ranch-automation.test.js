@@ -726,38 +726,76 @@ test('grass threshold is a validated integer percentage that defaults to 20', ()
     assert.equal(normalizePolicy({ grassThresholdPercent: 101 }).grassThresholdPercent, 20);
 });
 
-test('poop exchange redeems the 4-hour organic fertilizer before the 1-hour one when the opt-in is on', async () => {
-    const f = fixture(); f.enable('autoExchangePoop', 'autoExchangeOrganicFirst');
-    f.overrides.RotationShopInfo = () => ({
-        opened: true, present: true, period_day: '20261116', round_index: 1,
-        goods: [
-            { goods_id: '201', item_id: '80011', item_count: '1', cost_item_id: '7002', cost_count: '5', limit_count: '10', limit_used: '0' },
-            { goods_id: '202', item_id: '80012', item_count: '1', cost_item_id: '7002', cost_count: '8', limit_count: '10', limit_used: '0' },
-            { goods_id: '203', item_id: '1012', item_count: '1', cost_item_id: '7002', cost_count: '5', limit_count: '10', limit_used: '0' },
-        ],
-    });
-    f.overrides.RotationBuyGoods = () => ({});
+function exchangeMarket(f, goods) {
+    const state = goods.map(g => ({ limit_used: '0', ...g }));
+    const cost = g => BigInt(state.find(x => String(x.goods_id) === String(g.goods_id)).cost_count);
+    f.overrides.RotationShopInfo = () => ({ opened: true, present: true, period_day: '20261116', round_index: 1, goods: state.map(g => ({ ...g, limit_used: String(BigInt(g.limit_used)) })) });
+    f.overrides.RotationBuyGoods = params => {
+        const g = state.find(x => String(x.goods_id) === String(params.goods_id));
+        assert.ok(g, 'unknown goods ' + params.goods_id);
+        g.limit_used = String(BigInt(g.limit_used) + BigInt(params.count));
+        const currency = f.items.find(i => i.id === g.cost_item_id);
+        currency.count = String(BigInt(currency.count) - cost(g) * BigInt(params.count));
+        return {};
+    };
+    return state;
+}
+const bought = f => f.calls.filter(c => c.method === 'RotationBuyGoods').map(c => String(c.params.goods_id));
+
+test('priority exchange follows the saved order and waits instead of jumping ahead', async () => {
+    const f = fixture(); f.enable('autoExchangePoop', 'autoExchangePriority');
+    f.setPolicy({ exchangePoopOrder: ['202', '201'] });
+    exchangeMarket(f, [
+        { goods_id: '201', item_id: '80011', item_count: '1', cost_item_id: '7002', cost_count: '5', limit_count: '10' },
+        { goods_id: '202', item_id: '80012', item_count: '1', cost_item_id: '7002', cost_count: '8', limit_count: '10' },
+    ]);
     await f.service.runAutomation();
-    const buys = f.calls.filter(c => c.method === 'RotationBuyGoods').map(c => String(c.params.goods_id));
-    assert.ok(buys.length > 0);
-    assert.equal(buys[0], '202');
-    assert.ok(buys.indexOf('201') === -1 || buys.indexOf('201') > 0);
+    assert.deepEqual(bought(f), ['202', '201']);
+    // 便便只够换第一件时，后面的商品等攒够再来，不会跳过去换低优先级的。
+    const g = fixture(); g.enable('autoExchangePoop', 'autoExchangePriority');
+    g.setPolicy({ exchangePoopOrder: ['202', '201'], poopReserve: 0 });
+    g.items.find(i => i.id === '7002').count = '8';
+    exchangeMarket(g, [
+        { goods_id: '201', item_id: '80011', item_count: '1', cost_item_id: '7002', cost_count: '5', limit_count: '10' },
+        { goods_id: '202', item_id: '80012', item_count: '1', cost_item_id: '7002', cost_count: '8', limit_count: '10' },
+    ]);
+    await g.service.runAutomation();
+    assert.deepEqual(bought(g), ['202']);
+    assert.equal(g.items.find(i => i.id === '7002').count, '0');
 });
 
-test('poop exchange keeps the market order when the organic-first opt-in is off', async () => {
-    const f = fixture(); f.enable('autoExchangePoop');
-    f.overrides.RotationShopInfo = () => ({
-        opened: true, present: true, period_day: '20261116', round_index: 1,
-        goods: [
-            { goods_id: '201', item_id: '80011', item_count: '1', cost_item_id: '7002', cost_count: '5', limit_count: '10', limit_used: '0' },
-            { goods_id: '202', item_id: '80012', item_count: '1', cost_item_id: '7002', cost_count: '8', limit_count: '10', limit_used: '0' },
-        ],
-    });
-    f.overrides.RotationBuyGoods = () => ({});
+test('priority exchange drains the daily limit with several requests', async () => {
+    const f = fixture(); f.enable('autoExchangePoop', 'autoExchangePriority');
+    f.setPolicy({ exchangePoopOrder: ['202'], maxActionsPerRun: 100 });
+    exchangeMarket(f, [{ goods_id: '202', item_id: '80012', item_count: '1', cost_item_id: '7002', cost_count: '1', limit_count: '250' }]);
     await f.service.runAutomation();
-    const buys = f.calls.filter(c => c.method === 'RotationBuyGoods').map(c => String(c.params.goods_id));
-    assert.ok(buys.length > 0);
-    assert.equal(buys[0], '201');
+    assert.deepEqual(bought(f), ['202', '202', '202']);
+    assert.deepEqual(f.calls.filter(c => c.method === 'RotationBuyGoods').map(c => c.params.count), [99, 99, 52]);
+});
+
+test('poop shortage never blocks the pine queue and vice versa', async () => {
+    const f = fixture(); f.enable('autoExchangePoop', 'autoExchangePine', 'autoExchangePriority');
+    f.setPolicy({ exchangePoopOrder: ['202'], exchangePineOrder: ['302'], poopReserve: 0, pineReserve: 0 });
+    f.items.find(i => i.id === '7002').count = '3';
+    f.items.find(i => i.id === '1008').count = '100';
+    exchangeMarket(f, [
+        { goods_id: '202', item_id: '80012', item_count: '1', cost_item_id: '7002', cost_count: '8', limit_count: '10' },
+        { goods_id: '302', item_id: '1012', item_count: '1', cost_item_id: '1008', cost_count: '10', limit_count: '10' },
+    ]);
+    await f.service.runAutomation();
+    assert.deepEqual(bought(f), ['302']);
+    assert.equal(f.items.find(i => i.id === '1008').count, '0');
+});
+
+test('poop exchange keeps the market order when priority exchange is off', async () => {
+    const f = fixture(); f.enable('autoExchangePoop');
+    f.setPolicy({ exchangePoopOrder: ['202', '201'] });
+    exchangeMarket(f, [
+        { goods_id: '201', item_id: '80011', item_count: '1', cost_item_id: '7002', cost_count: '5', limit_count: '10' },
+        { goods_id: '202', item_id: '80012', item_count: '1', cost_item_id: '7002', cost_count: '8', limit_count: '10' },
+    ]);
+    await f.service.runAutomation();
+    assert.equal(bought(f)[0], '201');
 });
 
 test('poop exchange never spends pine stock while only the poop opt-in is enabled', async () => {

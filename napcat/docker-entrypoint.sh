@@ -44,4 +44,50 @@ else
 fi
 mv "$plugins_config.tmp" "$plugins_config"
 
-exec bash /app/entrypoint.sh "$@"
+maintenance_dir=${NAPCAT_MAINTENANCE_DIR:-}
+if [[ -z "$maintenance_dir" ]]; then
+  exec bash /app/entrypoint.sh "$@"
+fi
+
+# Snapshot the request before startup: a request arriving during boot must not be acknowledged by this instance.
+mkdir -p "$maintenance_dir"
+request_file="$maintenance_dir/restart-request"
+read_nonce() {
+  local nonce
+  nonce=$(cat "$request_file" 2>/dev/null) || return 0
+  [[ "$nonce" =~ ^[a-f0-9]{48}$ ]] && printf '%s' "$nonce"
+  return 0
+}
+startup_nonce=$(read_nonce)
+started_at=$(date +%s)000
+ack_tmp=$(mktemp "$maintenance_dir/restart-ack.XXXXXXXX")
+printf '{"nonce":"%s","startedAt":%s}\n' "$startup_nonce" "$started_at" > "$ack_tmp"
+chmod 644 "$ack_tmp"
+mv -f "$ack_tmp" "$maintenance_dir/restart-ack.json"
+
+owner_pid=$$
+bash /app/entrypoint.sh "$@" &
+napcat_pid=$!
+watch_pid=''
+stop_napcat() {
+  if [[ -n "$watch_pid" ]]; then kill "$watch_pid" 2>/dev/null || true; fi
+  kill -TERM "$napcat_pid" 2>/dev/null || true
+  # Exiting PID 1 tears down the whole container, including any descendants.
+  exit "$1"
+}
+trap 'stop_napcat 0' TERM INT
+trap 'stop_napcat 75' USR1
+(
+  while sleep 1; do
+    nonce=$(read_nonce)
+    if [[ -n "$nonce" && "$nonce" != "$startup_nonce" ]]; then
+      kill -USR1 "$owner_pid"
+      break
+    fi
+  done
+) &
+watch_pid=$!
+status=0
+wait "$napcat_pid" || status=$?
+kill "$watch_pid" 2>/dev/null || true
+exit "$status"

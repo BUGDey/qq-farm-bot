@@ -1,5 +1,20 @@
+const { serializeWorkerError } = require('../utils/worker-api-error');
 const process = require('node:process');
 const { parentPort, workerData } = require('node:worker_threads');
+
+// Observe fatal errors without preventing Node from terminating the broken worker.
+if (process.send || parentPort) {
+    process.on('uncaughtExceptionMonitor', (error, origin) => {
+        const kind = String(error?.name || 'Error');
+        const code = String(error?.code || '');
+        sendToMaster({
+            type: 'worker_fatal',
+            origin: origin === 'unhandledRejection' ? origin : 'uncaughtException',
+            name: /^[\w.-]{1,64}$/.test(kind) ? kind : 'Error',
+            code: /^[\w.-]{1,64}$/.test(code) ? code : '',
+        });
+    });
+}
 
 const { withAutomationLock } = require('../services/automation-lock');
 const { classifyError } = require('../utils/error-classifier');
@@ -139,11 +154,21 @@ if (parentPort && workerData && workerData.accountId && !process.env.FARM_ACCOUN
 /** 发送消息给主进程 */
 function sendToMaster(message) {
     if (process.send) {
-        process.send(message);
+        if (!process.connected) return;
+        try {
+            process.send(message, err => {
+                if (err && !['ERR_IPC_CHANNEL_CLOSED', 'EPIPE'].includes(err.code)) {
+                    console.warn('[worker] IPC send failed:', err.code || err.name);
+                }
+            });
+        } catch (err) {
+            console.warn('[worker] IPC send failed:', err.code || err.name);
+        }
         return;
     }
     if (parentPort) {
-        parentPort.postMessage(message);
+        try { parentPort.postMessage(message); }
+        catch (err) { console.warn('[worker] IPC send failed:', err.code || err.name); }
     }
 }
 
@@ -1373,7 +1398,9 @@ async function tickMugeAutomation() {
             releaseTaskPermit(permit);
         }
     } catch (err) {
-        if (!isTransientNetworkError(err)) {
+        if (err?.code === 'AUTOMATION_BUSY' || err?.errorType === 'automation_busy') {
+            log('活动', '牧歌初启自动任务本轮跳过：其他操作仍持有账号锁，将在下一轮重新检查', { module: 'activity', event: '牧歌初启自动任务', result: 'skipped_busy' });
+        } else if (!isTransientNetworkError(err)) {
             log('活动', `牧歌初启自动任务失败: ${err.message}`, {
                 module: 'activity', event: '牧歌初启自动任务', result: 'error',
             });
@@ -2094,13 +2121,14 @@ async function handleApiCallInternal(msg) {
     const enter = method.startsWith('ranch') ? session.inRanch : session.inFarm;
     return session.detached(() => enter(
         () => runWithRequestPriority('foreground', () => handleApiCallInScene(msg)), { manual: true }
-    )).catch(err => sendToMaster({ type: 'api_response', id, result: null, error: err.message }));
+    )).catch(err => sendToMaster({ type: 'api_response', id, result: null, error: err.message, errorDetails: serializeWorkerError(err) }));
 }
 
 async function handleApiCallInScene(msg) {
     const { id, method, args } = msg;
     let result = null;
     let error = null;
+    let errorDetails = {};
 
     // 好友同步操作期间暂停自动化
     const isFriendSync = method === 'getFriends' && args[0] === true
@@ -2607,6 +2635,7 @@ async function handleApiCallInScene(msg) {
         }
     } catch (err) {
         error = err.message;
+        errorDetails = serializeWorkerError(err);
     }
 
     if (isFriendSync) {
@@ -2621,6 +2650,7 @@ async function handleApiCallInScene(msg) {
         id,
         result,
         error,
+        errorDetails,
         ...(error ? { errorType: classifyError(error, { phase: 'api' }).errorType } : {}),
     });
 }

@@ -149,6 +149,9 @@ export const useFriendStore = defineStore('friend', () => {
         failCount: res.data.failCount || 0,
         blacklistCount: res.data.blacklistCount || 0,
         guardDogCount: res.data.guardDogCount || 0,
+        // 网关繁忙时后台补数据会让路：把"还剩多少个"透出去，界面才能说清而不是报失败。
+        deferredCount: Array.isArray(res.data.deferredGids) ? res.data.deferredGids.length : 0,
+        retryMs: Number(res.data.retryMs) || 0,
         error: res.data.error || '',
       }
     }

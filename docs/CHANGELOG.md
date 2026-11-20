@@ -41,11 +41,23 @@ flowchart TB
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
     BU --> BV[2026-11-18 · v2.18.1<br/>NapCat 拉取中断与测速修复] --> BW[2026-11-18 · v2.18.2<br/>入栏确认与仓库满修复] --> BX[2026-11-18 · v2.18.3<br/>巡查倒计时与启动权限修复]
     BX --> BY[2026-11-18 · v2.18.4<br/>Alpine 软件源修复] --> BZ[2026-11-19 · v2.18.5<br/>自动策略分类与牧场稳定性] --> CA[2026-11-19 · v2.18.6<br/>牧草补草修复与面板性能优化]
-    CA --> CB[2026-11-20 · v2.18.7<br/>账号设置加载与保存优化]
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV,AW,AX,AY,AZ,BA,BB,BC,BD,BE,BF,BG,BH,BI,BJ,BK,BL,BM,BN,BO,BP,BQ,BR,BS,BT,BU,BV,BW,BX,BY,BZ,CA,CB seed;
+    CA --> CB[2026-11-20 · v2.18.7<br/>账号设置加载与保存优化] --> CC[2026-11-20 · v2.18.8<br/>兑换集市优先级与好友同步修复]
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV,AW,AX,AY,AZ,BA,BB,BC,BD,BE,BF,BG,BH,BI,BJ,BK,BL,BM,BN,BO,BP,BQ,BR,BS,BT,BU,BV,BW,BX,BY,BZ,CA,CB,CC seed;
 ```
 
 ## 详细记录
+
+### v2.18.8 · 兑换集市优先级、好友同步与 NapCat 维护（2026-11-20）
+
+- 兑换集市按货币分别排序：便便、松果两套顺序可拖拽或置顶，开启「按顺序优先兑换」后逐件检查，前一件数量不足就等待，不越级兑换；关闭时保持集市原顺序。折扣显示为具体折数，并同时标注原价与折后价。
+- 好友狗信息同步不再逐只报「网关繁忙，后台补数据已让路」：后台任务在自身已持有的场景租约内不再被判为争用，整批延后到下一轮，既不会把好友误记成「无狗」，也不会刷满日志。
+- 首页与商场数字规则统一：查询到的准确 0 显示 0，只有未取到数据时才显示「—」。牧场商城兑换页与设置里的兑换顺序列表补充加载中状态。
+- 移除网站「邀请加时」功能：注册邀请码、绑定发奖、续费邀请卡、后台邀请页签与四个接口下线；历史邀请记录与已到账订阅保持不变，游戏内微信分享邀请不受影响。
+- 牧场首页优先使用同账号上次读取的数据立即渲染并给出缓存提示；经验效率与升级预计只使用实时样本。
+- NapCat 扫码部署每 30 小时安排一次维护：停止创建新扫码任务，现有任务最多等待 10 分钟，然后仅重启 NapCat。Docker、Windows 启动器与 Linux 看护按各自方式接入。
+- Linux 源码部署可在项目环境配置里设置 `NAPCAT_LINUX_START_CMD`，配合 `NAPCAT_LINUX_STOP_CMD` 或 `NAPCAT_LINUX_PID_FILE` 使用；未配置时面板不安排自动重启。
+- Worker IPC 发送容错，异常退出通知尽量保留异常类型与错误码。Worker 和 HTTP 超时提示包含操作及等待时间；写操作超时不自动重试。牧场经验缺失与牧歌账号锁占用分别显示明确原因。
+- 离线验证：后端全量 1089 项（1088 通过、1 跳过、0 失败），前端 27 项测试、类型检查与生产构建通过。
 
 ### v2.18.7 · 账号设置加载与保存优化（2026-11-20）
 

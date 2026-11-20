@@ -1,3 +1,4 @@
+const { workerApiError, restoreWorkerError } = require('../utils/worker-api-error');
 const { createScheduler } = require('../services/scheduler');
 const { resourcePolicy, createResourceMonitor } = require('./resource-policy');
 const { createGatewayManager } = require('./gateway-manager');
@@ -54,6 +55,9 @@ function createWorkerManager(deps) {
     // 按方法名的超时覆盖。萌宠日记单次操作要串行多次 RPC（读组 → 校验 → 操作 → 重读快照），
     // 10 秒默认值会误判超时，取值与上游一致。
     const METHOD_TIMEOUT_MS = {
+        // 背包是纯读操作，但会让路/排在自动化连续发车的网关队列后面，10 秒默认值容易误判超时。
+        getBag: 30000,
+        getBagSeeds: 30000,
         // Milk tea mutations validate and refresh through multiple sequential RPCs.
         getMilkTea: 90000,
         operateMilkTea: 180000,
@@ -475,9 +479,9 @@ function createWorkerManager(deps) {
             });
 
             if (!wrk.stopping) {
-                const reason = `worker_exit:code=${code == null ? 'unknown' : code},signal=${signal || 'none'}`;
+                const reason = `worker_exit:code=${code == null ? 'unknown' : code},signal=${signal || 'none'}${wrk.fatalCause ? `,cause=${wrk.fatalCause}` : ''}`;
                 notifyAbnormalOffline(account.id, wrk, reason, 'worker_unexpected_exit',
-                    `账号 ${displayName} 异常掉线（Worker 进程意外退出）`);
+                    `账号 ${displayName} 异常掉线（Worker 意外退出${wrk.fatalCause ? `：${wrk.fatalCause}` : '，请核对服务端控制台日志'}）`);
             }
 
             scheduler.clear(`force_kill_${  account.id}`);
@@ -644,7 +648,14 @@ function createWorkerManager(deps) {
         const wrk = workers[accountId];
         if (!wrk || wrk.process !== proc) return;
 
-        if (msg.type === 'task_permit_request') {
+        if (msg.type === 'worker_fatal') {
+            const safe = value => typeof value === 'string' && /^[\w.-]{1,64}$/.test(value) ? value : '';
+            const origin = msg.origin === 'unhandledRejection' ? 'unhandledRejection' : 'uncaughtException';
+            wrk.fatalCause = [origin, safe(msg.name) || 'Error', safe(msg.code)].filter(Boolean).join(':');
+            log('系统', `账号 ${wrk.name || accountId} Worker 发生致命异常（${wrk.fatalCause}）；完整调用栈请查看服务端控制台日志`, {
+                accountId: String(accountId), accountName: wrk.name, event: 'Worker 致命异常', result: 'error'
+            });
+        } else if (msg.type === 'task_permit_request') {
             const token = permitKey(accountId, wrk.generation, msg.token);
             permitQueue.push({ accountId, token, proc, generation: wrk.generation, requestedAt: Date.now() });
             drainPermitQueue();
@@ -904,7 +915,7 @@ function createWorkerManager(deps) {
 
             const pending = wrk.requests.get(id);
             if (pending) {
-                if (error) pending.reject(new Error(error));
+                if (error) pending.reject(restoreWorkerError(error, msg.errorDetails));
                 else pending.resolve(result);
                 wrk.requests.delete(id);
             }
@@ -1023,7 +1034,7 @@ function createWorkerManager(deps) {
             scheduler.setTimeoutTask(`api_timeout_${  accountId  }_${  wrk.generation  }_${  reqId}`, timeoutMs, () => {
                 if (wrk.requests.has(reqId)) {
                     wrk.requests.delete(reqId);
-                    reject(new Error('API Timeout'));
+                    reject(workerApiError(method, timeoutMs, accountId));
                 }
             });
 

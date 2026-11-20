@@ -4,6 +4,8 @@ const { selectCub, feedTypes, quietNow, purchasableCubs } = require('./ranch-str
 const CONFIG = require('../gameConfig/RanchConfig.json');
 const stock = (items, id, usable = false) => (items || []).filter(i => String(i.id) === String(id) && (!usable || (!i.locked && !i.is_locked && !i.isLocked && !i.detail?.ranchProduct && !i.item_detail?.ranch_product))).reduce((n, i) => n + BigInt(i.count || 0), 0n);
 const cap = (...values) => Number(values.map(BigInt).reduce((a, b) => a < b ? a : b));
+// 兑换货币余额：与真实兑换校验保持一致，只排除锁定物品（松果本身是牧场产物，不能再按产物标记排除）。
+const currencyStock = (items, id) => (items || []).filter(i => String(i.id) === String(id) && !i.locked && !i.is_locked && !i.isLocked).reduce((n, i) => n + BigInt(i.count || 0), 0n);
 const canConfig = new Map(CONFIG.MCCanConfig.map(c => [String(c.id), c]));
 const bucketId = can => can.feed_type === '有机罐头' ? '7004' : '7003';
 function maxGrassRefill(state, facility, policy) {
@@ -89,35 +91,69 @@ async function runRanchExtraAutomation(ctx) {
             if (count > 0) await perform({ action: 'addFeed', facilityInstId: facility.instId, count });
         }
     });
-    // Currency opt-ins follow the current market; never use gold/diamonds or stale rounds.
+    // 兑换集市：便便(7002)与松果(1008)是两种货币，分开排队、互不阻塞；
+    // 开启优先兑换后按保存的顺序依次兑换：前面的商品货币不足就等攒够，不跳过去换后面的。
     if (enabled('autoExchangePoop') || enabled('autoExchangePine')) await safely(async () => {
-        const initial = (await service.getResource('shop')).exchangeMarket;
-        if (!initial?.opened || !initial.present) return;
-        // 便便兑换按官方补给顺序优先换有机化肥（4小时 80012 先于 1小时 80011）；
-        // 关闭该开关时保持原有集市顺序，其它 7002 商品照旧参与，不影响覆盖面。
-        const POOP_PRIORITY = ['80012', '80011'];
-        const organicFirst = settings().autoExchangeOrganicFirst === true;
-        const rank = goods => {
-            const index = POOP_PRIORITY.indexOf(String(goods.itemId));
-            return organicFirst && index >= 0 ? index : POOP_PRIORITY.length;
-        };
-        const ordered = [...(initial.goods || [])].sort((a, b) => rank(a) - rank(b));
-        for (const original of ordered) await safely(async () => {
-            const key = String(original.costItemId) === '7002' ? 'autoExchangePoop' : String(original.costItemId) === '1008' ? 'autoExchangePine' : null;
-            if (!key || !enabled(key)) return;
-            const market = (await service.getResource('shop')).exchangeMarket;
-            if (!market?.opened || !market.present) return;
-            const goods = market.goods?.find(g => String(g.goodsId) === String(original.goodsId) && String(g.costItemId) === String(original.costItemId) && String(g.itemId) === String(original.itemId));
-            if (!goods) return;
-            const state = await service.getStatus();
-            if (state.sectionErrors?.warehouse) return;
-            const price = BigInt(goods.effectiveCostCount || 0);
-            const available = BigInt(goods.limitCount || 0) > 0n ? BigInt(goods.limitCount) - BigInt(goods.limitUsed || goods.boughtNum || 0) : 99n;
-            // Each request remains capped; the live action rechecks currency, stock and round.
-            if (price <= 0n || available <= 0n) return;
-            const count = cap(99, available, stock(state.items, goods.costItemId, true) / price);
-            if (count > 0) await perform({ action: 'exchange', goodsId: String(goods.goodsId), count, costCount: String(price), costItemId: String(goods.costItemId), periodDay: market.periodDay, roundIndex: market.roundIndex }, key);
-        });
+        const priority = settings().autoExchangePriority === true;
+        // 同一商品每轮可连续兑换多次：给每次请求一个本轮唯一的序号，
+        // 既避免"同一次巡游里重复提交同一笔"，又让下一轮能继续兑换剩余限额。
+        const slice = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const p0 = policy();
+        const groups = [
+            { key: 'autoExchangePoop', cost: '7002', order: p0.exchangePoopOrder || [], reserve: BigInt(p0.poopReserve || 0) },
+            { key: 'autoExchangePine', cost: '1008', order: p0.exchangePineOrder || [], reserve: BigInt(p0.pineReserve || 0) },
+        ];
+        for (const group of groups) {
+            if (!enabled(group.key)) continue;
+            const first = (await service.getResource('shop')).exchangeMarket;
+            if (!first?.opened || !first.present) continue;
+            const goods = (first.goods || []).filter(g => String(g.costItemId) === group.cost);
+            if (!goods.length) continue;
+            const rank = new Map(group.order.map((id, index) => [String(id), index]));
+            const ordered = priority
+                ? [...goods].sort((a, b) => (rank.get(String(a.goodsId)) ?? Number.MAX_SAFE_INTEGER) - (rank.get(String(b.goodsId)) ?? Number.MAX_SAFE_INTEGER))
+                : goods;
+            let waiting = false;
+            // 单轮时间预算：连续发车不能长时间占着网关队列，否则背包等读请求会被挤到超时。
+            const groupDeadline = Date.now() + 15000;
+            for (const target of ordered) {
+                if (waiting || !enabled(group.key)) break;
+                // 单次请求上限 99，限额更大时连续发车，直到限额用完或货币不足。
+                for (let attemptNo = 0; attemptNo < 40; attemptNo++) {
+                    if (!enabled(group.key)) return;
+                    if (Date.now() > groupDeadline) {
+                        waiting = true;
+                        break;
+                    }
+                    const state = await service.getStatus();
+                    if (state.sectionErrors?.warehouse) return;
+                    const market = (await service.getResource('shop')).exchangeMarket;
+                    if (!market?.opened || !market.present) return;
+                    const goodsNow = (market.goods || []).find(g => String(g.goodsId) === String(target.goodsId) && String(g.costItemId) === group.cost);
+                    if (!goodsNow) break;
+                    const price = BigInt(goodsNow.effectiveCostCount || 0);
+                    const limit = BigInt(goodsNow.limitCount || 0);
+                    const available = limit > 0n ? limit - BigInt(goodsNow.limitUsed || goodsNow.boughtNum || 0) : 99n;
+                    if (price <= 0n) break;
+                    const balance = currencyStock(state.items, group.cost);
+                    const affordable = balance > group.reserve ? (balance - group.reserve) / price : 0n;
+                    const count = affordable > 0n ? cap(99, available, affordable) : 0;
+                    if (count <= 0) {
+                        if (available <= 0n) break;          // 该商品限额已用完，换下一个
+                        if (!priority) break;                // 非优先模式：这个商品留到下一轮
+                        waiting = true;                      // 优先模式：等货币攒够再兑换
+                        break;
+                    }
+                    const usedBefore = used;
+                    try {
+                        await perform({ action: 'exchange', goodsId: String(goodsNow.goodsId), count, costCount: String(price), costItemId: group.cost, periodDay: market.periodDay, roundIndex: market.roundIndex, requestIndex: `${slice}:${attemptNo + 1}` }, group.key);
+                    } catch (err) { logError(err); break; }
+                    // 同一商品多次兑换要各自记账：没有真正发车（去重/开关关闭）时立即停手，避免空转。
+                    if (used === usedBefore) break;
+                    if (price * BigInt(count) >= balance - group.reserve) break;
+                }
+            }
+        }
     });
     // Buy/exchange to target stock first; later inventory tasks can use newly acquired supplies.
     for (const mode of ['buy', 'exchange']) {

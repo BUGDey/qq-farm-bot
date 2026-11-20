@@ -6,6 +6,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 import BaseSelect from '@/components/ui/BaseSelect.vue'
 import BaseSwitch from '@/components/ui/BaseSwitch.vue'
+import ExchangePriorityList from '@/components/settings/ExchangePriorityList.vue'
 import { useAccountStore } from '@/stores/account'
 
 const props = defineProps<{ readonly?: boolean }>()
@@ -14,6 +15,34 @@ const pending = useRanchActionLock(account)
 const data = ref<any>(null)
 const draft = ref<Record<string, boolean>>({})
 const policy = ref<any>({})
+const exchangeGoods = ref<any[]>([])
+const goodsLoading = ref(false)
+let goodsRequest = 0
+const poopGoods = computed(() => exchangeGoods.value.filter(g => String(g.costItemId) === '7002'))
+const pineGoods = computed(() => exchangeGoods.value.filter(g => String(g.costItemId) === '1008'))
+async function loadExchangeGoods() {
+  const accountId = account.currentAccountId
+  if (!accountId)
+    return
+  const request = ++goodsRequest
+  goodsLoading.value = true
+  try {
+    const res = await api.get('/api/ranch/shop', { headers: { 'x-account-id': accountId } })
+    if (request !== goodsRequest)
+      return
+    exchangeGoods.value = res.data?.ok
+      ? (res.data.data?.exchangeMarket?.goods || []).filter((g: any) => ['7002', '1008'].includes(String(g.costItemId)))
+      : []
+  }
+  catch {
+    if (request === goodsRequest)
+      exchangeGoods.value = []
+  }
+  finally {
+    if (request === goodsRequest)
+      goodsLoading.value = false
+  }
+}
 const active = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -41,7 +70,7 @@ const policyKeys: Record<string, string[]> = {
   feed: ['canStrategy', 'smartSeconds', 'grassThresholdPercent', 'feedTargetCount', 'feedReserveCount'],
   friends: ['helpMin', 'helpMax', 'quietEnabled', 'quietStart', 'quietEnd'],
   steal: [],
-  merchant: [],
+  merchant: ['exchangePoopOrder', 'exchangePineOrder'],
 }
 const husbandryFallbackOptions = [
   { label: '任务幼崽优先（无任务时最高等级）', value: 'task' },
@@ -76,7 +105,7 @@ const options = computed(() => [
   { key: 'autoSell', label: '自动出售产物', capability: 'sell', module: 'husbandry' },
   { key: 'autoExchangePoop', label: '使用便便兑换', capability: 'exchange', module: 'merchant' },
   { key: 'autoExchangePine', label: '使用松果兑换', capability: 'exchange', module: 'merchant' },
-  { key: 'autoExchangeOrganicFirst', label: '便便优先兑换有机化肥（4小时）', capability: 'exchange', module: 'merchant' },
+  { key: 'autoExchangePriority', label: '按下方顺序优先兑换', capability: 'exchange', module: 'merchant' },
   { key: 'autoUpgradeRanch', label: '升级牧场', capability: 'upgradeBuilding', module: 'feed' },
   { key: 'autoUpgradeFacilities', label: '解锁棚与升级设施', capability: 'upgradeBuilding', module: 'feed' },
   { key: 'autoFeedAnimal', label: '自动使用罐头', capability: 'feedAnimal', module: 'feed' },
@@ -132,6 +161,13 @@ function edit(key: string) {
     return
   active.value = key
   policy.value = JSON.parse(JSON.stringify(data.value?.policy || {}))
+  if (key === 'merchant') {
+    if (!Array.isArray(policy.value.exchangePoopOrder))
+      policy.value.exchangePoopOrder = []
+    if (!Array.isArray(policy.value.exchangePineOrder))
+      policy.value.exchangePineOrder = []
+    void loadExchangeGoods()
+  }
   draft.value = Object.fromEntries(options.value.map(o => [o.key, data.value?.[o.key] === true]))
 }
 async function save() {
@@ -178,6 +214,8 @@ watch(() => account.currentAccountId, () => {
   draft.value = {}
   policy.value = {}
   loading.value = false
+  exchangeGoods.value = []
+  goodsRequest += 1
   void load()
 }, { immediate: true, flush: 'sync' })
 onUnmounted(() => {
@@ -226,8 +264,8 @@ onUnmounted(() => {
                 <div class="grid gap-3 sm:grid-cols-2">
                   <div v-for="option in options.filter(o => o.module === active)" :key="option.key" class="min-w-0">
                     <BaseSwitch v-model="draft[option.key]" :label="option.label" :disabled="loading" />
-                    <p v-if="option.key === 'autoExchangeOrganicFirst'" class="mt-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                      开启后，便便兑换优先选择 4 小时有机化肥（80012），其次 1 小时有机化肥（80011）；不影响其他兑换商品。
+                    <p v-if="option.key === 'autoExchangePriority'" class="mt-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      开启后按下方顺序逐个检查：能换就换，换不了就等着数量攒够，不会跳过它先去换后面的商品。便便与松果是两种货币，各自排队互不影响。
                     </p>
                     <p v-if="option.key === 'autoClaimShareReward'" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                       在游戏内完成每日首次分享后自动检查并领取罐头（1 小时）×5，不会代你分享。
@@ -235,6 +273,26 @@ onUnmounted(() => {
                   </div>
                 </div>
               </section>
+              <template v-if="active === 'merchant' && draft.autoExchangePriority && (draft.autoExchangePoop || draft.autoExchangePine)">
+                <section v-if="draft.autoExchangePoop" class="space-y-2 border border-gray-100 rounded-lg p-4 dark:border-gray-700">
+                  <h3 class="text-lg font-bold">
+                    便便兑换顺序
+                  </h3>
+                  <p v-if="goodsLoading" class="text-sm text-gray-500">
+                    正在读取兑换集市商品…
+                  </p>
+                  <ExchangePriorityList v-model="policy.exchangePoopOrder" title="便便兑换" cost-name="便便" :goods="poopGoods" :loading="goodsLoading" :disabled="loading" />
+                </section>
+                <section v-if="draft.autoExchangePine" class="space-y-2 border border-gray-100 rounded-lg p-4 dark:border-gray-700">
+                  <h3 class="text-lg font-bold">
+                    松果兑换顺序
+                  </h3>
+                  <ExchangePriorityList v-model="policy.exchangePineOrder" title="松果兑换" cost-name="松果" :goods="pineGoods" :loading="goodsLoading" :disabled="loading" />
+                </section>
+                <p class="text-xs leading-relaxed text-gray-500">
+                  拖拽卡片调整顺序，或用 ↑ 置顶；价格显示的是折扣后的实际花费，达到限购上限后该商品会自动跳过。
+                </p>
+              </template>
               <section v-if="active === 'husbandry'" class="border border-gray-100 rounded-lg p-4 space-y-4 dark:border-gray-700">
                 <h3 class="text-lg font-bold">
                   养殖策略与巡查频率
@@ -315,7 +373,7 @@ onUnmounted(() => {
               </p>
             </div>
           </div>
-          <BaseSwitch v-if="module.key !== 'daily'" :aria-label="`${module.title}自动化`" :model-value="enabledCount(module.key) > 0" :disabled="props.readonly || loading || !data || pending.has(account.currentAccountId)" @update:model-value="toggleModule(module.key, !!$event)" />
+          <BaseSwitch :aria-label="`${module.title}自动化`" :model-value="enabledCount(module.key) > 0" :disabled="props.readonly || loading || !data || pending.has(account.currentAccountId)" @update:model-value="toggleModule(module.key, !!$event)" />
         </div>
         <div class="mt-4 min-h-[56px] flex flex-wrap content-start gap-2">
           <span v-for="option in moduleOptions(module.key).filter(o => data?.[o.key])" :key="option.key" class="max-w-full rounded-md bg-gray-50 px-2.5 py-1 text-xs text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">{{ option.label }}</span>

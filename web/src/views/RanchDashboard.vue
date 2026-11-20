@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import type { RuntimeLogEntry } from '@/utils/runtime-log'
-import { useIntervalFn } from '@vueuse/core'
+import { useEventListener, useIntervalFn } from '@vueuse/core'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRanchResource } from '@/composables/useRanchResource'
 import { useRanchSync } from '@/composables/useRanchSync'
 import { useAccountStore } from '@/stores/account'
 import { useStatusStore } from '@/stores/status'
-import { formatCouponAmount } from '@/utils/number-format'
+import { DASHBOARD_EMPTY, formatCouponAmount, formatDashboardValue } from '@/utils/number-format'
+import { readRanchDashboardCache, writeRanchDashboardCache } from '@/utils/ranch-dashboard-cache'
+import type { RanchDashboardCacheEntry } from '@/utils/ranch-dashboard-cache'
 import { ranchActionLabels } from '@/utils/ranch-display'
+import { createRanchExpSampler, RANCH_EXP_MAX_GAP_MS, ranchExpForecast, readRanchExp } from '@/utils/ranch-exp'
 import { compactRuntimeLogs, matchesRuntimeLog, normalizeRuntimeLog } from '@/utils/runtime-log'
 
 const ranch = useRanchSync()
@@ -22,7 +25,16 @@ useIntervalFn(() => { clock.value = Date.now() }, 1000)
 const connection = computed(() => status.currentStatusReady ? status.status?.connection : null)
 const currentAccountDisconnected = computed(() => !!connection.value && !connection.value.connected)
 const connectionLabel = computed(() => connection.value ? connection.value.connected ? '在线' : '离线' : '未知')
-const profileData = computed(() => profile.error.value ? null : profile.data.value)
+// 冷启动缓存：上次成功读到的展示数据先顶上，真实请求回来后再替换（见 utils/ranch-dashboard-cache）。
+const cacheEntry = ref<RanchDashboardCacheEntry | null>(null)
+function loadDashboardCache() {
+  const accountId = account.currentAccountId
+  cacheEntry.value = accountId ? readRanchDashboardCache(accountId) : null
+}
+loadDashboardCache()
+watch(() => account.currentAccountId, loadDashboardCache, { flush: 'sync' })
+const liveProfileData = computed(() => profile.error.value ? null : profile.data.value)
+const profileData = computed(() => liveProfileData.value ?? cacheEntry.value?.profile ?? null)
 // 头像加载失败时回退到确实存在的默认图，避免出现空白圆圈。
 const DEFAULT_AVATAR = '/admin-default-avatar.jpg'
 const avatarSrc = computed(() => profileData.value?.avatar || account.currentAccount?.avatar || DEFAULT_AVATAR)
@@ -31,11 +43,109 @@ function onAvatarError(event: Event) {
   if (img && img.src && !img.src.endsWith(DEFAULT_AVATAR))
     img.src = DEFAULT_AVATAR
 }
-const illustratedData = computed(() => illustrated.error.value ? null : illustrated.data.value)
-const snapshot = computed(() => ranch.error ? null : ranch.data)
+const illustratedData = computed(() => (illustrated.error.value ? null : illustrated.data.value) ?? cacheEntry.value?.illustrated ?? null)
+const liveSnapshot = computed(() => ranch.error ? null : ranch.data)
+const liveInventory = computed(() => !liveSnapshot.value?.sectionErrors?.warehouse && Array.isArray(liveSnapshot.value?.items) ? liveSnapshot.value : null)
+const snapshot = computed(() => liveSnapshot.value ?? cacheEntry.value?.snapshot ?? null)
+const inventory = computed(() => liveInventory.value ?? cacheEntry.value?.snapshot ?? null)
+// 正在用缓存顶替（真实请求尚未返回或失败）时给出明确提示，不把旧数据当实时数据。
+const usingCachedData = computed(() => !!(
+  (!liveInventory.value && cacheEntry.value?.snapshot)
+  || (!liveProfileData.value && cacheEntry.value?.profile)
+  || ((illustrated.error.value || !illustrated.data.value) && cacheEntry.value?.illustrated)
+))
+const cacheAgeText = computed(() => {
+  const savedAt = Number(cacheEntry.value?.savedAt)
+  if (!Number.isFinite(savedAt) || savedAt <= 0)
+    return ''
+  const minutes = Math.max(0, Math.floor((clock.value - savedAt) / 60000))
+  if (minutes < 1)
+    return '缓存于刚刚'
+  if (minutes < 60)
+    return `缓存于 ${minutes} 分钟前`
+  const hours = Math.floor(minutes / 60)
+  return hours < 24 ? `缓存于 ${hours} 小时前` : `缓存于 ${Math.floor(hours / 24)} 天前`
+})
+function persistDashboardCache() {
+  const accountId = account.currentAccountId
+  if (!accountId || document.hidden)
+    return
+  const profileSlice = liveProfileData.value
+  const illustratedSlice = illustrated.error.value ? null : illustrated.data.value
+  const snapshotSlice = liveInventory.value
+  // 空/失败读取不写缓存，避免用 0 覆盖掉之前可用的数据。
+  if (!profileSlice && !illustratedSlice && !snapshotSlice)
+    return
+  // 三个请求各自独立返回：写入时保留本次没有返回的旧分片，别把它们的缓存抹掉。
+  const existing = readRanchDashboardCache(accountId)
+  if (writeRanchDashboardCache(accountId, {
+    profile: profileSlice ?? existing?.profile,
+    illustrated: illustratedSlice ?? existing?.illustrated,
+    snapshot: snapshotSlice ?? existing?.snapshot,
+  }))
+    loadDashboardCache()
+}
+let cacheWriteScheduled = false
+function scheduleDashboardCacheWrite() {
+  if (cacheWriteScheduled)
+    return
+  cacheWriteScheduled = true
+  window.setTimeout(() => {
+    cacheWriteScheduled = false
+    persistDashboardCache()
+  }, 1000)
+}
+watch([() => profile.data.value, () => illustrated.data.value, () => ranch.data], scheduleDashboardCacheWrite)
 const displayName = computed(() => {
   const name = profileData.value?.name || account.currentAccount?.nick
   return name ? `${name}${account.currentAccount?.name ? ` (${account.currentAccount.name})` : ''}` : account.currentAccount?.name || '未知'
+})
+const expSampler = createRanchExpSampler()
+const expObservation = ref<{ gain: number | null, seconds: number | null, at: number } | null>(null)
+function resetExpObservation() {
+  expSampler.reset()
+  expObservation.value = null
+}
+watch(() => account.currentAccountId, resetExpObservation, { flush: 'sync' })
+watch(() => status.currentStatusReady ? status.status?.sessionUptime : null, (next, previous) => {
+  if (typeof next === 'number' && typeof previous === 'number' && next < previous)
+    resetExpObservation()
+})
+watch(currentAccountDisconnected, (disconnected) => {
+  if (disconnected)
+    resetExpObservation()
+})
+useEventListener(document, 'visibilitychange', resetExpObservation)
+watch(profile.error, (error) => {
+  if (error)
+    resetExpObservation()
+})
+watch(profile.data, (data) => {
+  if (document.hidden || profile.error.value || currentAccountDisconnected.value) {
+    resetExpObservation()
+    return
+  }
+  const at = Date.now()
+  const observed = expSampler.sample({
+    accountId: account.currentAccountId,
+    exp: data?.exp,
+    at,
+    sessionUptime: status.currentStatusReady ? status.status?.sessionUptime : null,
+  })
+  expObservation.value = observed ? { ...observed, at } : null
+})
+const expForecast = computed(() => {
+  const observation = expObservation.value
+  const fresh = observation && clock.value - observation.at <= RANCH_EXP_MAX_GAP_MS
+  // 效率必须来自本次会话的真实读数；缓存数据只用于展示等级/进度，不参与采样。
+  const data = liveProfileData.value
+  const available = !!data && readRanchExp(data.exp) !== null && !currentAccountDisconnected.value
+  const forecast = ranchExpForecast(profileData.value?.levelProgress, available && fresh ? observation.gain : null, available && fresh ? observation.seconds : null)
+  return {
+    eta: forecast.eta === '暂无法估算' ? DASHBOARD_EMPTY : forecast.eta,
+    rate: available && (!fresh || observation.gain === null) ? '采样中' : ['未知', '0/小时'].includes(forecast.rate) ? DASHBOARD_EMPTY : forecast.rate,
+    remaining: forecast.remaining === '剩余经验未知' ? DASHBOARD_EMPTY : forecast.remaining,
+  }
 })
 const expPercent = computed(() => {
   const progress = profileData.value?.levelProgress
@@ -43,15 +153,16 @@ const expPercent = computed(() => {
 })
 const expText = computed(() => {
   const data = profileData.value
-  if (data?.levelProgress?.needed > 0)
-    return `${data.levelProgress.current} / ${data.levelProgress.needed}`
-  return data?.exp != null ? `${data.exp} / 未知` : '未知 / 未知'
+  const progress = data?.levelProgress
+  const current = formatDashboardValue(progress?.needed > 0 ? progress.current : data?.exp)
+  const needed = formatDashboardValue(progress?.needed)
+  return current === DASHBOARD_EMPTY && needed === DASHBOARD_EMPTY ? DASHBOARD_EMPTY : `${current} / ${needed}`
 })
 function itemCount(id: number): string | null {
-  if (!Array.isArray(snapshot.value?.items) || snapshot.value?.sectionErrors?.warehouse)
+  if (!Array.isArray(inventory.value?.items) || inventory.value?.sectionErrors?.warehouse)
     return null
   try {
-    const items = snapshot.value.items.filter((item: any) => Number(item.id) === id)
+    const items = inventory.value.items.filter((item: any) => Number(item.id) === id)
     // Shared premium currencies may be omitted by the scene-2 bag; omission is not a zero balance.
     if ((id === 1002 || id === 1004) && !items.length)
       return null
@@ -61,7 +172,7 @@ function itemCount(id: number): string | null {
 }
 function itemAmount(id: number) {
   // 钻石：实时权威余额优先；读不到时用农场状态下写入的缓存值（diamondCached），
-  // 两者都拿不到才显示"未知"，绝不强制显示 0（场景 2 背包里可能根本没有钻石条目）。
+  // 两者都缺失才显示占位符，查到 0 就显示 0。
   if (id === 1004) {
     // status store 的 status 是 worker 上报的 stats，钻石在嵌套的 stats.status 里
     // （与农场 Dashboard.vue 的 status.value?.status?.diamond 同一层级）。
@@ -69,16 +180,13 @@ function itemAmount(id: number) {
     const live = snapshotStatus.diamond
     const cached = snapshotStatus.diamondCached
     const value = live ?? cached
-    return value == null || value === '' ? '未知' : formatCouponAmount(String(value))
+    return formatDashboardValue(value, formatCouponAmount)
   }
-  const value = itemCount(id)
-  if (value != null)
-    return formatCouponAmount(value)
-  return '未知'
+  return formatDashboardValue(itemCount(id), formatCouponAmount)
 }
 function canTime(id: number) {
   const value = itemCount(id)
-  return value == null ? '未知' : `${(Number(value) / 3600).toFixed(1)}h`
+  return formatDashboardValue(value, seconds => `${(seconds / 3600).toFixed(1)}h`)
 }
 const resourceCards = computed(() => [
   { key: 'gold', label: '金券', icon: '/game-config/seed_images_named/seed_images/1007.png', amount: itemAmount(1007) },
@@ -89,8 +197,8 @@ const resourceCards = computed(() => [
   { key: 'can-organic', label: '有机罐头', icon: '/game-config/ranch-icons/can-organic.png', amount: canTime(7004) },
   { key: 'grass', label: '牧草', icon: '/game-config/seed_images_named/seed_images/7001.png', amount: itemAmount(7001) },
   { key: 'poop', label: '便便', icon: '/game-config/ranch-icons/poop.png', amount: itemAmount(7002) },
-  { key: 'crop', label: '普通图鉴', icon: '/game-config/resource-icons/illustrated-crop.png', amount: illustratedData.value?.currentLevel != null ? `Lv.${illustratedData.value.currentLevel}` : '未知' },
-  { key: 'mutant', label: '巨大图鉴', icon: '/game-config/resource-icons/illustrated-mutant.png', amount: illustratedData.value?.weightScore?.currentId != null ? `Lv.${illustratedData.value.weightScore.currentId}` : '未知' },
+  { key: 'crop', label: '普通图鉴', icon: '/game-config/resource-icons/illustrated-crop.png', amount: formatDashboardValue(illustratedData.value?.currentLevel, level => `Lv.${level}`) },
+  { key: 'mutant', label: '巨大图鉴', icon: '/game-config/resource-icons/illustrated-mutant.png', amount: formatDashboardValue(illustratedData.value?.weightScore?.currentId, level => `Lv.${level}`) },
 ])
 // 巡查项文案：running→巡查中；enabled+nextAt→剩余倒计时（到点显示即将巡查，绝对时刻放悬浮提示）；
 // 未启用/未下发时间→等待巡查。nextAt 兼容秒/毫秒（小于 1e12 视为秒）。
@@ -124,7 +232,7 @@ const checks = computed(() => [
   const value = currentAccountDisconnected.value ? '账号未登录' : state.value
   return { ...item, value, hint: currentAccountDisconnected.value ? '账号未登录' : state.hint }
 }))
-const uptime = computed(() => status.currentStatusReady && status.status?.uptime != null ? formatDuration(status.status.uptime) : '未知')
+const uptime = computed(() => formatDashboardValue(status.currentStatusReady ? status.status?.uptime : null, formatDuration))
 const runLabel = computed(() => currentAccountDisconnected.value ? '牧场未运行' : !connection.value ? '牧场状态未知' : checks.value.some(check => check.value === '巡查中') ? '牧场巡查中' : '牧场状态')
 const featureCards = [
   { key: 'crop', title: '图鉴', subtitle: '普通 / 巨大', icon: '/game-config/resource-icons/illustrated-crop.png', to: '/ranch/illustrated' },
@@ -248,13 +356,16 @@ useIntervalFn(() => {
       <p v-if="ranch.error || profile.error.value || illustrated.error.value" class="game-card data-warning" role="alert">
         {{ ranch.error || profile.error.value || illustrated.error.value }}
       </p>
+      <p v-if="usingCachedData" class="game-card cache-hint" role="status">
+        <span class="i-carbon-time" /> 正在显示上次读取的缓存数据（{{ cacheAgeText }}），已自动在后台刷新。
+      </p>
       <div class="game-card user-card">
         <div class="user-info-row">
           <img :src="avatarSrc" alt="用户头像" class="user-avatar-large" @error="onAvatarError">
           <div class="user-details">
             <div class="user-name-row">
               <span class="user-name" :title="displayName">{{ displayName }}</span>
-              <span class="user-level">Lv.{{ profileData?.level ?? '未知' }}</span>
+              <span class="user-level">{{ formatDashboardValue(profileData?.level, level => `Lv.${level}`) }}</span>
             </div>
             <div class="exp-bar-row">
               <div class="exp-progress-bar" role="progressbar" aria-label="牧场经验" :aria-valuenow="profileData?.levelProgress ? expPercent : undefined" :aria-valuemin="0" :aria-valuemax="100">
@@ -262,7 +373,10 @@ useIntervalFn(() => {
               </div>
               <span class="exp-total">{{ expText }}</span>
             </div>
-            <div class="exp-meta"><span class="exp-rate"><span class="exp-bolt i-fas-bolt" />牧场 EXP</span></div>
+            <div class="exp-meta" title="本页连续有效牧场经验样本的平均效率；刷新、切号、会话重启或页面隐藏后重新采样，预估仅供参考">
+              <span class="exp-rate"><span class="exp-bolt i-fas-bolt" />EXP 效率：{{ expForecast.rate }}<span class="exp-observation-label">（本页观测）</span></span>
+              <span class="level-up-time"><span class="level-eta">{{ expForecast.eta }}</span><span class="level-need">{{ expForecast.remaining }}</span></span>
+            </div>
           </div>
         </div>
       </div>
@@ -322,7 +436,7 @@ useIntervalFn(() => {
               <div class="text-base" :class="[getOpIcon(item.key), getOpColor(item.key)]" />
               <span class="home-stat-label" :title="ranchActionLabels[item.key] || item.key">{{ ranchActionLabels[item.key] || item.key }}</span>
             </div>
-            <span class="home-stat-value">{{ item.value }}</span>
+            <span class="home-stat-value">{{ formatDashboardValue(item.value) }}</span>
           </div>
         </div>
       </div>
@@ -357,6 +471,7 @@ useIntervalFn(() => {
 .game-card { position: relative; border-radius: 20px; border: 1.5px solid rgba(255,255,255,.65); background: linear-gradient(165deg,rgba(255,255,255,.58),rgba(255,255,255,.28)); box-shadow: 0 10px 28px rgba(31,38,80,.12),inset 0 1.5px 0 rgba(255,255,255,.85); backdrop-filter: blur(24px) saturate(1.35); -webkit-backdrop-filter: blur(24px) saturate(1.35); }
 .empty-state { width: 100%; padding: 32px; text-align: center; color: #6b7280; }
 .data-warning { padding: 10px 14px; font-size: 12px; color: #b91c1c; overflow-wrap: anywhere; }
+.cache-hint { display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 12px; color: #475569; background: rgba(255,255,255,.55); border: 1px solid rgba(148,163,184,.35); }
 .user-card { padding: 12px 16px; }
 .user-info-row { display: flex; align-items: center; gap: 16px; }
 .user-avatar-large { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,.95); box-shadow: 0 6px 16px rgba(31,38,80,.18); flex-shrink: 0; }
@@ -369,7 +484,11 @@ useIntervalFn(() => {
 .exp-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#4ade80,#22c55e); box-shadow: 0 0 8px rgba(34,197,94,.5); transition: width .5s ease; }
 .exp-total { font-size: 13px; font-weight: 600; color: #4b5563; overflow-wrap: anywhere; }
 .exp-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin-top: 5px; font-size: 12px; color: #6b7280; }
-.exp-rate { display: inline-flex; align-items: center; gap: 5px; font-weight: 500; }
+.exp-rate { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; font-weight: 500; }
+.exp-observation-label { font-size: 11px; }
+.level-up-time { display: flex; flex-wrap: wrap; gap: 4px 10px; min-width: 0; overflow-wrap: anywhere; }
+.level-need { color: #6b7280; }
+@media (max-width:640px) { .level-up-time { flex-direction: column; gap: 2px; } }
 .exp-bolt { color: #3b82f6; }
 .resource-cards { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 10px; }
 .resource-card { padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 84px; overflow: hidden; }
@@ -425,6 +544,22 @@ useIntervalFn(() => {
 @media (max-width:560px) { .glass-panel { padding: 8px; }.feature-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; } }
 @media (max-width:480px) {
   .resource-cards { gap: 6px; }.resource-card { padding: 8px; min-height: 74px; border-radius: 16px; }.resource-label { font-size: 11px; }.resource-head { gap: 3px; }.resource-mini-icon { width: 14px; height: 14px; }.resource-amount { font-size: 13px; }.resource-big-icon { right: 2px; bottom: 0; width: 34px; height: 34px; }.farm-status-card { gap: 8px; }.farm-scene { width: 18%; }.farm-metrics { gap: 8px; }.farm-metric { gap: 6px; }.farm-metric-icon { width: 24px; height: 24px; font-size: 12px; }.farm-metric-value { font-size: 12px; }.farm-metric-label { font-size: 10px; }.card-arrow { font-size: 11px; }.feature-grid { gap: 6px; }.feature-card { padding: 10px; border-radius: 16px; }.feature-icon { width: 36px; height: 36px; border-radius: 11px; }.feature-title { font-size: 12px; }.feature-subtitle { font-size: 10px; }.game-card { border-radius: 16px; }.home-log-panel { min-height: 240px; max-height: 340px; border-radius: 16px; padding: 10px 12px; gap: 8px; }.home-log-head h3 { font-size: 15px; }.home-log-row { flex-wrap: wrap; font-size: 12px; padding: 3px 4px; }.home-log-msg { flex-basis: 100%; }.home-stats-panel { padding: 12px 14px; border-radius: 16px; }.home-stats-grid { gap: 5px 8px; }.home-stat-item { padding: 5px 6px; gap: 6px; }.home-stat-label { font-size: 12px; }.home-stat-value-pill { min-width: 40px; padding: 3px 8px; font-size: 12px; }
+}
+@media (max-width: 480px) {
+  .resource-card { min-width: 0; }
+  .resource-label, .resource-amount {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .resource-big-icon { opacity: .25; }
+  .farm-status-card { padding: 12px; }
+  .farm-scene { display: none; }
+  .farm-metric { padding-inline: 0; }
+  .farm-metric-value {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .home-stat-value { font-size: 13px; }
 }
 @media (prefers-reduced-motion:reduce) { .feature-card,.farm-status-card,.exp-progress-fill { transition: none; } }
 </style>

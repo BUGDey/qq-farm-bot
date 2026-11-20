@@ -1,3 +1,16 @@
+export const DASHBOARD_EMPTY = '—'
+
+/**
+ * 只把「没查到」的情况显示成占位符：null / undefined / 空串 / NaN / Infinity。
+ * 服务端明确返回的 0 是有效数据，照常显示成 0。
+ */
+export function formatDashboardValue(value: unknown, format: (amount: number) => string = String): string {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim()))
+    return DASHBOARD_EMPTY
+  const amount = Number(value)
+  return Number.isFinite(amount) ? format(amount) : DASHBOARD_EMPTY
+}
+
 export type ResourceCurrency = 'gold' | 'coupon' | 'goldBean'
 
 const WAN_UNIT = '\u4E07'

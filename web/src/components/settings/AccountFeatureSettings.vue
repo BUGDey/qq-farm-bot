@@ -178,6 +178,17 @@ const activityKeys = computed(() => [
   ...(showShareRewardActivity.value ? ['share_reward_share', 'share_reward_daily', 'share_reward_milestones'] : []),
 ])
 const activityEnabledCount = computed(() => activityKeys.value.filter(key => automation.value.automation[key]).length)
+// 「活动配置」总开关可安全切换的布尔项：只含当前窗口内会渲染的开关，
+// 不含 wish_sign_choice、奶茶雇佣参数、鹊桥好友优先级这些非布尔配置。
+function eventToggleKeys() {
+  return [
+    ...activityKeys.value,
+    ...(SHOW_STAR_ACTIVITY ? ['star_passport_claim', 'star_record_claim'] : []),
+    ...(SHOW_QIXI_ACTIVITY ? ['qixi_dew_use', 'qixi_bridge_build', 'qixi_sachet_gift'] : []),
+  ]
+}
+// 这些开关会花掉背包或货币，总开关开启时不动它们。
+const EVENT_SPENDING_KEY = /(_buy|_donate|_craft|_boost|_upgrade|_hire|_work_interact|_unlock)$/
 const starFestivalEnabled = computed(() => ['star_passport_claim', 'star_record_claim'].some(key => automation.value.automation[key]))
 const qixiActivityEnabled = computed(() => ['qixi_dew_use', 'qixi_bridge_build', 'qixi_sachet_gift'].some(key => automation.value.automation[key]))
 // 按活动分别判断。此前这里复用 activityKeys（含全部活动），只开公益或萌宠时
@@ -305,6 +316,23 @@ function setModuleEnabled(key: ModuleKey, enabled: boolean) {
   }
   else if (key === 'merchant') {
     automation.value.automation.mystery_shop_auto_buy = enabled
+  }
+  else if (key === 'activity') {
+    // 「日常」总开关：农场日常任务与邮件奖励一起开/关；宠物喂食共用「宠物」页的设置，单独走接口。
+    automation.value.automation.task = enabled
+    automation.value.automation.mail_claim = enabled
+    if (props.section !== 'events' && autoFeedEnabled.value !== enabled)
+      void savePetAutoFeed({ enabled })
+  }
+  else if (key === 'events') {
+    // 「活动配置」总开关：关闭时清空整组；开启时只打开领取类开关，
+    // 消耗资源的开关（购买/捐献/制作/加速/雇佣/解锁）保持原样，避免一键花费。
+    for (const name of eventToggleKeys()) {
+      if (typeof automation.value.automation[name] !== 'boolean')
+        continue
+      if (!enabled || !EVENT_SPENDING_KEY.test(name))
+        automation.value.automation[name] = enabled
+    }
   }
   else {
     return
@@ -456,7 +484,6 @@ watch(() => props.currentAccountId, () => {
               </div>
             </div>
             <BaseSwitch
-              v-if="key !== 'activity' && key !== 'events'"
               :aria-label="`${info.title}自动化`"
               :model-value="moduleEnabled(key as ModuleKey)"
               :disabled="isReadonly || saving"

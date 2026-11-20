@@ -14,7 +14,7 @@ import { useAccountStore } from '@/stores/account'
 import { useBagStore } from '@/stores/bag'
 import { useStatusStore } from '@/stores/status'
 import { useToastStore } from '@/stores/toast'
-import { formatCouponAmount, formatGoldAmount, formatGoldBeanAmount } from '@/utils/number-format'
+import { DASHBOARD_EMPTY, formatCouponAmount, formatDashboardValue, formatGoldAmount, formatGoldBeanAmount } from '@/utils/number-format'
 import { compactRuntimeLogs, matchesRuntimeLog, normalizeRuntimeLog } from '@/utils/runtime-log'
 
 const statusStore = useStatusStore()
@@ -223,10 +223,7 @@ const expRate = computed(() => {
   const gain = status.value?.sessionExpGained || 0
   // 效率用「本次会话」时长算：刷新 Code 后会话经验会清零，用累计时长会失真
   const uptime = status.value?.sessionUptime ?? status.value?.uptime ?? 0
-  if (!uptime)
-    return '0/小时'
-  const rate = gain / (uptime / 3600)
-  return `${Math.floor(rate)}/小时`
+  return uptime > 0 ? formatDashboardValue(Math.floor(gain / (uptime / 3600)), rate => `${rate}/小时`) : DASHBOARD_EMPTY
 })
 
 // 升级预估拆成「多久升级」和「还差多少经验」两段：
@@ -269,30 +266,37 @@ const timeToLevel = computed(() => {
 const fertilizerNormal = computed(() => dashboardItems.value.find((item: any) => Number(item.id) === 1011))
 const fertilizerOrganic = computed(() => dashboardItems.value.find((item: any) => Number(item.id) === 1012))
 
+const levelText = computed(() => formatDashboardValue(status.value?.status?.level, level => `Lv.${level}`))
+const expText = computed(() => {
+  const current = formatDashboardValue(status.value?.levelProgress?.current)
+  const needed = formatDashboardValue(status.value?.levelProgress?.needed)
+  return current === DASHBOARD_EMPTY && needed === DASHBOARD_EMPTY ? DASHBOARD_EMPTY : `${current} / ${needed}`
+})
+
 const resourceCards = computed(() => [
   {
     key: 'gold',
     label: '金币',
     icon: '/game-config/resource-icons/gold.png',
-    amount: formatGoldAmount(status.value?.status?.gold || 0),
+    amount: formatDashboardValue(status.value?.status?.gold, formatGoldAmount),
   },
   {
     key: 'coupon',
     label: '点券',
     icon: '/game-config/resource-icons/coupon.png',
-    amount: formatCouponAmount(status.value?.status?.coupon || 0),
+    amount: formatDashboardValue(status.value?.status?.coupon, formatCouponAmount),
   },
   {
     key: 'diamond',
     label: '钻石',
     icon: '/game-config/resource-icons/diamond.png',
-    amount: formatCouponAmount(status.value?.status?.diamond || 0),
+    amount: formatDashboardValue(status.value?.status?.diamond, formatCouponAmount),
   },
   {
     key: 'bean',
     label: '金豆',
     icon: '/game-config/resource-icons/gold-bean.png',
-    amount: formatGoldBeanAmount(status.value?.status?.goldBean || 0),
+    amount: formatDashboardValue(status.value?.status?.goldBean, formatGoldBeanAmount),
   },
   {
     key: 'fert-normal',
@@ -310,13 +314,13 @@ const resourceCards = computed(() => [
     key: 'crop',
     label: '作物图鉴',
     icon: '/game-config/resource-icons/illustrated-crop.png',
-    amount: `Lv.${illustratedLevels.value.crop}`,
+    amount: formatDashboardValue(illustratedLevels.value.crop, level => `Lv.${level}`),
   },
   {
     key: 'mutant',
     label: '超变图鉴',
     icon: '/game-config/resource-icons/illustrated-mutant.png',
-    amount: `Lv.${illustratedLevels.value.mutant}`,
+    amount: formatDashboardValue(illustratedLevels.value.mutant, level => `Lv.${level}`),
   },
 ])
 
@@ -324,14 +328,14 @@ const featureCards = computed(() => [
   {
     key: 'crop',
     title: '作物图鉴',
-    subtitle: `Lv.${illustratedLevels.value.crop}`,
+    subtitle: formatDashboardValue(illustratedLevels.value.crop, level => `Lv.${level}`),
     icon: '/dashboard/icon-crop.png',
     to: '/illustrated',
   },
   {
     key: 'pet',
     title: '宠物',
-    subtitle: `Lv.${illustratedLevels.value.mutant}`,
+    subtitle: formatDashboardValue(illustratedLevels.value.mutant, level => `Lv.${level}`),
     icon: '/dashboard/icon-pet.png',
     to: '/pet',
   },
@@ -454,11 +458,7 @@ function getEventLabel(event: string) {
 }
 
 function formatBucketTime(item: any) {
-  if (!item)
-    return '0.0h'
-  if (item.hoursText)
-    return item.hoursText.replace('小时', 'h')
-  return `${(Number(item.count || 0) / 3600).toFixed(1)}h`
+  return formatDashboardValue(item?.count, count => item.hoursText?.replace('小时', 'h') || `${(count / 3600).toFixed(1)}h`)
 }
 
 function updateCountdowns() {
@@ -805,13 +805,13 @@ useIntervalFn(updateCountdowns, 1000)
           <div class="user-details">
             <div class="user-name-row">
               <span class="user-name">{{ displayName }}</span>
-              <span class="user-level">Lv.{{ status?.status?.level || 0 }}</span>
+              <span class="user-level">{{ levelText }}</span>
             </div>
             <div class="exp-bar-row">
               <div class="exp-progress-bar">
                 <div class="exp-progress-fill" :style="{ width: `${getExpPercent(status?.levelProgress)}%` }" />
               </div>
-              <span class="exp-total">{{ status?.levelProgress?.current || 0 }} / {{ status?.levelProgress?.needed || 0 }}</span>
+              <span class="exp-total">{{ expText }}</span>
             </div>
             <div class="exp-meta">
               <span class="exp-rate">
@@ -893,7 +893,7 @@ useIntervalFn(updateCountdowns, 1000)
                 <span class="i-carbon-time" />
               </span>
               <div class="farm-metric-text">
-                <span class="farm-metric-value">{{ formatDuration(localUptime) }}</span>
+                <span class="farm-metric-value">{{ formatDashboardValue(localUptime, formatDuration) }}</span>
                 <span class="farm-metric-label">已运行</span>
               </div>
             </div>
@@ -947,7 +947,7 @@ useIntervalFn(updateCountdowns, 1000)
               <div class="text-base" :class="[getOpIcon(item.key), getOpColor(item.key)]" />
               <span class="home-stat-label" :title="getOpName(item.key)">{{ getOpName(item.key) }}</span>
             </div>
-            <span class="home-stat-value">{{ item.value }}</span>
+            <span class="home-stat-value">{{ formatDashboardValue(item.value) }}</span>
           </div>
         </div>
       </div>
@@ -1012,7 +1012,7 @@ useIntervalFn(updateCountdowns, 1000)
               账号
             </div>
             <div class="rounded-lg bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-              Lv.{{ status?.status?.level || 0 }}
+              {{ levelText }}
             </div>
           </div>
           <div class="mb-1 truncate text-xl font-bold" :title="displayName">
@@ -1024,7 +1024,7 @@ useIntervalFn(updateCountdowns, 1000)
                 <div class="i-fas-bolt text-blue-400" />
                 <span>EXP</span>
               </div>
-              <span>{{ status?.levelProgress?.current || 0 }} / {{ status?.levelProgress?.needed || '?' }}</span>
+              <span>{{ expText }}</span>
             </div>
             <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
               <div
@@ -1047,7 +1047,7 @@ useIntervalFn(updateCountdowns, 1000)
                 金币
               </div>
               <div class="text-2xl text-yellow-600 font-bold dark:text-yellow-500">
-                {{ formatGoldAmount(status?.status?.gold || 0) }}
+                {{ formatDashboardValue(status?.status?.gold, formatGoldAmount) }}
               </div>
               <div
                 v-if="(status?.sessionGoldGained || 0) !== 0"
@@ -1063,7 +1063,7 @@ useIntervalFn(updateCountdowns, 1000)
                 点券
               </div>
               <div class="text-2xl text-emerald-500 font-bold dark:text-emerald-400">
-                {{ formatCouponAmount(status?.status?.coupon || 0) }}
+                {{ formatDashboardValue(status?.status?.coupon, formatCouponAmount) }}
               </div>
               <div
                 v-if="(status?.sessionCouponGained || 0) !== 0"
@@ -1079,7 +1079,7 @@ useIntervalFn(updateCountdowns, 1000)
                 钻石
               </div>
               <div class="text-2xl text-cyan-600 font-bold dark:text-cyan-400">
-                {{ formatCouponAmount(status?.status?.diamond || 0) }}
+                {{ formatDashboardValue(status?.status?.diamond, formatCouponAmount) }}
               </div>
             </div>
             <div class="min-w-0 text-right">
@@ -1088,7 +1088,7 @@ useIntervalFn(updateCountdowns, 1000)
                 金豆
               </div>
               <div class="text-2xl text-amber-500 font-bold dark:text-amber-400">
-                {{ formatGoldBeanAmount(status?.status?.goldBean || 0) }}
+                {{ formatDashboardValue(status?.status?.goldBean, formatGoldBeanAmount) }}
               </div>
             </div>
           </div>
@@ -1100,7 +1100,7 @@ useIntervalFn(updateCountdowns, 1000)
               </div>
               <div class="flex items-center gap-1.5 text-xs text-gray-400">
                 <div class="i-fas-clock text-purple-400" />
-                {{ formatDuration(localUptime) }}
+                {{ formatDashboardValue(localUptime, formatDuration) }}
               </div>
             </div>
           </div>
@@ -1135,7 +1135,7 @@ useIntervalFn(updateCountdowns, 1000)
                 作物图鉴
               </div>
               <div class="font-bold">
-                Lv.{{ illustratedLevels.crop }}
+                {{ formatDashboardValue(illustratedLevels.crop, level => `Lv.${level}`) }}
               </div>
             </div>
             <div>
@@ -1144,7 +1144,7 @@ useIntervalFn(updateCountdowns, 1000)
                 超变图鉴
               </div>
               <div class="font-bold">
-                Lv.{{ illustratedLevels.mutant }}
+                {{ formatDashboardValue(illustratedLevels.mutant, level => `Lv.${level}`) }}
               </div>
             </div>
           </div>
@@ -2263,10 +2263,12 @@ select.home-log-filter-item {
 
 @media (max-width: 480px) {
   .resource-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
   }
 
   .resource-card {
+    min-width: 0;
     padding: 8px;
     min-height: 74px;
     border-radius: 16px;
@@ -2274,9 +2276,11 @@ select.home-log-filter-item {
 
   .resource-label {
     font-size: 11px;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
-  /* 收窄头部（小图标 + 隐藏箭头），保证「普通肥/作物图鉴」等 4 字标签不截断 */
+  /* 收窄头部，让小图标与资源标签共用一行。 */
   .resource-head {
     gap: 3px;
   }
@@ -2290,16 +2294,20 @@ select.home-log-filter-item {
     display: none;
   }
 
-  /* 计时器：缩小图标与数值，右侧插画让出宽度，避免 00:06:41 被截断 */
   .farm-status-card {
-    gap: 8px;
+    padding: 12px;
+  }
+
+  .farm-status-header {
+    flex-wrap: wrap;
   }
 
   .farm-scene {
-    width: 34%;
+    display: none;
   }
 
   .farm-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -2315,6 +2323,8 @@ select.home-log-filter-item {
 
   .farm-metric-value {
     font-size: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .farm-metric-label {
@@ -2323,6 +2333,8 @@ select.home-log-filter-item {
 
   .resource-amount {
     font-size: 13px;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .resource-mini-icon {
@@ -2335,6 +2347,7 @@ select.home-log-filter-item {
     bottom: 0;
     width: 34px;
     height: 34px;
+    opacity: 0.25;
   }
 
   .card-arrow {

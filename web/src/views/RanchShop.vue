@@ -97,7 +97,7 @@ function purchaseBlock(goods: { price: unknown, limitCount?: unknown, boughtNum?
         </div>
       </template><template v-else>
         <div class="space-y-4">
-          <p>{{ resource.data.value?.exchangeMarket?.opened && resource.data.value?.exchangeMarket?.present ? '营业中' : '当前未营业' }} · 轮次 {{ resource.data.value?.exchangeMarket?.roundIndex ?? '—' }}</p><div class="grid grid-cols-[repeat(auto-fill,minmax(156px,1fr))] gap-3">
+          <p>{{ resource.data.value?.exchangeMarket?.opened && resource.data.value?.exchangeMarket?.present ? '营业中' : '当前未营业' }} · 轮次 {{ resource.data.value?.exchangeMarket?.roundIndex ?? '—' }}</p><ShopEmptyState v-if="!(resource.data.value?.exchangeMarket?.goods || []).length" :message="resource.loading.value ? '正在加载兑换商品…' : '当前没有可兑换商品'" /><div v-else class="grid grid-cols-[repeat(auto-fill,minmax(156px,1fr))] gap-3">
             <RanchShopGoodsCard v-for="goods in resource.data.value?.exchangeMarket?.goods || []" :key="goods.goodsId" :item="{ ...goods, id: goods.goodsId }" badge="兑换">
               <p class="mt-1 break-words text-center text-xs text-amber-600 font-semibold dark:text-amber-400">
                 消耗 {{ goods.costItemName || `物品 ${goods.costItemId}` }} × {{ goods.effectiveCostCount ?? goods.costCount }}

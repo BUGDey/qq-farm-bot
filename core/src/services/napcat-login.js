@@ -1,6 +1,65 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const QRCode = require('qrcode');
+const { AsyncLocalStorage } = require('node:async_hooks');
+const operationContext = new AsyncLocalStorage();
+const operations = new Set();
+let generation = 0;
+let maintenance = false;
+let createBusy = false;
+const MAINTENANCE_ERROR = 'NapCat 正在自动维护，请稍后重新扫码';
+
+function assertGeneration() {
+  const operation = operationContext.getStore();
+  if (operation && operation.generation !== generation) throw new Error(MAINTENANCE_ERROR);
+}
+
+function guarded(fn, { creating = false, idle = false } = {}) {
+  return async (...args) => {
+    assertGeneration();
+    if (maintenance && (creating || idle)) {
+      if (idle) return false;
+      throw new Error(MAINTENANCE_ERROR);
+    }
+    if (creating && (createBusy || idleGuardBusy)) throw new Error('NapCat 正在处理上一项扫码操作，请稍后再试');
+    if (creating) createBusy = true;
+    const operation = { generation, controller: new AbortController() };
+    operations.add(operation);
+    try {
+      return await operationContext.run(operation, async () => {
+        const result = await fn(...args);
+        assertGeneration();
+        return result;
+      });
+    } finally {
+      operations.delete(operation);
+      if (creating && operation.generation === generation) createBusy = false;
+    }
+  };
+}
+
+function beginMaintenance() { maintenance = true; }
+function endMaintenance() { maintenance = false; }
+function invalidateForMaintenance() {
+  generation += 1;
+  createBusy = false;
+  webUiCredential = '';
+  for (const operation of operations) operation.controller.abort();
+  for (const task of tasks.values()) if (task.timer) clearTimeout(task.timer);
+  tasks.clear();
+  activeTaskId = '';
+}
+async function maintenanceReady() {
+  try {
+    const cfg = config();
+    const hash = crypto.createHash('sha256').update(`${cfg.webuiToken}.napcat`).digest('hex');
+    const auth = await requestJson(`${cfg.webui}/auth/login`, { body: { hash }, timeout: 5000 });
+    const credential = auth?.data?.Credential;
+    if (!credential) return false;
+    const state = await requestJson(`${cfg.webui}/QQLogin/CheckLoginStatus`, { body: {}, token: credential, timeout: 5000 });
+    return state.code === undefined || Number(state.code) === 0;
+  } catch { return false; }
+}
 
 const APP_ID = '1112386029';
 const TTL_MS = Math.max(30000, Number(process.env.NAPCAT_LOGIN_TTL_MS) || 120000);
@@ -79,18 +138,22 @@ function capability() {
 }
 
 async function requestJson(url, { method = 'POST', body, token = '', timeout = 15000 } = {}) {
+  assertGeneration();
   let response;
   try {
+    const signal = operationContext.getStore()?.controller.signal;
     response = await fetch(url, {
       method,
       headers: { Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(timeout),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout),
     });
   } catch (error) {
     throw new Error(`无法连接 NapCat: ${error.message}`);
   }
+  assertGeneration();
   const text = await response.text();
+  assertGeneration();
   let payload = {};
   try { payload = text ? JSON.parse(text) : {}; } catch { payload = { raw: text }; }
   if (!response.ok) throw new Error(payload.error || payload.message || `NapCat HTTP ${response.status}`);
@@ -211,11 +274,12 @@ async function resetNapcat() {
  */
 const IDLE_GUARD_INTERVAL_MS = 30 * 1000;
 let idleGuardTimer = null;
+let idleGuardInitialTimer = null;
 let idleGuardBusy = false;
 
-async function releaseIdleSession() {
+const releaseIdleSession = guarded(async function releaseIdleSession() {
   if (idleGuardBusy) return false;
-  if (tasks.size > 0) return false;
+  if (operations.size > 1 || tasks.size > 0 || createBusy || maintenance) return false;
   idleGuardBusy = true;
   try {
     const state = await webUi('/QQLogin/CheckLoginStatus').catch(() => null);
@@ -229,17 +293,20 @@ async function releaseIdleSession() {
   } finally {
     idleGuardBusy = false;
   }
-}
+}, { idle: true });
 
 function startIdleGuard() {
   if (idleGuardTimer) return;
   // 启动后先等一会儿，避免和扫码流程抢
-  setTimeout(() => { void releaseIdleSession(); }, 5000).unref?.();
+  idleGuardInitialTimer = setTimeout(() => { void releaseIdleSession(); }, 5000);
+  idleGuardInitialTimer.unref?.();
   idleGuardTimer = setInterval(() => { void releaseIdleSession(); }, IDLE_GUARD_INTERVAL_MS);
   idleGuardTimer.unref?.();
 }
 
 function stopIdleGuard() {
+  if (idleGuardInitialTimer) clearTimeout(idleGuardInitialTimer);
+  idleGuardInitialTimer = null;
   if (idleGuardTimer) clearInterval(idleGuardTimer);
   idleGuardTimer = null;
 }
@@ -254,13 +321,14 @@ async function clearStaleSession() {
   }
 }
 
-async function release(task, cleanup = '') {
+const release = guarded(async function release(task, cleanup = '') {
+  if (task.generation !== generation) return;
   if (task.timer) clearTimeout(task.timer);
   if (cleanup === 'logout') await logout();
   else if (cleanup === 'restart') await resetNapcat();
   tasks.delete(task.id);
   if (activeTaskId === task.id) activeTaskId = '';
-}
+});
 
 async function create(owner, { refresh = false } = {}) {
   if (!isConfigured()) throw new Error('NapCat 扫码登录未配置');
@@ -292,7 +360,8 @@ async function create(owner, { refresh = false } = {}) {
   const raw = result.qrcode || result.qrCode || result.qrUrl || result.qr_url || result.image || result.base64;
   if (!raw) throw new Error('NapCat 未返回登录二维码');
   const qrImage = /^data:image\//i.test(raw) ? raw : (/^[a-z0-9+/]+={0,2}$/i.test(raw) && raw.length > 128 ? `data:image/png;base64,${raw}` : await QRCode.toDataURL(raw, { width: 280, margin: 1 }));
-  const task = { id: crypto.randomBytes(18).toString('hex'), owner, status: 'waiting_scan', qrImage, expiresAt: Date.now() + TTL_MS };
+  assertGeneration();
+  const task = { generation, id: crypto.randomBytes(18).toString('hex'), owner, status: 'waiting_scan', qrImage, expiresAt: Date.now() + TTL_MS };
   task.timer = setTimeout(() => { void release(task, task.status === 'confirmed' ? 'logout' : '').catch(() => {}); }, TTL_MS + 10);
   task.timer.unref?.();
   tasks.set(task.id, task);
@@ -345,12 +414,14 @@ async function code(id, owner) {
         uin: String(result.uin || task.user?.uin || '').trim(),
         nickname: String(result.nickname || task.user?.nickname || '').trim(),
       };
+      assertGeneration();
       task.result = { code: authCode, ...identity };
       task.status = 'cleaning';
       if (task.timer) clearTimeout(task.timer);
       task.cleanupPromise = logout()
         .then(() => release(task))
         .catch((error) => {
+          if (task.generation !== generation) return;
           task.status = 'cleanup_failed';
           task.error = error.message;
           task.expiresAt = Date.now() + TTL_MS;
@@ -374,21 +445,25 @@ async function cancel(id, owner) {
  * 是否有扫码任务正在进行（释放 QQ 登录态前要避开它）。
  */
 function hasActiveTasks() {
-    return tasks.size > 0;
+    return tasks.size > 0 || operations.size > 0 || idleGuardBusy || createBusy;
 }
 
 module.exports = {
     hasActiveTasks,
+  beginMaintenance,
+  endMaintenance,
+  invalidateForMaintenance,
+  maintenanceReady,
   APP_ID,
   isConfigured,
   launchEnabled,
   capability,
   pluginToken,
-  create,
-  status,
-  code,
-  cancel,
-  logout,
+  create: guarded(create, { creating: true }),
+  status: guarded(status),
+  code: guarded(code),
+  cancel: guarded(cancel),
+  logout: guarded(logout),
   releaseIdleSession,
   startIdleGuard,
   stopIdleGuard,

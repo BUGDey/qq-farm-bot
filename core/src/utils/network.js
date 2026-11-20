@@ -17,7 +17,7 @@ const { types } = require('./proto');
 const { toLong, toNum, syncServerTime, log, logWarn } = require('./utils');
 const cryptoWasm = require('./crypto-wasm');
 const { createGatewayToken } = require('./gateway-token');
-const { NETWORK_TIMEOUT_MS, NETWORK_CHECK_INTERVAL_MS, shouldTerminateGateway, evaluateGatewayHealth, canRunBackground, getOldestPendingAgeMs } = require('./gateway-health');
+const { NETWORK_TIMEOUT_MS, NETWORK_CHECK_INTERVAL_MS, shouldTerminateGateway, evaluateGatewayHealth, isIdleForBackground, getOldestPendingAgeMs } = require('./gateway-health');
 const { createRequestGate, getRequestPriority } = require('./request-priority');
 const { TsdkRuntime } = require('./tsdk-runtime');
 
@@ -845,9 +845,13 @@ function isGatewayHealthyForBusiness() { return getGatewayHealth(); }
 function isGatewayIdleForLowPriority() {
     const health = getGatewayHealth();
     const scene = ranchSession.snapshot?.() || {};
-    return health.pending === 0 && canRunBackground({ ...health,
-        businessActive: health.queue.active, businessQueued: health.queue.queued,
-        sceneActive: !!scene.activeScene, sceneQueued: scene.queued || 0 });
+    return isIdleForBackground({
+        healthy: health.healthy,
+        queue: health.queue,
+        sceneActive: !!scene.activeScene,
+        sceneQueued: scene.queued || 0,
+        insideScene: typeof ranchSession.insideActiveScene === 'function' && ranchSession.insideActiveScene(),
+    });
 }
 function failConnection(reason) {
     if (!ws) return;

@@ -17,8 +17,8 @@ const {
   randomDelay,
   sleep,
 } = require('../utils/utils');
-const { getGatewayHealth, getUserState } = require('../utils/network');
-const { runWithRequestPriority } = require('../utils/request-priority');
+const { getGatewayHealth, getUserState, isGatewayIdleForLowPriority, waitForGatewayIdle } = require('../utils/network');
+const { isGatewayBusyError, runWithRequestPriority } = require('../utils/request-priority');
 const {
   getPlantBlacklist,
   getFriendBlacklist,
@@ -42,6 +42,8 @@ const { classifyGatewayDefer, planNextSyncPacing } = require('./friend-dog-sync-
 
 const GOLDEN_BUG_ITEM_ID = 301101;
 const GOLDEN_BUG_SOCIAL_TYPE = 2;
+/** 后台补数据等空闲窗口的上限：等不到就整批留到下一轮，不逐只硬闯 */
+const DOG_SYNC_IDLE_WAIT_MS = 3000;
 
 // ===== Analyze friend lands =====
 
@@ -165,6 +167,8 @@ async function getFriendDogInfo(gid, friendName = '') {
     if (handled.handled && handled.kind === 'blacklist') {
       return { dogId: 0, dogName: '无狗', blacklisted: true };
     }
+    // 让路错误不代表"这只没狗"：整批按排队处理，绝不写进缓存，也绝不逐只刷错误日志。
+    if (isGatewayBusyError(err)) throw err;
     logWarn('好友', `获取好友 ${numericGid} 狗信息失败: ${err.message}`, {
       module: 'friend',
       event: '获取好友狗信息',
@@ -216,6 +220,17 @@ async function batchGetFriendDogInfo(friends) {
         retryMs: planNextSyncPacing({ cleanRounds, deferredKind }).retryMs,
       };
     }
+    // 后台班次要先等到真正的空闲窗口；等不到就整批留到下一轮，而不是逐只请求逐只报错。
+    if (!isGatewayIdleForLowPriority() && !(await waitForGatewayIdle(DOG_SYNC_IDLE_WAIT_MS))) {
+      return {
+        map: dogMap,
+        failCount: noDogCount,
+        blacklistCount,
+        deferredGids: entries.slice(i).map(entry => entry.gid),
+        deferredKind: 'gateway_contention',
+        retryMs: planNextSyncPacing({ cleanRounds, deferredKind: 'gateway_contention' }).retryMs,
+      };
+    }
     const entry = entries[i];
     const gid = entry.gid;
 
@@ -225,7 +240,21 @@ async function batchGetFriendDogInfo(friends) {
       continue;
     }
 
-    const dogInfo = await getFriendDogInfo(gid, entry.name);
+    let dogInfo;
+    try {
+      dogInfo = await getFriendDogInfo(gid, entry.name);
+    } catch (error) {
+      if (!isGatewayBusyError(error)) throw error;
+      // 中途让路：已拿到的结果保留，剩下的下一轮再补。
+      return {
+        map: dogMap,
+        failCount: noDogCount,
+        blacklistCount,
+        deferredGids: entries.slice(i).map(entry2 => entry2.gid),
+        deferredKind: 'gateway_contention',
+        retryMs: planNextSyncPacing({ cleanRounds, deferredKind: 'gateway_contention' }).retryMs,
+      };
+    }
     if (dogInfo.dogId === 0) noDogCount++;
     if (dogInfo.blacklisted) {
       blacklistCount++;
@@ -460,14 +489,21 @@ async function fetchFriendsDogInfo() {
   }
 
   const guardDogCount = friends.filter(f => f.dogId === 90021).length;
+  const deferredCount = syncResult.deferredGids.length;
+  const retrySec = Math.max(1, Math.round((Number(syncResult.retryMs) || 0) / 1000));
 
+  // 让路不是失败：明确说明还剩多少只留到下一轮，避免"无狗 N 个"误导。
   log('好友',
-    `获取完成：共 ${friends.length} 个好友，护主犬 ${guardDogCount} 个，无狗 ${failCount} 个，黑名单 ${blacklistCount} 个`,
+    deferredCount > 0
+      ? `本轮让路：已补 ${friends.length - deferredCount} 个好友，剩余 ${deferredCount} 个留到下一轮（约 ${retrySec} 秒后再试）`
+      : `获取完成：共 ${friends.length} 个好友，护主犬 ${guardDogCount} 个，无狗 ${failCount} 个，黑名单 ${blacklistCount} 个`,
     {
       module: 'friend',
       event: '狗信息',
-      result: 'ok',
+      result: deferredCount > 0 ? 'deferred' : 'ok',
       count: friends.length,
+      deferredCount,
+      retryMs: Number(syncResult.retryMs) || 0,
       guardDogCount,
       failCount,
       blacklistCount,

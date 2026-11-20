@@ -749,7 +749,13 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                 const bag = await rpc('GetBag', { global_scene_id: 2, tab_id: 0 });
                 const items = [...(bag.physical_items || []), ...(bag.virtual_items || [])];
                 const level = ranchLevel(items);
-                if (level == null) throw new Error('服务端未返回有效的牧场经验');
+                if (level == null) {
+                    const error = new Error('服务端未返回有效的牧场经验：牧场背包 GetBag(scene=2) 缺少或包含无效的经验项 1102；本次无法计算等级与升级进度，请稍后刷新（不会以农场经验或 0 替代）');
+                    error.code = 'RANCH_PROFILE_INCOMPLETE';
+                    error.method = 'GetBag';
+                    error.scene = 'ranch';
+                    throw error;
+                }
                 const exp = items.filter(i => String(i.id) === '1102').reduce((sum, i) => sum + BigInt(i.count), 0n);
                 if (exp > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('牧场经验超出安全计算范围');
                 const levels = require('../gameConfig/RanchLevel.json');

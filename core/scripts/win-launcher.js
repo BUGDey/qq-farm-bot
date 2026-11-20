@@ -29,6 +29,7 @@ const net = require('net');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 const { setEnvValues, getEnvValue, readEnvText, readEnvPairs } = require('./env-file');
+const { fileTransport, watchNapcatRequests } = require('../src/services/napcat-maintenance');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const NAPCAT_HOME = path.join(ROOT, 'data', 'napcat');
@@ -806,6 +807,7 @@ async function startNapcatMode() {
 
   const runtimeLog = path.join(NAPCAT_HOME, 'napcat-runtime.log');
   const runtimeErrLog = path.join(NAPCAT_HOME, 'napcat-runtime.err.log');
+  function launchNapcat() {
   let napcatProc;
   if (runtimeRoot) {
     log('[NapCat] 使用自带 QQNT 运行时（node.exe index.js），不需要本机 QQ');
@@ -842,6 +844,14 @@ async function startNapcatMode() {
     if (code !== 0) log(`[NapCat] 完整日志：${runtimeLog}`);
   });
 
+  return napcatProc;
+  }
+
+  const maintenanceDir = path.join(NAPCAT_HOME, 'maintenance');
+  const transport = fileTransport(maintenanceDir);
+  const startupNonce = transport.readRequest();
+  const startedAt = Date.now();
+  let napcatProc = launchNapcat();
   if (!(await waitPort(NAPCAT_PORT, 180000))) {
     log(`[警告] 等待 ${NAPCAT_PORT} 端口超时：请确认 QQ 已安装并完成扫码登录`);
   } else {
@@ -853,9 +863,27 @@ async function startNapcatMode() {
   const panel = spawn(pnpm.cmd, [...pnpm.args, '-C', 'core', 'dev'], {
     cwd: ROOT,
     stdio: 'inherit',
-    env: panelEnv(envPath),
+    env: { ...panelEnv(envPath), NAPCAT_MAINTENANCE_DIR: maintenanceDir },
   });
   savePids({ napcat: napcatProc.pid, panel: panel.pid });
+  transport.acknowledge(startupNonce, startedAt);
+  const maintenanceWatcher = watchNapcatRequests({
+    transport,
+    restart: async () => {
+      // Only the process tree owned by this launcher may be stopped. Never kill all QQ processes.
+      if (!napcatProc?.pid || napcatProc.exitCode !== null || napcatProc.signalCode !== null) {
+        throw new Error('NapCat 启动句柄已退出，无法安全重启其进程树');
+      }
+      const result = spawnSync('taskkill', ['/PID', String(napcatProc.pid), '/T', '/F'], { stdio: 'ignore' });
+      if (result.status !== 0) throw new Error('停止 NapCat 自有进程树失败');
+      napcatProc = launchNapcat();
+      savePids({ napcat: napcatProc.pid, panel: panel.pid });
+      // Ack process creation once. The panel separately waits for WebUI readiness;
+      // a slow boot must not cause another kill/restart every retry interval.
+    },
+    onError: error => log(`[NapCat] 自动维护失败，将限频重试：${error.message}`),
+  });
+  maintenanceWatcher.start();
 
   const panelReady = await waitPort(PANEL_PORT, 240000);
   log('');
@@ -875,6 +903,7 @@ async function startNapcatMode() {
 
   return await new Promise((resolve) => {
     panel.on('exit', (code) => {
+      maintenanceWatcher.stop();
       log(`[面板] 进程退出，code=${code}`);
       resolve(code === 0);
     });

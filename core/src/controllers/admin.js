@@ -72,7 +72,6 @@ const { createAdminSessionManager } = require("./admin-session-manager");
 const { registerAdminSystemRoutes } = require("./admin-system-routes");
 const { registerAdminUserRoutes } = require("./admin-user-routes");
 const { registerAdminCardRoutes } = require("./admin-card-routes");
-const { registerAdminInviteRoutes } = require("./admin-invite-routes");
 const { registerAdminLoginLogRoutes } = require("./admin-login-log-routes");
 const userStore = require("../models/user-store");
 
@@ -101,7 +100,6 @@ const PUBLIC_API_PREFIXES = [
   "/public/renew",
   "/public/account-status",
   "/public/reset-password/",
-  "/public/invite/",
 ];
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 const ONE_MINUTE_MS = 60 * 1000;
@@ -224,12 +222,17 @@ function registerRequestTimeoutGuard(expressApp) {
   expressApp.use((req, res, next) => {
     if (req.path === "/api/health") return next();
 
+    // Active API work has its own deadline; do not let the 30s idle-socket
+    // safeguard close a valid long-running request before this JSON response.
+    req.socket?.setTimeout(HTTP_REQUEST_TIMEOUT_MS + 1000);
     const timeout = setTimeout(() => {
       if (res.headersSent || res.writableEnded || res.destroyed) return;
       res.locals.requestTimedOut = true;
       res.status(503).json({
         ok: false,
-        error: "Request Timeout",
+        error: `请求处理超时：${req.method} ${req.path}，已等待 ${HTTP_REQUEST_TIMEOUT_MS / 1000} 秒；操作结果尚未确认，请先刷新核对再决定是否重试`,
+        code: "HTTP_REQUEST_TIMEOUT",
+        timeoutMs: HTTP_REQUEST_TIMEOUT_MS,
       });
     }, HTTP_REQUEST_TIMEOUT_MS);
 
@@ -539,13 +542,6 @@ function startAdminServer(dataProvider) {
     userStore,
     adminLogger,
   });
-  registerAdminInviteRoutes({
-    app,
-    requireAdminToken,
-    requireAdminRole,
-    userStore,
-  });
-
   registerAdminFarmResourceRoutes({
     app,
     provider,
@@ -919,6 +915,10 @@ function startAdminServer(dataProvider) {
       port: adminPort,
     });
   });
+  const napcatLogin = require("../services/napcat-login");
+  const { startNapcatMaintenance, stopNapcatMaintenance } = require("../services/napcat-maintenance");
+  startNapcatMaintenance(napcatLogin);
+  server.once("close", stopNapcatMaintenance);
   configureHttpServerTimeouts(server);
   trackHttpConnections(server);
 

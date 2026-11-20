@@ -172,9 +172,14 @@ function onSearchBlur() {
             <div class="i-carbon-notification text-base text-gray-500" />
           </button>
         </div>
-
-        <div class="min-w-0 flex items-center gap-2 lg:gap-4">
+        <div class="ml-auto shrink-0 lg:hidden">
           <GameSpaceSwitch />
+        </div>
+
+        <div class="w-full min-w-0 flex items-center gap-2 lg:w-auto lg:gap-4">
+          <div class="hidden lg:flex">
+            <GameSpaceSwitch />
+          </div>
           <div :class="mobileSearchOpen ? 'absolute inset-x-3 top-full z-40 mt-1' : 'relative hidden lg:block'">
             <div class="search-box relative">
               <div class="search-icon i-carbon-search" />

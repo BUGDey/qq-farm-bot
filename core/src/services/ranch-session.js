@@ -147,6 +147,11 @@ function createRanchSession({ now = Date.now, setTimer = setTimeout, clearTimer 
                 && (now() - lease.startedAt >= batchBudgetMs || pending.some(item => item.manual || now() - item.queuedAt >= maxWaitMs));
         },
         snapshot: () => ({ scene, epoch, suspended, activeScene: active?.scene || null, queued: pending.length, retryAt, blockedScenes: [...blockedScenes.keys()] }),
+        // 当前异步上下文是否就在正在执行的那个场景事务里（后台补数据的让路判断需要区分）
+        insideActiveScene: () => {
+            const lease = context.getStore();
+            return !!lease && !!active && lease.scene === active.scene;
+        },
         suspend: () => { suspended = true; },
         resume: () => { suspended = false; },
         reset: () => {

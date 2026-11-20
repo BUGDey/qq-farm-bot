@@ -354,7 +354,7 @@ disable_napcat() {
 }
 
 prepare_napcat_dirs() {
-  mkdir -p "${APP_DIR}/data/napcat/config" "${APP_DIR}/data/napcat/QQ" "${APP_DIR}/data/napcat/auth"
+  mkdir -p "${APP_DIR}/data/napcat/config" "${APP_DIR}/data/napcat/QQ" "${APP_DIR}/data/napcat/auth" "${APP_DIR}/data/napcat/maintenance"
   mkdir -p "${APP_DIR}/data/logs"
   # NapCat 容器以 NAPCAT_UID/NAPCAT_GID 运行，root 建出来的目录它写不进去
   if [ "$(id -u)" -eq 0 ]; then
@@ -470,6 +470,7 @@ PNPM=()
 
 install_systemd_service() {
   local unit=/etc/systemd/system/qq-farm-bot.service
+  local maintenance_env=''
   if ! has_cmd systemctl || [ ! -d /etc/systemd/system ]; then
     return 1
   fi
@@ -478,6 +479,10 @@ install_systemd_service() {
     return 1
   fi
   log "安装 systemd 服务..."
+  mkdir -p "${APP_DIR}/core/data/logs"
+  if install_systemd_napcat_watchdog; then
+    maintenance_env="Environment=\"NAPCAT_MAINTENANCE_DIR=${APP_DIR}/data/napcat/maintenance\""
+  fi
   cat > "$unit" <<EOF
 [Unit]
 Description=QQ Farm Bot (Admin Panel)
@@ -490,6 +495,7 @@ WorkingDirectory=${APP_DIR}/core
 Environment=NODE_ENV=production
 Environment=ADMIN_PORT=${PORT}
 Environment=FARM_DATA_DIR=${APP_DIR}/core/data
+${maintenance_env}
 Environment=TZ=Asia/Shanghai
 EnvironmentFile=-${APP_DIR}/.env
 ExecStart=$(command -v node) ${APP_DIR}/core/client.js
@@ -511,6 +517,47 @@ EOF
   return 0
 }
 
+# 仅当用户显式配置了 NapCat 启动命令时，才额外安装独立看护单元；
+# 该单元只重启 NapCat，绝不重启面板服务。
+install_systemd_napcat_watchdog() (
+  unset NAPCAT_LINUX_START_CMD
+  if [ -f "${APP_DIR}/.env" ]; then
+    # shellcheck disable=SC1091
+    . "${APP_DIR}/.env"
+  fi
+  if [ -z "${NAPCAT_LINUX_START_CMD:-}" ]; then
+    systemctl disable --now qq-farm-bot-napcat-watchdog >/dev/null 2>&1 || true
+    return 1
+  fi
+  local unit=/etc/systemd/system/qq-farm-bot-napcat-watchdog.service
+  mkdir -p "${APP_DIR}/data/napcat/maintenance"
+  cat > "$unit" <<EOF
+[Unit]
+Description=QQ Farm Bot NapCat restart watchdog
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${APP_DIR}
+Environment=NAPCAT_MAINTENANCE_DIR=${APP_DIR}/data/napcat/maintenance
+EnvironmentFile=${APP_DIR}/.env
+Environment=TZ=Asia/Shanghai
+ExecStart=$(command -v node) ${APP_DIR}/core/scripts/linux-napcat-watchdog.js
+Restart=always
+RestartSec=10
+StandardOutput=append:${APP_DIR}/core/data/logs/napcat-watchdog.log
+StandardError=append:${APP_DIR}/core/data/logs/napcat-watchdog.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable qq-farm-bot-napcat-watchdog >/dev/null 2>&1
+  systemctl restart qq-farm-bot-napcat-watchdog || return 1
+  ok "NapCat 看护单元已安装：qq-farm-bot-napcat-watchdog（只重启 NapCat）"
+)
+
 start_by_nohup() {
   mkdir -p "${APP_DIR}/core/data/logs"
   if port_in_use "$PORT"; then
@@ -527,11 +574,32 @@ start_by_nohup() {
   export ADMIN_PORT="${PORT}"
   export FARM_DATA_DIR="${APP_DIR}/core/data"
   export TZ=Asia/Shanghai NODE_ENV=production
+  unset NAPCAT_MAINTENANCE_DIR
+  start_linux_napcat_watchdog
   nohup node client.js >> "${APP_DIR}/core/data/logs/bot.log" 2>&1 &
   sleep 3
   cd "$APP_DIR"
   ok "已启动，日志：${APP_DIR}/core/data/logs/bot.log"
   log "停止：./start.sh stop"
+}
+
+# Linux 源码模式 NapCat 看护：只在用户显式配置启动命令时启用。
+# 项目自身不启动 NapCat；这里只负责「到点后只重启 NapCat」，不碰面板/系统服务。
+start_linux_napcat_watchdog() {
+  local start_cmd="${NAPCAT_LINUX_START_CMD:-}"
+  if [ -z "$start_cmd" ]; then
+    log "未配置 NAPCAT_LINUX_START_CMD，跳过 NapCat 自动重启看护（NapCat 不由此脚本启动）"
+    return 0
+  fi
+  mkdir -p "${APP_DIR}/data/napcat/maintenance" "${APP_DIR}/core/data/logs"
+  export NAPCAT_MAINTENANCE_DIR="${APP_DIR}/data/napcat/maintenance"
+  export NAPCAT_LINUX_START_CMD="$start_cmd"
+  export NAPCAT_LINUX_STOP_CMD="${NAPCAT_LINUX_STOP_CMD:-}"
+  export NAPCAT_LINUX_PID_FILE="${NAPCAT_LINUX_PID_FILE:-}"
+  nohup node "${APP_DIR}/core/scripts/linux-napcat-watchdog.js" \
+    >> "${APP_DIR}/core/data/logs/napcat-watchdog.log" 2>&1 &
+  ok "NapCat 自动重启看护已启动（30 小时一轮，仅重启 NapCat）"
+  log "看护日志：${APP_DIR}/core/data/logs/napcat-watchdog.log"
 }
 
 deploy_node() {
