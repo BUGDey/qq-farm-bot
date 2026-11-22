@@ -19,6 +19,8 @@ const defaultAutomation = {
   farm_push: false,
   land_upgrade: false,
   friend_steal: false,
+  friend_steal_super_mutant_only: false,
+  friend_steal_mutant_only: false,
   friend_help: false,
   friend_bad: false,
   friend_golden_bug: false,
@@ -85,6 +87,8 @@ const defaultAutomation = {
   fertilizer: 'none',
   skip_own_weed_bug: false,
   fertilizer_multi_season: false,
+  fertilizer_use_normal: false,
+  fertilizer_use_organic: false,
   fertilizer_land_types: [...allFertilizerLandTypes],
   fertilizer_smart_seconds: 300,
 }

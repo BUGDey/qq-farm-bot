@@ -271,6 +271,8 @@ const DEFAULT_AUTOMATION = {
     friend_auto_accept: true,
     friend_help_exp_limit: true,
     friend_steal: true,
+    friend_steal_super_mutant_only: false,
+    friend_steal_mutant_only: false,
     friend_help: true,
     friend_bad: false,
     friend_golden_bug: false,
@@ -346,6 +348,9 @@ const DEFAULT_AUTOMATION = {
     sell: false,
     fertilizer: 'smart_normal',
     fertilizer_multi_season: true,
+    // 独立总开关：只负责把背包里闲置的化肥用掉，与上面的「施肥策略」下拉框互不影响。
+    fertilizer_use_normal: false,
+    fertilizer_use_organic: false,
     fertilizer_land_types: [...DEFAULT_FERTILIZER_LAND_TYPES],
     fertilizer_smart_seconds: 300,
     skip_own_weed_bug: true,

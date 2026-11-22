@@ -214,6 +214,11 @@ test('configuration analytics works without entering ranch and explicitly states
     const result = await f.service.getResource('analytics');
     assert.ok(result.animals.length > 0);
     assert.ok(result.assumptions.includes('未计'));
+    // mature_sec 是「幼崽 + 成长」的总时长，基础周期不能再把成熟时长加一遍。
+    const duck = result.animals.find(a => String(a.id) === '60002');
+    assert.equal(duck.cycleSeconds, duck.infantSec + duck.growSec);
+    assert.equal(duck.cycleSeconds, duck.matureSec);
+    assert.equal(duck.harvestExpPerHour, Number(duck.harvestExp) * 3600 / duck.cycleSeconds);
     assert.equal(f.calls.length, 0);
     f.responses.ShopInfo = { goods_list: [] }; f.responses.RotationShopInfo = {};
     await f.service.getResource('shop');

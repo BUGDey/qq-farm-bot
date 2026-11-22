@@ -9,6 +9,7 @@ import FriendCheatPanel from '@/components/friends/FriendCheatPanel.vue'
 import FriendsFriendList from '@/components/friends/FriendsFriendList.vue'
 import FriendsPageHeader from '@/components/friends/FriendsPageHeader.vue'
 import FriendsSyncSettings from '@/components/friends/FriendsSyncSettings.vue'
+import { isHelpAction, isNuisanceAction, isStealAction } from '@/utils/interact-types'
 import FriendsTabs from '@/components/friends/FriendsTabs.vue'
 import RanchFriends from '@/views/RanchFriends.vue'
 import { useAccountStore } from '@/stores/account'
@@ -228,13 +229,13 @@ const filteredInteractRecords = computed(() => {
   if (interactFilter.value === 'all')
     return interactRecords.value
 
-  const actionTypeMap: Record<string, number> = {
-    steal: 1,
-    help: 2,
-    bad: 3,
+  const matcher: Record<string, (type: unknown) => boolean> = {
+    steal: isStealAction,
+    help: isHelpAction,
+    bad: isNuisanceAction,
   }
-  const targetActionType = actionTypeMap[interactFilter.value] || 0
-  return interactRecords.value.filter((record: any) => Number(record?.actionType) === targetActionType)
+  const match = matcher[interactFilter.value]
+  return match ? interactRecords.value.filter((record: any) => match(record?.actionType)) : []
 })
 
 const visibleInteractRecords = computed(() => filteredInteractRecords.value.slice(0, 50))
@@ -514,11 +515,11 @@ function handleInteractAvatarError(record: any) {
 }
 
 function getInteractBadgeClass(actionType: number) {
-  if (Number(actionType) === 1)
+  if (isStealAction(actionType))
     return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-  if (Number(actionType) === 2)
+  if (isHelpAction(actionType))
     return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-  if (Number(actionType) === 3)
+  if (isNuisanceAction(actionType))
     return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
   return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
 }
@@ -902,7 +903,7 @@ async function handleBatchAddKnownFriendGids() {
               偷菜记录
             </div>
             <div class="mt-1 text-lg font-semibold">
-              {{ interactRecords.filter(record => Number(record?.actionType) === 1).length }}
+              {{ interactRecords.filter(record => isStealAction(record?.actionType)).length }}
             </div>
           </div>
           <div class="rounded-2xl bg-white px-4 py-3 shadow dark:bg-gray-800">
@@ -910,7 +911,7 @@ async function handleBatchAddKnownFriendGids() {
               帮忙记录
             </div>
             <div class="mt-1 text-lg font-semibold">
-              {{ interactRecords.filter(record => Number(record?.actionType) === 2).length }}
+              {{ interactRecords.filter(record => isHelpAction(record?.actionType)).length }}
             </div>
           </div>
           <div class="rounded-2xl bg-white px-4 py-3 shadow dark:bg-gray-800">
@@ -918,7 +919,7 @@ async function handleBatchAddKnownFriendGids() {
               捣乱记录
             </div>
             <div class="mt-1 text-lg font-semibold">
-              {{ interactRecords.filter(record => Number(record?.actionType) === 3).length }}
+              {{ interactRecords.filter(record => isNuisanceAction(record?.actionType)).length }}
             </div>
           </div>
         </div>

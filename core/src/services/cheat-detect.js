@@ -254,6 +254,10 @@ function analyzeFriendCheat(accountId, now = Date.now()) {
     dogCache = readFriendDogInfoCache(accountId) || {};
   } catch { }
 
+  // 互动记录类型：1 与 13 都表示偷取（13 是 2026-11 抓包里的新编码，带 crop_id/crop_count），
+  // 2 表示帮忙。9/11 缺字段证据，不参与偷菜/活跃度统计，避免把未知类型当成偷取。
+  const STEAL_ACTIONS = new Set([1, 13]);
+  const HELP_ACTIONS = new Set([2]);
   // 按访客分组；同时统计近 24 小时内「帮助/偷菜」操作覆盖的小时数（活跃度 X/24）
   const dayCutoffMs = now - 24 * 60 * 60 * 1000;
   const byVisitor = new Map();
@@ -268,11 +272,11 @@ function analyzeFriendCheat(accountId, now = Date.now()) {
     entry.cropCount += Number(cropCount) || 0;
     if (nick) entry.nick = nick;
     // 近 24h 活跃度：只统计帮助(2)/偷菜(1)两类真实操作所在的小时桶
-    if (tsMs >= dayCutoffMs && (action === 1 || action === 2)) {
+    if (tsMs >= dayCutoffMs && (STEAL_ACTIONS.has(action) || HELP_ACTIONS.has(action))) {
       entry.recentOpHours.add(Math.floor(tsMs / 3600000));
     }
     // 秒偷：偷取时刻落在我方某地块成熟后 FAST_STEAL_WINDOW_SEC 内
-    if (Number(action) === 1 && matureSet.size > 0) {
+    if (STEAL_ACTIONS.has(Number(action)) && matureSet.size > 0) {
       const tsSec = Number(ts);
       for (let at = tsSec; at >= tsSec - FAST_STEAL_WINDOW_SEC; at -= 1) {
         if (matureSet.has(at)) {
@@ -306,8 +310,8 @@ function analyzeFriendCheat(accountId, now = Date.now()) {
     const daySpanDays = Math.max(1, Math.round((lastDay - firstDay) / (24 * 60 * 60 * 1000)) + 1);
 
     const actionSet = new Set(entry.actions);
-    const helpCount = entry.actions.filter((a) => a === 2).length;
-    const stealCount = entry.actions.filter((a) => a === 1).length;
+    const helpCount = entry.actions.filter((a) => HELP_ACTIONS.has(a)).length;
+    const stealCount = entry.actions.filter((a) => STEAL_ACTIONS.has(a)).length;
     const nuisanceCount = entry.actions.filter((a) => a === 3).length;
 
     const regularity = computeRegularityScore(intervals);

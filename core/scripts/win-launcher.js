@@ -807,6 +807,22 @@ async function startNapcatMode() {
 
   const runtimeLog = path.join(NAPCAT_HOME, 'napcat-runtime.log');
   const runtimeErrLog = path.join(NAPCAT_HOME, 'napcat-runtime.err.log');
+
+  // NapCat 启动时会往系统临时目录建 napcat-plugin-uploads，某些 Windows 环境（杀软、
+  // 受控文件夹访问、残留同名文件）会在 mkdir 时报 EPERM 直接退出（code=1）。
+  // 把 NapCat 自己的 TMP 指到数据目录下并提前建好，避免依赖系统 Temp 的权限。
+  const napcatTmpDir = path.join(NAPCAT_HOME, 'tmp');
+  function prepareNapcatTemp() {
+    try {
+      fs.mkdirSync(path.join(napcatTmpDir, 'napcat-plugin-uploads'), { recursive: true });
+      return napcatTmpDir;
+    } catch (err) {
+      log(`[警告] 无法创建 NapCat 临时目录 ${napcatTmpDir}：${err.message}`);
+      return '';
+    }
+  }
+  const napcatTmp = prepareNapcatTemp();
+
   function launchNapcat() {
   let napcatProc;
   if (runtimeRoot) {
@@ -817,11 +833,19 @@ async function startNapcatMode() {
       cwd: runtimeRoot,
       stdio: ['ignore', out, err],
       windowsHide: true,
+      env: napcatTmp
+        ? { ...process.env, TEMP: napcatTmp, TMP: napcatTmp, TMPDIR: napcatTmp }
+        : process.env,
     });
   } else {
     const boot = napcatBootEntry(shellDir);
     const qq = findQqInstall();
-    const env = { ...process.env, WEBUI_TOKEN: token, NAPCAT_PORT: String(NAPCAT_PORT) };
+    const env = {
+      ...process.env,
+      WEBUI_TOKEN: token,
+      NAPCAT_PORT: String(NAPCAT_PORT),
+      ...(napcatTmp ? { TEMP: napcatTmp, TMP: napcatTmp, TMPDIR: napcatTmp } : {}),
+    };
     if (boot && qq) {
       log(`[NapCat] 回退到本机 QQ 模式：${qq}`);
       napcatProc = spawn(boot, [qq, path.join(path.dirname(boot), 'NapCatWinBootHook.dll')], {
@@ -841,7 +865,15 @@ async function startNapcatMode() {
       log('[NapCat] 最近日志：');
       for (const line of tail) log(`  ${line}`);
     }
-    if (code !== 0) log(`[NapCat] 完整日志：${runtimeLog}`);
+    if (code !== 0) {
+      // NapCat 的崩溃堆栈走 stderr（err 日志），控制台也要打出来，否则只剩一个 code=1。
+      const errTail = readLogTail(runtimeErrLog, 12);
+      if (errTail.length) {
+        log('[NapCat] 错误日志：');
+        for (const line of errTail) log(`  ${line}`);
+      }
+      log(`[NapCat] 完整日志：${runtimeLog} / ${runtimeErrLog}`);
+    }
   });
 
   return napcatProc;

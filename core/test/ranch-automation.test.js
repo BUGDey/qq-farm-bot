@@ -93,7 +93,7 @@ test('QQ ranch patrol yields to queued farm work and resumes at the next roster 
 });
 
 test('all opt-ins default off, empty rules never consume resources merely by enabling', async () => {
-    assert.equal(Object.keys(SETTINGS_KEYS).length, 25);
+    assert.equal(Object.keys(SETTINGS_KEYS).length, 29);
     assert.equal(Object.values(normalizeSettings({})).some(Boolean), false);
     const f = fixture(); await f.service.runAutomation(); assert.equal(f.calls.length, 0);
     f.enable('autoSell', 'autoUseCan', 'autoPlace', 'autoBuy', 'autoExchange');
@@ -120,6 +120,52 @@ test('bounded friend cursor rotates across runs without starving later friends',
     f.setFriends(['456', '457', '458', '459'].map(gid => ({ gid }))); f.setPolicy({ friendBatchSize: 2 });
     await f.service.runAutomation(); await f.service.runAutomation();
     assert.deepEqual(f.calls.filter(c => c.method === 'EnterHomestead').map(c => c.params.host_gid), ['456', '457', '458', '459']);
+});
+
+test('refused friend visits back off for a while instead of retrying every patrol', async () => {
+    // 服务端明确拒绝（如未解锁/非好友）后 30 分钟内不再拜访该好友，
+    // 避免每轮巡查都把配额用在打不开的牧场上。单次失败不会中断整批（只有超时类错误才停批）。
+    const { runRanchExtraAutomation } = require('../src/services/ranch-automation');
+    let clock = 1_700_000_000_000;
+    const visits = [];
+    const runOnce = async () => {
+        visits.length = 0;
+        await runRanchExtraAutomation({
+            service: {
+                getResource: async () => ({ friends: [{ gid: '1' }, { gid: '2' }] }),
+                action: async input => { visits.push(input.hostGid); throw new Error('该好友暂不可访问'); },
+            },
+            attempt: async () => {}, settings: () => ({ autoHelp: true }),
+            policy: () => normalizePolicy({ friendBatchSize: 5 }), alive: () => true, goodsMap: new Map(),
+            getCursor: () => 0, setCursor() {}, now: () => clock, logError: () => {},
+        });
+        return visits.slice();
+    };
+    assert.deepEqual(await runOnce(), ['1', '2']);
+    // 冷却期内两个好友都被跳过。
+    clock += 60_000;
+    assert.deepEqual(await runOnce(), []);
+    // 冷却期过去后重新尝试。
+    clock += 31 * 60_000;
+    assert.deepEqual(await runOnce(), ['1', '2']);
+});
+
+test('stroke whitelist only touches the selected friends', async () => {
+    // 「只抚摸勾选的好友」开启且白名单为空时一个人都不摸；勾选了 456 后就只进 456 的牧场。
+    const empty = fixture(); empty.enable('autoStroke'); empty.setPolicy({ strokeIncludeGids: [] });
+    empty.automation.ranch_auto_stroke_selected = true;
+    await empty.service.runAutomation();
+    assert.equal(empty.calls.filter(c => c.method === 'StrokeAnimal').length, 0);
+
+    const picked = fixture(); picked.enable('autoStroke'); picked.setPolicy({ strokeIncludeGids: ['456'] });
+    picked.automation.ranch_auto_stroke_selected = true;
+    await picked.service.runAutomation();
+    assert.equal(picked.calls.filter(c => c.method === 'StrokeAnimal').length, 1);
+
+    const other = fixture(); other.enable('autoStroke'); other.setPolicy({ strokeIncludeGids: ['999'] });
+    other.automation.ranch_auto_stroke_selected = true;
+    await other.service.runAutomation();
+    assert.equal(other.calls.filter(c => c.method === 'StrokeAnimal').length, 0);
 });
 
 test('friend quota refusal is logged and does not block unrelated help and care', async () => {
@@ -165,11 +211,55 @@ test('can filling honors reserve, per-run cap and independent bucket targets', a
     assert.equal(f.calls.some(c => c.method === 'BuyGoods' || c.method === 'FeedAnimal'), false);
 });
 
+test('normal/organic can switches work without the legacy switch', async () => {
+    // 只开独立开关时，perform 必须用该开关做门禁，否则会被 ACTION_SWITCH 反查成旧的 autoUseCan 而静默不执行。
+    const normal = fixture(); normal.enable('autoUseCanNormal');
+    normal.setPolicy({ canItemIds: ['80021', '80031'], canReserveCount: 0, canMaxPerRun: 99, bucketTargetSeconds: 36000 });
+    await normal.service.runAutomation();
+    const normalUses = normal.calls.filter(c => c.method === 'BatchUse');
+    assert.equal(normalUses.length, 1);
+    assert.equal(normalUses[0].params.items[0].id, '80021');
+
+    const organic = fixture(); organic.enable('autoUseCanOrganic');
+    organic.setPolicy({ canItemIds: ['80021', '80031'], canReserveCount: 0, canMaxPerRun: 99, bucketTargetSeconds: 36000 });
+    await organic.service.runAutomation();
+    const organicUses = organic.calls.filter(c => c.method === 'BatchUse');
+    assert.equal(organicUses.length, 1);
+    assert.equal(organicUses[0].params.items[0].id, '80031');
+
+    const none = fixture();
+    none.setPolicy({ canItemIds: ['80021', '80031'], canReserveCount: 0, canMaxPerRun: 99, bucketTargetSeconds: 36000 });
+    await none.service.runAutomation();
+    assert.equal(none.calls.filter(c => c.method === 'BatchUse').length, 0);
+});
+
 test('automatic feed uses inventory and capacity/target/reserve, never use_gold', async () => {
     const f = fixture(); f.enable('autoAddFeed'); f.setPolicy({ feedTargetCount: 200, feedReserveCount: 900 });
     await f.service.runAutomation(); await f.service.runAutomation();
     const adds = f.calls.filter(c => c.method === 'AddFeed'); assert.equal(adds.length, 1);
     assert.equal(adds[0].params.add_count, 100); assert.equal(adds[0].params.use_gold, false);
+});
+
+test('ready shed unlock is driven by placement automation even without upgrade switches', async () => {
+    const f = fixture();
+    f.enable('autoPlace');
+    let shedState = 3;
+    f.overrides.AllCells = () => ({ ...f.responses('AllCells'), facilities: [...f.responses('AllCells').facilities, { instance_id: '10003', facility_id: 6002001, state: shedState }] });
+    const unlocked = [];
+    f.overrides.ActivateFacility = params => { unlocked.push(params.instance_id); shedState = 1; return { facility: { instance_id: params.instance_id, facility_id: 6002001, state: 1 } }; };
+    await f.service.runAutomation();
+    assert.deepEqual(unlocked, ['10003']);
+    assert.equal(f.calls.some(c => c.method === 'UpgradeBuilding'), false);
+    await f.service.runAutomation();
+    assert.deepEqual(unlocked, ['10003'], 'unlocked shed must not be activated twice');
+});
+
+test('ready shed stays locked when only ranch main-city upgrade automation is on', async () => {
+    const f = fixture();
+    f.enable('autoUpgradeRanch');
+    f.overrides.AllCells = () => ({ ...f.responses('AllCells'), facilities: [...f.responses('AllCells').facilities, { instance_id: '10003', facility_id: 6002001, state: 3 }] });
+    await f.service.runAutomation();
+    assert.equal(f.calls.some(c => c.method === 'ActivateFacility'), false);
 });
 
 test('automatic placement buys compatible whitelist cubs with auto_add, at most one per pen/run', async () => {
@@ -548,6 +638,19 @@ test('friend production obeys autoSteal opt-in, live readiness and action budget
     }
 });
 
+test('autoHelp can trigger friend production without autoSteal', async () => {
+    const f = fixture(); f.enable('autoHelp');
+    Object.assign(f.friend.animals[0], { stage: 3, producing: false, can_deliver: true, can_trigger_produce: true });
+    f.friend.shelves[0].can_steal = false;
+    f.overrides.TriggerProduce = params => {
+        assert.equal(params.host_gid, '456');
+        return {};
+    };
+    await f.service.runAutomation();
+    assert.equal(f.calls.filter(c => c.method === 'TriggerProduce').length, 1);
+    assert.equal(f.calls.some(c => c.method === 'StealProduce'), false);
+});
+
 test('failed friend production never fabricates stealable shelves', async () => {
     const f = fixture(); f.enable('autoSteal');
     Object.assign(f.friend.animals[0], { stage: 3, producing: false, can_deliver: true });
@@ -807,4 +910,76 @@ test('poop exchange never spends pine stock while only the poop opt-in is enable
     f.overrides.RotationBuyGoods = () => ({});
     await f.service.runAutomation();
     assert.equal(f.calls.some(c => c.method === 'RotationBuyGoods'), false);
+});
+
+
+test('feed-then-produce only fires when the dedicated opt-in is enabled and the animal is ready', async () => {
+    const f = fixture(); f.enable('autoFeedAnimal'); f.setPolicy({ canStrategy: 'normal' });
+    f.own.animals = [{ animal_inst_id: 17, animal_id: '60001', stage: 3, can_feed: true, can_deliver: true }];
+    f.items.find(i => i.id === '7004').count = '60';
+    f.overrides.FeedAnimal = () => ({});
+    f.overrides.TriggerProduce = () => ({});
+    await f.service.runAutomation();
+    assert.equal(f.calls.filter(c => c.method === 'FeedAnimal').length, 1);
+    assert.equal(f.calls.some(c => c.method === 'TriggerProduce'), false);
+});
+
+test('feed-then-produce appends TriggerProduce after a successful feed when opted in', async () => {
+    const f = fixture(); f.enable('autoFeedAnimal', 'autoProduceAfterFeed'); f.setPolicy({ canStrategy: 'normal' });
+    f.own.animals = [{ animal_inst_id: 17, animal_id: '60001', stage: 3, can_feed: true, can_deliver: true }];
+    f.items.find(i => i.id === '7004').count = '60';
+    f.overrides.FeedAnimal = () => ({});
+    f.overrides.TriggerProduce = () => ({});
+    await f.service.runAutomation();
+    const methods = f.calls.map(c => c.method);
+    assert.equal(methods.filter(m => m === 'FeedAnimal').length, 1);
+    assert.equal(methods.filter(m => m === 'TriggerProduce').length, 1);
+    assert.ok(methods.indexOf('FeedAnimal') < methods.indexOf('TriggerProduce'));
+});
+
+test('feedAnimalMaxPerRun caps how many animals are fed in one automation run', async () => {
+    // 默认上限 1：即使有 3 只可喂动物、背包有足够罐头，也只喂 1 次。
+    const make = () => {
+        const f = fixture(); f.enable('autoFeedAnimal'); f.setPolicy({ canStrategy: 'normal' });
+        f.own.animals = [17, 18, 19].map(id => ({ animal_inst_id: id, animal_id: '60001', stage: 2, can_feed: true }));
+        f.items.find(i => i.id === '7004').count = '600';
+        f.overrides.FeedAnimal = () => ({});
+        return f;
+    };
+    const def = make();
+    await def.service.runAutomation();
+    assert.equal(def.calls.filter(c => c.method === 'FeedAnimal').length, 1);
+
+    // 显式上限 2：一轮最多喂 2 次。
+    const capped = make();
+    capped.setPolicy({ feedAnimalMaxPerRun: 2 });
+    await capped.service.runAutomation();
+    assert.equal(capped.calls.filter(c => c.method === 'FeedAnimal').length, 2);
+
+    // 上限 99 时不受该字段限制，3 只都喂（仍受 maxActionsPerRun 约束）。
+    const high = make();
+    high.setPolicy({ feedAnimalMaxPerRun: 99 });
+    await high.service.runAutomation();
+    assert.equal(high.calls.filter(c => c.method === 'FeedAnimal').length, 3);
+});
+
+test('server-confirmed exhausted stroke quota is remembered and clears next Shanghai day', async () => {
+    const { createInteractionQuota, nextQuotaResetMs } = require('../src/services/ranch-automation');
+    const quota = createInteractionQuota();
+    const now = Date.parse('2026-11-21T23:30:00+08:00');
+    const reset = nextQuotaResetMs(now);
+    assert.equal(new Date(reset).toISOString(), '2026-11-21T16:00:00.000Z');
+    quota.remember('autoStroke', 0, now);
+    assert.equal(quota.resetAt('autoStroke', now), reset);
+    // two branch: a later positive read clears the exhaustion immediately
+    quota.remember('autoStroke', 1, now);
+    assert.equal(quota.resetAt('autoStroke', now), 0);
+    // exhausted actions are skipped for the rest of that game day
+    quota.remember('autoPutHazard', 0, now);
+    const f = fixture(); f.enable('autoPutHazard', 'autoHelp');
+    f.overrides.GetRanchOpTimes = () => ({ ops: [{ op_id: '11003', remaining_times: '0' }, { op_id: '11009', remaining_times: '10' }] });
+    await f.service.runAutomation();
+    assert.equal(f.calls.some(c => c.method === 'PutHazard'), false);
+    assert.equal(f.calls.some(c => c.method === 'CleanAllRanch'), true);
+    quota.remember('autoPutHazard', 100, now);
 });

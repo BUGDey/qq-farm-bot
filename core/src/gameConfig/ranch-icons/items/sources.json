@@ -1,0 +1,19 @@
+{
+  "note": "手工补充的牧场物品图标（不在官方 animal/mcRes 批量导出清单内），与 web/public/game-config/ranch-icons/items/sources.json 的 180 条清单相互独立。",
+  "images": [
+    {
+      "id": 101624,
+      "name": "故友重逢礼包",
+      "file": "101624_1.png",
+      "assetPath": "gui/texture/icon/pack_friendrecall_friend",
+      "bundle": "extraRes",
+      "guid": "965fe5ab-e44e-46a8-9bb0-789528eea059",
+      "cacheManifest": "extraRes/17948091397131.json#1721",
+      "url": "https://cdn-resource.nqf.qq.com/release/remote/extraRes/native/96/965fe5ab-e44e-46a8-9bb0-789528eea059.fc28c.png",
+      "sha256": "be3d5810ae95280bef30a82407fc6e84838c34e2b3dbc9e244b7492a8b714309",
+      "size": 13776,
+      "width": 100,
+      "height": 100
+    }
+  ]
+}

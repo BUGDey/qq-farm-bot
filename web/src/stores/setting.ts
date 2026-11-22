@@ -68,9 +68,13 @@ export interface AutomationConfig {
   mystery_shop_allow_gold_bean?: boolean
   fertilizer?: string
   fertilizer_multi_season?: boolean
+  fertilizer_use_normal?: boolean
+  fertilizer_use_organic?: boolean
   fertilizer_land_types?: string[]
   fertilizer_smart_seconds?: number
   friend_steal?: boolean
+  friend_steal_super_mutant_only?: boolean
+  friend_steal_mutant_only?: boolean
   friend_help?: boolean
   friend_bad?: boolean
   friend_golden_bug?: boolean

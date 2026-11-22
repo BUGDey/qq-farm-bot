@@ -82,6 +82,13 @@ const confirmModal = ref({
   selectedItems: [] as any[],
 })
 
+const useQuantity = ref(1)
+const useQuantityMax = computed(() => {
+  const item = confirmModal.value.item
+  if (!item)
+    return 1
+  return Math.max(1, Number(item.count || 1))
+})
 const batchMode = ref(false)
 const selectedForBatch = ref<Set<number>>(new Set())
 const batchSellResult = ref<{ gold: number, goldBean: number } | null>(null)
@@ -146,10 +153,12 @@ function handleSellClick(item: any) {
 
 function handleUseClick(item: any) {
   const count = Number(item.id) === 6001 ? 1 : Number(item.count || 1)
+  useQuantity.value = count
   confirmModal.value = {
     show: true,
     title: '确认使用',
-    message: `确定要使用${Number(item.id) === 6001 ? '一枚' : '全部'} ${item.name || `物品${item.id}`} 吗?\n数量：${count}`,
+    // 默认一次用完，可在弹窗里改成只使用一部分（烟花这类单次投放的物品固定为 1）。
+    message: `确定要使用 ${item.name || `物品${item.id}`} 吗?`,
     type: 'primary',
     loading: false,
     action: 'use',
@@ -224,10 +233,16 @@ async function handleConfirm() {
     }
     else if (action === 'use' && item) {
       const sourceItem = originalItems.value.find((it: any) => Number(it.id) === Number(item.id))
+      // 数量由用户在弹窗里指定；超出背包数量或非正整数时当场拦下，不发请求。
+      const requested = Number(item.id) === 6001 ? 1 : Math.floor(Number(useQuantity.value) || 0)
+      if (!Number.isFinite(requested) || requested < 1 || requested > Number(item.count || 1)) {
+        toastStore.error(`使用数量需在 1 到 ${Number(item.count || 1)} 之间`)
+        return
+      }
       const res = await bagStore.useItem(
         currentAccountId.value,
         Number(item.id),
-        Number(item.id) === 6001 ? 1 : Number(item.count || 1),
+        requested,
         Number(sourceItem?.uid || 0),
       )
       if (res.ok) {
@@ -564,11 +579,100 @@ useIntervalFn(loadBag, 60000)
       @confirm="handleConfirm"
       @close="handleCancel"
       @cancel="handleCancel"
-    />
+    >
+      <div v-if="confirmModal.action === 'use'" class="use-qty">
+        <label class="qty-label" for="bag-use-quantity">使用数量</label>
+        <div class="qty-row">
+          <input
+            id="bag-use-quantity"
+            v-model.number="useQuantity"
+            type="number"
+            class="qty-input"
+            min="1"
+            :max="useQuantityMax"
+            :disabled="confirmModal.loading || useQuantityMax <= 1"
+            @keydown.enter.prevent="handleConfirm"
+          >
+          <button
+            type="button"
+            class="qty-all"
+            :disabled="confirmModal.loading || useQuantityMax <= 1"
+            @click="useQuantity = useQuantityMax"
+          >
+            全部（{{ useQuantityMax }}）
+          </button>
+        </div>
+        <p class="qty-hint">可只使用一部分，剩余留在背包；使用后获得的物品会即时结算。</p>
+      </div>
+    </ConfirmModal>
   </div>
 </template>
 
 <style scoped>
+.use-qty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  text-align: left;
+}
+
+.qty-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.dark .qty-label {
+  color: #9ca3af;
+}
+
+.qty-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.qty-input {
+  width: 96px;
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #111827;
+}
+
+.dark .qty-input {
+  background: rgba(31, 41, 55, 0.85);
+  color: #f9fafb;
+}
+
+.qty-all {
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  cursor: pointer;
+}
+
+.dark .qty-all {
+  color: #6ee7b7;
+}
+
+.qty-all:disabled,
+.qty-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.qty-hint {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #9ca3af;
+}
+
 .thumb-wrap.fallback img {
   display: none;
 }

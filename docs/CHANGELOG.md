@@ -41,11 +41,63 @@ flowchart TB
     classDef seed fill:#e8f8ee,stroke:#20b967,color:#183d2a,stroke-width:2px;
     BU --> BV[2026-11-18 · v2.18.1<br/>NapCat 拉取中断与测速修复] --> BW[2026-11-18 · v2.18.2<br/>入栏确认与仓库满修复] --> BX[2026-11-18 · v2.18.3<br/>巡查倒计时与启动权限修复]
     BX --> BY[2026-11-18 · v2.18.4<br/>Alpine 软件源修复] --> BZ[2026-11-19 · v2.18.5<br/>自动策略分类与牧场稳定性] --> CA[2026-11-19 · v2.18.6<br/>牧草补草修复与面板性能优化]
-    CA --> CB[2026-11-20 · v2.18.7<br/>账号设置加载与保存优化] --> CC[2026-11-20 · v2.18.8<br/>兑换集市优先级与好友同步修复]
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV,AW,AX,AY,AZ,BA,BB,BC,BD,BE,BF,BG,BH,BI,BJ,BK,BL,BM,BN,BO,BP,BQ,BR,BS,BT,BU,BV,BW,BX,BY,BZ,CA,CB,CC seed;
+    CA --> CB[2026-11-20 · v2.18.7<br/>账号设置加载与保存优化] --> CC[2026-11-20 · v2.18.8<br/>兑换集市优先级与好友同步修复] --> CD[2026-11-21 · v2.18.9<br/>罐头化肥双开关与牧场物品图标]
+    CD --> CE[2026-11-21 · v2.18.10<br/>牧场购买超时与分析周期修正]
+    CE --> CF[2026-11-22 · v2.18.11<br/>牧场排行榜与偷取筛选]
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV,AW,AX,AY,AZ,BA,BB,BC,BD,BE,BF,BG,BH,BI,BJ,BK,BL,BM,BN,BO,BP,BQ,BR,BS,BT,BU,BV,BW,BX,BY,BZ,CA,CB,CC,CD,CE,CF seed;
 ```
 
 ## 详细记录
+
+### v2.18.11 · 牧场排行榜、偷取筛选与作物信息补全（2026-11-22）
+
+**牧场排行榜**
+- 牧场首页「好友」功能卡改为「排行榜 / 本站排行」（与农场首页一致，原「图鉴」卡保持不变，`web/src/views/RanchDashboard.vue`），牧场菜单 `web/src/router/ranch-menu.ts` 在「图鉴」前新增「牧场排行」；牧场好友入口仍可从底部导航进入。
+- `core/src/controllers/admin-current-user-routes.js` 的 `/api/ranking` 牧场分支不再固定返回不可用：读取 `data/stats/ranch-<accountId>.json`，按 `space=ranch` 排名。`earn`（收获）累加 `collect/harvest/produce/sell/exchange/claimTask/claimIllustrated/claimWeight/dailyBenefit` 的成功次数，`steal` 取偷取操作次数；不伪造金额。
+- 牧场只保留总历史统计，除 `period=total` 外统一返回 `available:false` 并说明原因；前端周期按钮对应禁用，切换到牧场自动落回「总榜」。
+- `core/src/services/ranch.js` 的统计持久化补齐 `operations` 与 `operationsDate`，兼容旧的只有 `totalOperations` 的文件。
+- 修复排行读不到数据：文件名正则从双反斜杠 `/^ranch-(.+)\\.json$/` 修正为 `/^ranch-(.+)\.json$/`。
+
+**农场偷取筛选**
+- 新增两个自动化开关 `friend_steal_super_mutant_only`、`friend_steal_mutant_only`（`core/src/models/store.js`），设置面板在「偷取」模块内提供说明。
+- `core/src/services/friend-visit.js` 的 `getStealFilterOptions()` 统一读取开关，三处 `analyzeFriendLands` 调用传入策略；无最终候选时不查询也不再发送偷取请求。
+- `core/src/services/friend-land-analyzer.js` 在成熟且可偷的分支内复核：`onlyMutant` 看变异效果是否非空；`onlySuperMutant` 用超变图鉴 `param`（果实 ID）与展示作物的果实 ID 比对——此前直接拿展示作物 ID 比果实 ID 永远不命中，会导致开着筛选取不到任何作物，已修正。
+
+**作物信息补全**
+- `core/src/config/gameConfig.js` 新增 `getPlantDisplayName` 与 `getMutantDisplaySource`：按 `plant.mutant_effect_plant` 建立「展示 ID → 源作物与变异效果」索引，名字与图标按「作物 → 果实反查 → 物品名 → 变异来源」回退。
+- `getPlantImageByPhase` 保持原有候选顺序（作物资源名 → 种子物品 → 按 ID 推导），仅在都缺资源时用果实物品的资源名兜底，避免改变既有变异阶段图行为。
+- 农场土地与收获列表、好友土地与可偷列表、互动记录统一使用该名字解析，不再出现「植物1040112」占位名或空图。
+- 剩余 43 条缺失阶段图均为官方资源包未导出的活动作物（如 `Crop_9001`、`Crop_8001`、`Crop_1542`、`Crop_883`），本地确实无素材，不做伪造。
+
+**Windows 启动器 NapCat 启动失败**
+- 现象：启动器选「2) 启动 QQ 扫码版」后输出 `[NapCat] 进程退出，code=1`，控制台没有任何原因。
+- 根因：NapCat 启动时执行 `mkdir os.tmpdir()/napcat-plugin-uploads`，该机器上系统 Temp 下建目录被拒（`EPERM`），NapCat 直接退出；错误只写在 `data/napcat/napcat-runtime.err.log`。
+- 修复：`core/scripts/win-launcher.js` 把 NapCat 子进程的 `TEMP/TMP/TMPDIR` 指向 `data/napcat/tmp` 并预建 `napcat-plugin-uploads`；进程非 0 退出时把 `napcat-runtime.err.log` 的尾部打印到控制台。`napcat/docker-entrypoint.sh` 同步预建 `${TMPDIR:-/tmp}/napcat-plugin-uploads`（容器内 best-effort）。
+- 验证：用相同环境变量直接跑 `data/napcat/index.js`，NapCat 正常加载到二维码登录阶段，不再触发 EPERM；`bash -n` 与 NapCat 维护/看护单测通过。
+
+**验证**
+- 新增 `core/test/ranking-ranch.test.js`、`core/test/friend-steal-filters.test.js`、`core/test/crop-metadata.test.js`；core 全量 1119 项、1118 通过、1 跳过、0 失败。
+- web 测试 28/28、`vue-tsc` 与生产构建通过。
+
+### v2.18.10 · 牧场购买超时与分析周期修正（2026-11-21）
+
+- **购买超时（524）**：`core/src/services/ranch.js` 的 `buy` 分支把 `ShopInfo` 与 `GetBag` 改成 `Promise.all` 并发读取，少一个往返；`core/src/services/ranch-session.js` 的 `inScene` 新增排队超时（手动 20 秒、后台 40 秒），超时返回 `SCENE_QUEUE_TIMEOUT` 可读错误，不再让请求挂到反向代理 60 秒断开。网关侧仍可能在极端排队时提前超时，但用户会先看到明确提示。
+- **前端**：`web/src/composables/useRanchResource.ts` 的 `mutate` 失败后不再调用 `refresh()`，避免失败请求后再叠一次完整读取。
+- **分析周期**：`getResource('analytics')` 的 `cycleSeconds` 改为 `infant_sec + grow_sec`。抓包实证 `mature_ready_at_ms - infant_ready_at_ms` 等于 `mature_sec`，即成熟时长是总时长，原实现再加一遍使周期翻倍、`harvestExpPerHour` 只有真值一半。
+- **好友互动停排**：参考 PR #157，抚摸（11009）、放蚊子（11003）写前/写后读取服务端 `GetRanchOpTimes` 的 `remaining_times`，次数为 0 时按上海时区日界记下次日重置时刻；停排期间跳过该动作，并把重置时刻纳入下一次巡查调度，避免次数用尽后整晚空跑。
+- **喂后自动生产**：新增 `autoProduceAfterFeed`（`ranch_auto_produce_after_feed`，默认关闭）开关。`FeedAnimal` 成功后若动物处于可生产阶段且尚未生产，复核快照后对同一动物发 `TriggerProduce`；只在自动使用罐头真正执行时触发，不额外增加协议调用。
+- **罐头上限入口**：`ranch-settings.js` 的 `LIMITS` 新增 `feedAnimalMaxPerRun`（默认 1，范围 1–99）；自动喂动物段按该上限截断每轮次数，装罐仍用既有 `canMaxPerRun`。前端「饲料与设施」弹窗新增「单次装罐上限（个）」与「每轮喂动物上限（次）」两个输入框，均带说明文字。
+- **验证**：core 全量 1106 项 / 1105 通过 / 0 失败 / 1 跳过；web 单元测试 28/28；`vue-tsc -b` 与 `vite build` exit 0。
+
+
+### v2.18.9 · 罐头/化肥双开关与牧场日常细化（2026-11-21）
+
+- 牧场「日常」新增「自动使用无机罐头」「自动使用有机罐头」两个独立开关：按 `MCCanConfig` 的 `feed_type` 分流，只装填对应类型的罐头，与「罐头使用策略」互不影响；旧的「自动装填罐头容器」开关继续可用。服务端返回容器已满（`code=1003002`）时跳过该容器并记录一次原因，不中断后续罐头与其他任务。
+- 牧场「自动抚摸动物」支持只作用于指定好友：新增「只抚摸勾选的好友」开关与好友勾选名单（`strokeIncludeGids`），写操作前二次校验名单，防止设置改动后旧任务继续写；好友名单读取时显示加载中状态，读取失败可重试，一个都没勾选时不抚摸任何人。
+- 农场新增「自动使用无机化肥」「自动使用有机化肥」两个独立开关，只负责把背包里闲置的化肥用掉；策略本身已在施用同一种化肥时不重复执行，避免一轮里跑两遍。
+- 补全牧场物品的图标与名称：故友重逢礼包（101624）图标取自官方 CDN 并记录来源，松果（1008）沿用与官方一致的原图；仓库取名回落到 `RanchConfig.json` 的 `MCItemInfo`，不再显示「物品 101624」这类占位名。
+- 自动任务稳定性：好友牧场拜访被服务端拒绝后冷却 30 分钟再试，超时/连接中断这类结果未知的错误仍按原样重试，不会因为一次抖动跳过好友。
+- 离线验证：后端全量 1095 项（1094 通过、1 跳过、0 失败），前端 28 项测试、类型检查与生产构建通过。
 
 ### v2.18.8 · 兑换集市优先级、好友同步与 NapCat 维护（2026-11-20）
 

@@ -9,13 +9,15 @@ const { getAnimalVisual, getFacilityVisual } = require('./ranch-visuals');
 const { getItemImageById } = require('../config/gameConfig');
 const shopConfig = require('../gameConfig/RanchShopConfig.json');
 const goodsMap = new Map(shopConfig.MCGoods.map(row => [String(row.id), row]));
+// 解锁棚是入栏/生产的前置条件：这些开关任一开启都允许自动解锁待解锁的棚。
+const UPGRADE_AUTOMATION_KEYS = Object.freeze(['autoUpgradeRanch', 'autoUpgradeFacilities', 'autoPlace', 'autoProduce']);
 const CAPABILITIES = Object.freeze({ connect: false, disconnect: false, claimTask: true, collect: true, clean: true, place: true, produce: true, harvest: true, addFeed: true, submitOrder: true, refreshOrder: true, claimIllustrated: true, claimWeight: true, dailyBenefit: true, buy: true, exchange: true, friendActions: true, sell: true, useCan: true, visitors: true, feedAnimal: true, activateFacility: true, upgradeBuilding: true, completeUpgrade: true, buildingEdit: false, landUnlock: false });
 const { SETTINGS_KEYS, ACTION_SWITCH, normalizePolicy, normalizeSettings } = require('./ranch-settings');
 const { feedTypes, quietNow, createRanchMaturityPlan } = require('./ranch-strategy');
-const { createRanchScheduler, inGroup } = require('./ranch-scheduler');
+const { createRanchScheduler, inGroup, hasEnabledAutomation } = require('./ranch-scheduler');
 const { createRanchDailyBenefit } = require('./ranch-daily-benefit');
 const benefitSchedule = require('./ranch-benefit-schedule');
-const { runRanchExtraAutomation, assertAutomationPolicy } = require('./ranch-automation');
+const { runRanchExtraAutomation, assertAutomationPolicy, createInteractionQuota } = require('./ranch-automation');
 const itemMap = new Map(config.MCItemInfo.map(row => [String(row.id), row]));
 const animalIcons = require('../gameConfig/RanchAnimalIcons.json');
 const ranchItemImage = id => animalIcons[String(id)]?.[1] || (String(id) === '7002' ? '/game-config/ranch-icons/poop.png' : getItemImageById(id));
@@ -107,6 +109,7 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
     let operation = 0;
     let automationRunning = false;
     const continuations = new Map();
+    const interactionQuota = createInteractionQuota();
     const friendCursors = { all: 0, farm: 0, help: 0, steal: 0 };
     const maturityPlan = createRanchMaturityPlan(now);
     let planEpoch;
@@ -150,7 +153,14 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
             totalOperationsSaveTimer = null;
             const file = totalStatsFile();
             if (!file) return;
-            try { writeJsonFileAtomic(file, { totalOperations: { ...totalOperations }, savedAt: Date.now() }); } catch { }
+            try {
+                writeJsonFileAtomic(file, {
+                    operations: { ...operations },
+                    operationsDate,
+                    totalOperations: { ...totalOperations },
+                    savedAt: Date.now(),
+                });
+            } catch { }
         }, 2000);
     }
     const dailyBenefitCache = { day: '', at: 0, state: null };
@@ -407,18 +417,36 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
             const check = () => {
                 if (!automationKey) return;
                 if (['steal', 'friendProduce', 'help', 'stroke', 'putHazard'].includes(input.action) && quietNow(normalizePolicy(getSettings().ranch_policy), now())) throw new Error('当前处于好友静默时段');
-                const upgradeKey = ['activateFacility', 'upgradeBuilding', 'completeUpgrade'].includes(input.action) && ['autoUpgradeRanch', 'autoUpgradeFacilities'].includes(automationKey);
+                // 解锁棚是入栏/生产的前置条件，允许它跟着入栏或生产开关一起自动执行，
+                // 否则只开「自动入栏」时新棚会一直停在待解锁状态，看起来就像自动化没启动。
+                const isShedAction = input.action === 'activateFacility';
+                const upgradeKey = (isShedAction || ['upgradeBuilding', 'completeUpgrade'].includes(input.action)) && UPGRADE_AUTOMATION_KEYS.includes(automationKey);
                 if (upgradeKey) {
                     const facility = autoContext.state?.facilities.find(f => String(f.instId) === String(input.facilityInstId));
-                    if (!facility || (facility.facilityKind === 'MODULE_TYPE_MAIN_CITY') !== (automationKey === 'autoUpgradeRanch')) throw new Error('升级开关与建筑类型不符');
+                    const wantsMainCity = automationKey === 'autoUpgradeRanch';
+                    const wrongKind = !facility || (isShedAction
+                        ? facility.facilityKind !== 'MODULE_TYPE_RANCH_SHED' || wantsMainCity
+                        : (facility.facilityKind === 'MODULE_TYPE_MAIN_CITY') !== wantsMainCity);
+                    if (wrongKind) throw new Error('升级开关与建筑类型不符');
                 }
                 const exchangeKey = input.action === 'exchange' && ['autoExchangePoop', 'autoExchangePine'].includes(automationKey);
-                if ((exchangeKey ? (input.costItemId !== (automationKey === 'autoExchangePoop' ? '7002' : '1008')) : (!upgradeKey && ACTION_SWITCH[input.action] !== automationKey)) || !settings()[automationKey]) throw new Error('牧场自动任务已关闭');
+                // 罐头有三个总开关：旧的「自动装填罐头容器」和新的「无机/有机」两个独立开关，
+                // 任一开启都允许写，否则只开独立开关时会被 ACTION_SWITCH 反查挡在这里。
+                const canKey = input.action === 'useCan' && ['autoUseCan', 'autoUseCanNormal', 'autoUseCanOrganic'].includes(automationKey);
+                // 助产与偷取是两个独立的好友自动化动作：关闭自动偷取时，
+                // 自动帮助仍可负责 friendProduce，不能被 ACTION_SWITCH 的旧映射拦截。
+                const friendProduceKey = input.action === 'friendProduce' && ['autoSteal', 'autoHelp'].includes(automationKey);
+                if ((exchangeKey ? (input.costItemId !== (automationKey === 'autoExchangePoop' ? '7002' : '1008')) : (!upgradeKey && !canKey && !friendProduceKey && ACTION_SWITCH[input.action] !== automationKey)) || !settings()[automationKey]) throw new Error('牧场自动任务已关闭');
                 autoContext.simpleExchange = exchangeKey;
                 if (input.action === 'feedAnimal') {
                     const p = normalizePolicy(getSettings().ranch_policy);
                     const animal = autoContext.state?.ranches.find(r => String(r.ranchInstId) === String(input.ranchId))?.animals.find(a => String(a.animalInstId) === String(input.animalInstId));
                     if (!animal || !feedTypes(animal, p, now()).includes(input.bucketType)) throw new Error('罐头策略已变化');
+                }
+                if (input.action === 'stroke' && settings().autoStrokeSelected === true) {
+                    // 「只抚摸勾选的好友」开启后，未勾选的好友一律不发写请求。
+                    const allowed = normalizePolicy(getSettings().ranch_policy).strokeIncludeGids;
+                    if (!allowed.includes(String(input.hostGid))) throw new Error('该好友不在自动抚摸名单内');
                 }
                 autoContext.exchangeEnabled = settings().autoExchange;
                 assertAutomationPolicy(input, normalizePolicy(getSettings().ranch_policy), autoContext);
@@ -481,7 +509,12 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                 if (!row || ![5, 6].includes(row.shop_id)) throw new Error('商品不属于牧场商店');
                 if (row.price_id !== 1007) throw new Error('只支持金券购买，其他付费资源不开放');
                 if (!Number.isSafeInteger(input.count) || input.count <= 0 || input.count > Math.min(row.one_buy_count || 99, 999)) throw new Error('购买数量超过单次上限');
-                const shop = await rpc('ShopInfo', { shop_id: row.shop_id });
+                // 商城信息和背包余额互不依赖，并发读取可以少等一个往返；
+                // 手动购买排在自动化后面时，往返次数直接决定会不会撞上网关超时。
+                const [shop, bag] = await Promise.all([
+                    rpc('ShopInfo', { shop_id: row.shop_id }),
+                    rpc('GetBag', { global_scene_id: 2, tab_id: 0 }),
+                ]);
                 const goods = (shop.goods_list || []).find(g => String(g.id) === String(input.goodsId));
                 if (!goods || !goods.unlocked || goods.owned) throw new Error('商品尚未解锁、已拥有或已下架');
                 if (Number(goods.limit_count) > 0 && BigInt(goods.bought_num || 0) + BigInt(input.count) > BigInt(goods.limit_count)) throw new Error('超过剩余购买限额');
@@ -490,7 +523,6 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                 // Reject active discounts until their BuyGoods price contract is confirmed.
                 const second = now() / 1000;
                 if (Number(goods.discount_price) > 0 && second >= Number(goods.discount_start_time) && second < Number(goods.discount_end_time)) throw new Error('限时折扣价格语义待确认，暂不购买');
-                const bag = await rpc('GetBag', { global_scene_id: 2, tab_id: 0 });
                 const balance = [...(bag.physical_items || []), ...(bag.virtual_items || [])].filter(i => String(i.id) === '1007' && !i.locked && !i.is_locked).reduce((n, i) => n + BigInt(i.count || 0), 0n);
                 if (balance < BigInt(price) * BigInt(input.count)) throw new Error('金券不足');
                 autoContext.market = { balance, itemId: String(row.item_id), itemCount: Number(row.item_count), price: BigInt(price), costItemId: '1007', bag };
@@ -596,6 +628,16 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                 const seconds = state.items.filter(i => String(i.id) === itemId && !i.locked).reduce((n, i) => n + BigInt(i.count || 0), 0n);
                 if (seconds <= 0n) throw new Error('罐头容器剩余时长不足，不自动补充或购买');
                 reply = await mutate('FeedAnimal', { targets: [{ ranch_inst_id: String(ranch.ranchInstId), animal_inst_id: animal.animalInstId }], bucket_type: input.bucketType });
+                // 喂后自动生产：仅在自动化开关开启、且动物此刻确实可生产时追加一次 TriggerProduce。
+                // 写入前重新读取快照，绝不凭旧状态推断；失败不吞、由调用方记录。
+                if (automationKey && settings().autoProduceAfterFeed && animal.stage === 3 && !animal.producing && animal.canDeliver === true) {
+                    const fresh = await snapshot(false, !!automationKey);
+                    const freshAnimal = fresh.ranches.find(r => String(r.ranchInstId) === String(ranch.ranchInstId))?.animals.find(a => String(a.animalInstId) === String(animal.animalInstId));
+                    if (freshAnimal?.canTriggerProduce) {
+                        reply = await mutate('TriggerProduce', { host_gid: String(getUserState().gid), targets: [{ ranch_inst_id: String(ranch.ranchInstId), animal_inst_id: animal.animalInstId }] });
+                        record('produce', reply, trigger, { action: 'produce', ranchId: input.ranchId, animalInstId: input.animalInstId }, { state: fresh });
+                    }
+                }
             } else if (input.action === 'activateFacility') {
                 // READY=3 is server-authoritative; never activate a virtual/locked cover.
                 const facility = state.facilities.find(f => String(f.instId) === String(input.facilityInstId));
@@ -720,12 +762,16 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
             const animals = config.MCAnimalConfig.filter(a => a.enable_flag).map(raw => {
                 const animal = describeResource(raw);
                 for (const key of ['productItem', 'byproductItem']) if (animal[key]) animal[key].name = itemMap.get(String(animal[key].id))?.name || `物品 ${animal[key].id}`;
-                const cycleSeconds = Number(raw.infant_sec || 0) + Number(raw.grow_sec || 0) + Number(raw.mature_sec || 0);
+                // mature_sec 是「幼崽 + 成长」的总时长（抓包实证：mature_ready_at_ms - infant_ready_at_ms
+                // 正好等于 mature_sec），再加一遍会把周期算成两倍。
+                const infantSec = Number(raw.infant_sec || 0);
+                const growSec = Number(raw.grow_sec || 0);
+                const cycleSeconds = infantSec + growSec;
                 // 分析页动物名旁展示成年形态图片（与牧场个人页窝位同一套本地素材）。
                 const image = animalIcons[String(raw.id)]?.[4] || animal.image || '';
                 return { ...animal, image, cycleSeconds, harvestExpPerHour: cycleSeconds > 0 ? Number(raw.harvest_exp || 0) * 3600 / cycleSeconds : null };
             });
-            return { animals, summary: { animalCount: animals.length }, assumptions: '依据官方基础配置；周期为幼崽、成长、成熟时长之和，未计生产等待、饲料中断、增益和变异，不代表实际收益。' };
+            return { animals, summary: { animalCount: animals.length }, assumptions: '依据官方基础配置：基础周期＝幼崽时长＋成长时长（等于成熟时长），生产周期为单轮生产时长，生产轮数取最大生产次数；未计生产等待、饲料中断、增益和变异，不代表实际收益。' };
         }
         if (resource === 'activity') return { activities: [], message: '暂无已登记的牧场限时活动' };
         if (resource === 'dailyBenefit') return exclusive(() => session.inRanch(async () => {
@@ -849,18 +895,26 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                     patrolSummary(outcome?.status === 'deferred' ? '跳过' : outcome?.cancelled ? '取消' : outcome?.status === 'yielded' ? '分片待续' : '完成', group);
                     return outcome;
                 } });
-            if (!ran) patrolSummary('跳过', reason || (Object.values(scheduledSettings()).some(Boolean) ? '尚未到巡查时间或已有巡查等待场景' : '自动任务未开启'));
+            if (!ran) patrolSummary('跳过', reason || (hasEnabledAutomation(scheduledSettings()) ? '尚未到巡查时间或已有巡查等待场景' : '自动任务未开启'));
             return result;
         },
         async runAutomation(group = 'all') {
             observeDisabledDailyBenefit();
+            const runSettings = () => Object.fromEntries(Object.entries(settings()).map(([key, value]) => [key, value && inGroup(key, group)]));
+            const skipDisabled = () => {
+                if (hasEnabledAutomation(runSettings())) return false;
+                continuations.delete(group);
+                return true;
+            };
+            // Do not even queue a scene lease for an idle group. Recheck after
+            // queueing too: switches may have been turned off while waiting.
+            if (skipDisabled()) return { status: 'completed' };
             return session.inRanch(async () => {
-                const runSettings = () => Object.fromEntries(Object.entries(settings()).map(([key, value]) => [key, value && inGroup(key, group)]));
+                if (skipDisabled()) return { status: 'completed' };
                 if (!getUserState().gid || operation || automationRunning) return { status: 'deferred' };
                 if (planEpoch !== session.getEpoch?.()) { maturityPlan.reset(); continuations.clear(); planEpoch = session.getEpoch?.(); }
                 const p = normalizePolicy(getSettings().ranch_policy);
                 const opts = runSettings();
-                if (!Object.values(opts).some(Boolean)) { continuations.delete(group); return { status: 'completed' }; }
                 const automationEpoch = session.getEpoch?.();
                 const signature = JSON.stringify([opts, p]);
                 let progress = continuations.get(group);
@@ -954,8 +1008,8 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                         } catch (err) { log('牧场', `自动重量积分查询失败：${err.message}`, { scene: 'ranch', module: ranchOperationModule('claimWeight'), event: 'claimWeight', result: 'error' }); }
                     }
                     await runRanchExtraAutomation({
-                        service: automationService, attempt, continuation: progress, hasCompleted: (payload, key) => progress.done.has(identity(payload, key)), onLimit: () => { yielded = true; }, settings: runSettings, policy: () => normalizePolicy(getSettings().ranch_policy),
-                        alive, goodsMap, accountId: getUserState().gid, now,
+                        service: automationService, attempt, continuation: progress, hasCompleted: (payload, key) => progress.done.has(identity(payload, key)), onLimit: () => { yielded = true; }, settings: runSettings, rawSettings: settings, policy: () => normalizePolicy(getSettings().ranch_policy),
+                        alive, goodsMap, accountId: getUserState().gid, now, serverNow, interactionQuota,
                         readFriendRoster: async () => {
                             const roster = await automationService.getResource('friends', {
                                 rosterScan: progress.friendRoster ||= {},
@@ -977,10 +1031,12 @@ function createRanchService({ rpc, send, session = ranchSession, getUserState, g
                     }
                     if (!yielded) continuations.delete(group);
                     const clock = serverNow();
+                    const quotaResets = ['autoStroke', 'autoPutHazard'].map(action => interactionQuota.resetAt(action, clock)).filter(at => at > clock);
                     const latest = cachedState || state;
                     const deadlines = [
                         ...(latest.ranches || []).flatMap(r => (r.animals || []).flatMap(a => [a.infantReadyAtMs, a.growReadyAtMs, a.produceReadyAtMs, a.matureReadyAtMs])),
                         ...(latest.facilities || []).filter(f => f.upgradeState).map(f => Number(f.upgradeEndTime) * 1000),
+                        ...quotaResets,
                     ].map(Number).filter(at => Number.isFinite(at) && at > clock);
                     return { status: yielded ? 'yielded' : 'completed', nextAt: deadlines.length ? now() + Math.max(1000, Math.min(...deadlines) - clock) : undefined };
                 } finally {

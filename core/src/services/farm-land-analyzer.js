@@ -1,5 +1,5 @@
 const { PlantPhase, PHASE_NAMES } = require('../config/config');
-const { getPlantName, getPlantExp, getPlantById, getPlantGrowTime, getPlantGrowPhases, getSeedImageBySeedId, getMutantDisplayPlantId, getMutantPlantImageByPhase, getMutantEffectsByIds } = require('../config/gameConfig');
+const { getPlantName, getPlantDisplayName, getPlantExp, getPlantById, getPlantGrowTime, getPlantGrowPhases, getSeedImageBySeedId, getMutantDisplayPlantId, getMutantPlantImageByPhase, getMutantEffectsByIds } = require('../config/gameConfig');
 const { toNum, toTimeSec, getServerTimeSec, logWarn } = require('../utils/utils');
 const { getAllLands } = require('./farm-api');
 const { buildLandUpgradeDetail } = require('./farm-land-upgrade');
@@ -294,7 +294,7 @@ function analyzeLands(lands, debug = false) {
     if (phase === PlantPhase.MATURE) {
       result.harvestable.push(landId);
       const plantId = toNum(plant.id);
-      const displayName = getPlantName(plantId);
+      const displayName = getPlantDisplayName(plantId);
       const plantExp = getPlantExp(plantId);
       result.harvestableInfo.push({
         landId, plantId,
@@ -533,7 +533,7 @@ async function getLandsDetail() {
       const plantId = toNum(plant.id);
       const mutantConfigIds = getPlantMutantConfigIds(plant, currentPhase);
       const displayPlantId = getMutantDisplayPlantId(plantId, mutantConfigIds);
-      const displayName = getPlantName(displayPlantId) || getPlantName(plantId) || plant.name || '未知';
+      const displayName = getPlantDisplayName(displayPlantId) || getPlantName(plantId) || plant.name || '未知';
       const plantInfo = getPlantById(plantId);
       const seedId = toNum(plantInfo && plantInfo.seed_id);
       const seedImage = seedId > 0 ? getSeedImageBySeedId(seedId) : '';

@@ -1,5 +1,12 @@
 const { PlantPhase } = require('../config/config');
 const { getPlantBlacklist, isAutomationOn } = require('../models/store');
+
+function getStealFilterOptions() {
+  return {
+    onlySuperMutant: !!isAutomationOn('friend_steal_super_mutant_only'),
+    onlyMutant: !!isAutomationOn('friend_steal_mutant_only'),
+  };
+}
 const { getUserState } = require('../utils/network');
 const { toNum, log, logWarn, randomDelay } = require('../utils/utils');
 const { recordOperation } = require('./stats');
@@ -97,7 +104,7 @@ async function doFriendOperation(gid, opType) {
     const lands = enterReply.lands || [];
     const userState = getUserState();
     const plantBlacklist = getPlantBlacklist(userState.accountId);
-    const analysis = analyzeFriendLands(lands, userState.gid, '', { plantBlacklist });
+    const analysis = analyzeFriendLands(lands, userState.gid, '', { plantBlacklist, ...getStealFilterOptions() });
 
     let okCount = 0;
 
@@ -329,7 +336,7 @@ async function visitFriend(friend, tally, myGid, accountId) {
   }
 
   const plantBlacklist = getPlantBlacklist(accountId);
-  const analysis = analyzeFriendLands(lands, myGid, name, { plantBlacklist });
+  const analysis = analyzeFriendLands(lands, myGid, name, { plantBlacklist, ...getStealFilterOptions() });
   const actionLogs = [];
 
   // ---- Help (weed / bug / water) ----
@@ -543,27 +550,14 @@ async function visitFriendForSteal(friend, tally, myGid, accountId) {
   }
 
   const plantBlacklist = getPlantBlacklist(accountId);
-  const analysis = analyzeFriendLands(lands, myGid, name, { plantBlacklist });
+  const analysis = analyzeFriendLands(lands, myGid, name, { plantBlacklist, ...getStealFilterOptions() });
   const actionLogs = [];
 
-  // Check if any stealable land still has remaining steal slots for us
-  const hasStealSlot = lands.some(land => {
-    const plant = land.plant;
-    if (!plant || !plant.phases || plant.phases.length === 0) return false;
-    const phase = getCurrentPhase(plant.phases, false, '', plant.id);
-    if (!phase || phase.phase !== PlantPhase.MATURE) return false;
-    if (!plant.stealable) return false;
+  // The analyzer already applies blacklist and configured mutation filters.
+  // Do not query or send a steal request when no final candidate remains.
+  const hasStealSlot = analysis.stealable.length > 0;
 
-    const stealPlayers = plant.steal_player;
-    if (!stealPlayers || stealPlayers.length === 0) return true;
-
-    const mySteal = stealPlayers.find(s => toNum(s.gid) === myGid);
-    const myStealCount = mySteal ? toNum(mySteal.num) : 0;
-    const maxSteal = toNum(plant.steal_num, 0);
-    return myStealCount < maxSteal;
-  });
-
-  if (!hasStealSlot && analysis.stealable.length === 0) {
+  if (!hasStealSlot) {
     await leaveFriendFarm(gid);
     return { acted: false, entered: true };
   }

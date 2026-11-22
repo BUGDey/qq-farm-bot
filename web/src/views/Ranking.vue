@@ -33,7 +33,10 @@ const spaceOptions: { key: GameSpace, label: string }[] = [
 const space = ref<GameSpace>(useGameSpaceStore().space)
 const spaceLabel = computed(() => space.value === 'ranch' ? '牧场' : '农场')
 const stealLabel = computed(() => space.value === 'ranch' ? '偷取' : '偷菜')
-const period = ref<Period>('daily')
+// 牧场目前只持久化总历史操作统计，日/周/月榜没有数据源，直接锁到总历史。
+const earnLabel = computed(() => space.value === 'ranch' ? '收获' : '收益')
+const periodDisabled = (key: Period) => space.value === 'ranch' && key !== 'total'
+const period = ref<Period>(space.value === 'ranch' ? 'total' : 'daily')
 const type = ref<RankType>('earn')
 const list = ref<RankRow[]>([])
 const loading = ref(false)
@@ -70,11 +73,13 @@ function switchSpace(next: GameSpace) {
   if (space.value === next)
     return
   space.value = next
+  if (next === 'ranch' && period.value !== 'total')
+    period.value = 'total'
   fetchRanking()
 }
 
 function switchPeriod(next: Period) {
-  if (period.value === next)
+  if (period.value === next || periodDisabled(next))
     return
   period.value = next
   fetchRanking()
@@ -124,10 +129,11 @@ function formatValue(row: RankRow) {
 
 /** 行内次要指标：与当前排序维度互补，让每行信息更完整 */
 function secondaryValue(row: RankRow) {
+  const n = Number(row.earn) || 0
+  const text = n >= 1e8 ? `${(n / 1e8).toFixed(1)}亿` : n >= 1e4 ? `${(n / 1e4).toFixed(1)}万` : String(Math.round(n))
   if (type.value === 'steal') {
-    const n = Number(row.earn) || 0
-    const text = n >= 1e8 ? `${(n / 1e8).toFixed(1)}亿` : n >= 1e4 ? `${(n / 1e4).toFixed(1)}万` : String(Math.round(n))
-    return `收益 +${text}`
+    // 牧场没有金币收益统计，这里的 earn 是成功操作次数，不能写成「收益」。
+    return space.value === 'ranch' ? `${earnLabel.value} ${text} 次` : `收益 +${text}`
   }
   return `${stealLabel.value} ${Math.round(Number(row.steal) || 0)} 次`
 }
@@ -163,8 +169,12 @@ onMounted(fetchRanking)
           v-for="p in periods"
           :key="p.key"
           class="period-btn rounded-md transition"
-          :class="period === p.key ? 'bg-emerald-500 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'"
+          :class="periodDisabled(p.key)
+            ? 'cursor-not-allowed text-gray-300'
+            : (period === p.key ? 'bg-emerald-500 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900')"
           :aria-pressed="period === p.key"
+          :disabled="periodDisabled(p.key)"
+          :title="periodDisabled(p.key) ? '牧场只保留总历史操作统计' : p.label"
           @click="switchPeriod(p.key)"
         >
           {{ p.label }}
@@ -178,7 +188,7 @@ onMounted(fetchRanking)
           :aria-pressed="type === 'earn'"
           @click="switchType('earn')"
         >
-          <span class="h-2 w-2 rounded-full bg-amber-400" /> 收益
+          <span class="h-2 w-2 rounded-full bg-amber-400" /> {{ earnLabel }}
         </button>
         <button
           class="type-btn inline-flex items-center gap-1.5 rounded-full font-medium transition"
@@ -189,6 +199,10 @@ onMounted(fetchRanking)
           <span class="i-carbon-run text-base" /> {{ stealLabel }}
         </button>
       </div>
+
+      <p v-if="space === 'ranch'" class="mb-3 text-xs text-gray-500">
+        牧场排行统计的是总历史操作次数，日/周/月榜暂不提供。
+      </p>
 
       <div v-if="loading" class="py-14 text-center text-sm text-gray-400">
         加载中…
@@ -227,7 +241,7 @@ onMounted(fetchRanking)
             </div>
           </div>
           <div class="rank-value" :class="type === 'steal' ? 'rank-value-steal' : 'rank-value-earn'">
-            {{ type === 'earn' ? '+' : '' }}{{ formatValue(row) }}
+            {{ type === 'earn' && space !== 'ranch' ? '+' : '' }}{{ formatValue(row) }}
           </div>
         </div>
       </div>

@@ -150,3 +150,20 @@ test('样本去重：同一秒同一访客同一动作只计一次', () => {
   assert.ok(visitor);
   assert.equal(visitor.metrics.count, 1, '重复样本应去重');
 });
+
+test('新互动类型 13 计入偷取，未知类型不并入偷取统计', () => {
+  // 2026-11 抓包里偷取记录的 action_type 是 13（带 crop_id/crop_count），
+  // 9/11 没有字段证据，只能当作未知互动，不能算成偷菜。
+  const samples = [];
+  for (let i = 0; i < 24; i++) samples.push([Math.floor((NOW - (24 - i) * 60 * 1000) / 1000), 1300, 13, 5, '新版偷菜']);
+  for (let i = 0; i < 8; i++) samples.push([Math.floor((NOW - (10 - i) * 60 * 1000) / 1000), 1400, 9, 1, '未知九']);
+  writeFixture(samples, []);
+  const result = analyzeFriendCheat(ACCOUNT, NOW);
+  const thief = result.visitors.find(v => v.nick === '新版偷菜');
+  const unknown = result.visitors.find(v => v.nick === '未知九');
+  assert.ok(thief, '13 类型访客应被统计');
+  assert.equal(thief.metrics.stealCount, 24, '13 应计入偷取次数');
+  assert.ok(thief.metrics.stealValue >= 120, '13 的 crop_count 应计入作物数量');
+  assert.ok(unknown, '9 类型访客应被统计');
+  assert.equal(unknown.metrics.stealCount, 0, '未知类型不得计入偷取');
+});

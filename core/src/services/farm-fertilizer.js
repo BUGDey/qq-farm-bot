@@ -251,6 +251,11 @@ function formatFertilizerLandTypes(types) {
 async function runFertilizerByConfig(explicitLandIds = [], options = {}) {
   const automation = getAutomation() || {};
   const mode = automation.fertilizer || 'none';
+  // 独立总开关：只在「施肥策略」选「不使用」时生效，负责把背包里闲置的无机/有机化肥用掉。
+  // 策略本身已经在施肥时不再额外跑一遍，避免同一轮重复发请求。
+  const useNormalSwitch = automation.fertilizer_use_normal === true;
+  const useOrganicSwitch = automation.fertilizer_use_organic === true;
+  const standaloneSwitch = mode === 'none' && (useNormalSwitch || useOrganicSwitch);
   const reason = String(options.reason || '').trim().toLowerCase() === 'multi_season' ? 'multi_season' : 'normal';
   const label = reason === 'multi_season' ? '多季补肥' : '常规施肥';
   const eventLabel = reason === 'multi_season' ? '多季节施肥' : '常规施肥';
@@ -280,8 +285,8 @@ async function runFertilizerByConfig(explicitLandIds = [], options = {}) {
 
   const { skipNormal = false } = options;
 
-  // 没有指定地块且非有机模式 → 空返回
-  if (explicitIds.length === 0 &&
+  // 没有指定地块且非有机模式 → 空返回（独立化肥开关开启时不拦）
+  if (explicitIds.length === 0 && !standaloneSwitch &&
       mode !== 'organic' && mode !== 'both' &&
       mode !== 'smart' && mode !== 'smart_only' && mode !== 'smart_normal' &&
       mode !== 'final_normal' && mode !== 'final_organic') {
@@ -321,12 +326,17 @@ async function runFertilizerByConfig(explicitLandIds = [], options = {}) {
   if (landTypeMap.size > 0) {
     targetIds = filterLandIdsByTypes(explicitIds, landTypeMap, landTypes);
   }
+  // 独立开关且没有指定地块时，目标取全部已解锁地块（施肥本身仍由服务端校验剩余次数/上限）。
+  if (targetIds.length === 0 && standaloneSwitch) {
+    targetIds = allLands.filter(land => land?.unlocked && toNum(land.id)).map(land => toNum(land.id));
+    if (landTypeMap.size > 0) targetIds = filterLandIdsByTypes(targetIds, landTypeMap, landTypes);
+  }
 
   let normalCount = 0;
   let organicCount = 0;
 
   // 普通化肥
-  if (!skipNormal && (mode === 'normal' || mode === 'both' || mode === 'smart') && targetIds.length > 0) {
+  if (!skipNormal && (mode === 'normal' || mode === 'both' || mode === 'smart' || (useNormalSwitch && mode === 'none')) && targetIds.length > 0) {
     normalCount = await fertilize(targetIds, NORMAL_FERTILIZER_ID);
     if (normalCount > 0) {
       log('施肥', `${label}：已为 ${normalCount}/${targetIds.length} 块地施普通化肥（范围: ${landTypeLabels.join('、')}）`, {
@@ -338,7 +348,7 @@ async function runFertilizerByConfig(explicitLandIds = [], options = {}) {
   }
 
   // 有机化肥
-  if (mode === 'organic' || mode === 'both') {
+  if (mode === 'organic' || mode === 'both' || (useOrganicSwitch && mode === 'none')) {
     let organicTargets = explicitIds;
     if (allLands.length > 0) {
       organicTargets = getOrganicFertilizerTargetsFromLands(allLands);

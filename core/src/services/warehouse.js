@@ -27,6 +27,32 @@ const { evaluateSellCondition } = require('../config/sell-conditions');
 const { compareBagSeedGameOrder } = require('../utils/bag-seed-order');
 const { updateStatusGold } = require('./status');
 
+// ItemInfo.json 里没有登记、但牧场配置里存在的物品（例如 1008 松果、101624 故友重逢礼包）。
+// 这类物品原本会退化成「物品1008」这样的占位名，这里按 id 回落到 MCItemInfo 的 name/type。
+const ranchItemInfoMap = new Map(
+  require('../gameConfig/RanchConfig.json').MCItemInfo.map(row => [String(row.id), row]),
+);
+
+/** 物品名称：ItemInfo 优先，缺失时回落到牧场 MCItemInfo；仍未命中返回空串。 */
+function resolveItemName(itemId) {
+  const id = Number(itemId) || 0;
+  if (id <= 0) return '';
+  const name = getItemById(id)?.name;
+  if (name) return String(name);
+  const ranchRow = ranchItemInfoMap.get(String(id));
+  return ranchRow && ranchRow.name ? String(ranchRow.name) : '';
+}
+
+/** 物品类型：ItemInfo 优先，缺失时回落到牧场 MCItemInfo。 */
+function resolveItemType(itemId) {
+  const id = Number(itemId) || 0;
+  if (id <= 0) return 0;
+  const info = getItemById(id);
+  if (info) return Number(info.type) || 0;
+  const ranchRow = ranchItemInfoMap.get(String(id));
+  return ranchRow ? Number(ranchRow.type) || 0 : 0;
+}
+
 // ---- 常量 ----
 
 // 批量出售大小
@@ -120,7 +146,7 @@ function describeUseReply(reply) {
     rewards: items.map((item) => ({
       id: toNum(item.id),
       count: String(item.count),
-      name: getItemById(toNum(item.id))?.name || `物品${item.id}`,
+      name: resolveItemName(toNum(item.id)) || `物品${item.id}`,
     })),
   };
 }
@@ -465,6 +491,7 @@ async function getBagDetail() {
       category = 'seed';
     }
 
+    if (!name) name = resolveItemName(id);
     if (!name) name = `物品${  id}`;
 
     const interactionType = info && info.interaction_type ? String(info.interaction_type) : '';
@@ -489,7 +516,7 @@ async function getBagDetail() {
         name,
         image: getItemImageById(id),
         category,
-        itemType: info ? Number(info.type) || 0 : 0,
+        itemType: resolveItemType(id),
         priceId: effectivePriceId,
         price: effectivePrice,
         priceUnit,

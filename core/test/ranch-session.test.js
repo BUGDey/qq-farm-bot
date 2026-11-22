@@ -137,12 +137,24 @@ test('duplicate pending/active automation coalesces into one transaction', async
     assert.equal(a, b); finish(); await a; assert.equal(count, 1);
 });
 
-function clockFixture() {
-    let time = 0, timer;
+function clockFixture(extra = {}) {
+    let time = 0;
+    const timers = new Set();
     const f = fixture({ now: () => time, minDwellMs: 15000, maxWaitMs: 30000,
-        setTimer: (fn, delay) => { timer = { fn, due: time + delay }; return timer; },
-        clearTimer: () => { timer = null; } });
-    return { ...f, advance: async delta => { time += delta; if (timer && timer.due <= time) { const fn = timer.fn; timer = null; fn(); } await flush(); } };
+        setTimer: (fn, delay) => { const timer = { fn, due: time + delay }; timers.add(timer); return timer; },
+        clearTimer: timer => { if (timer) timers.delete(timer); },
+        ...extra });
+    return { ...f, advance: async delta => {
+        time += delta;
+        // 队列超时与场景驻留定时器可能同时到期，逐个触发直到没有到期项。
+        for (let guard = 0; guard < 10; guard++) {
+            const due = [...timers].filter(timer => timer.due <= time);
+            if (!due.length) break;
+            for (const timer of due) { timers.delete(timer); timer.fn(); }
+            await flush();
+        }
+        await flush();
+    } };
 }
 
 test('scene dwell batches same-scene work, then yields without starving opposite scene', async () => {
@@ -254,4 +266,41 @@ test('ACE runs outside a blocked ranch transaction without changing scene', asyn
     assert.deepEqual(events, ['enter:ranch', 'business', 'ace']);
     release(); await batch;
     assert.equal(session.snapshot().scene, 'ranch');
+});
+
+test('queued manual work fails with a readable timeout instead of hanging until the gateway cuts it', async () => {
+    const { session, rpc, events, advance } = clockFixture({ manualQueueTimeoutMs: 5000 });
+    let finish;
+    const busy = session.inRanch(async () => {
+        await rpc('long'); await new Promise(resolve => { finish = resolve; }); await rpc('done');
+    });
+    await flush();
+    const manual = session.inRanch(() => rpc('manual'), { manual: true });
+    const rejected = assert.rejects(manual, err => {
+        assert.equal(err.code, 'SCENE_QUEUE_TIMEOUT');
+        assert.match(err.message, /排队超过 5 秒/);
+        assert.match(err.message, /本次操作未提交/);
+        return true;
+    });
+    await advance(5000);
+    await rejected;
+    assert.equal(events.includes('manual'), false);
+    finish(); await busy;
+    assert.deepEqual(events, ['enter:ranch', 'long', 'done']);
+});
+
+test('an early timer wake re-arms the queue timeout instead of failing the request', async () => {
+    const { session, rpc, events, advance } = clockFixture({ manualQueueTimeoutMs: 5000 });
+    let finish;
+    const busy = session.inRanch(async () => {
+        await rpc('long'); await new Promise(resolve => { finish = resolve; });
+    });
+    await flush();
+    const manual = session.inRanch(() => rpc('manual'), { manual: true });
+    await advance(1);
+    assert.equal(events.includes('manual'), false);
+    const settled = await Promise.race([manual.then(() => 'resolved'), flush().then(() => 'waiting')]);
+    assert.equal(settled, 'waiting');
+    finish(); await Promise.all([busy, manual]);
+    assert.deepEqual(events, ['enter:ranch', 'long', 'manual']);
 });

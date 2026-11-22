@@ -6,7 +6,7 @@
  * - 互动类型识别（偷取/帮忙/捣乱）
  * - 作物名称解析
  */
-const { getFruitName, getPlantByFruitId, getPlantById, getPlantName } = require('../config/gameConfig');
+const { getFruitName, getPlantByFruitId, getPlantById, getPlantName, getPlantDisplayName } = require('../config/gameConfig');
 const { sendMsgAsync } = require('../utils/network');
 const { types } = require('../utils/proto');
 const { logWarn, toNum, toTimeSec, sleep } = require('../utils/utils');
@@ -30,10 +30,15 @@ const FETCH_INTERACT_MIN_INTERVAL_MS = 500;
 
 // ---- 互动类型标签 ----
 
+// 2026-11-21 抓包（InteractService.InteractRecords）里记录类型是 9/11/13，
+// 其中只有 13 带 crop_id/crop_count，与旧版 1（偷取作物）语义一致，其余类型缺字段证据，
+// 因此只把 13 并入偷取，9/11 仍按通用「互动」展示，不做猜测性命名。
+const STEAL_ACTION_TYPES = new Set([1, 13]);
 const ACTION_LABELS = {
   '1': '偷取作物',
   '2': '帮忙',
   '3': '捣乱',
+  '13': '偷取作物',
 };
 
 function getActionLabel(actionType) {
@@ -51,7 +56,7 @@ function buildActionDetail(record) {
   const landId = Number(record.landId) || 0;
   const parts = [];
 
-  if (record.actionType === 1) {
+  if (STEAL_ACTION_TYPES.has(record.actionType)) {
     // 偷取
     if (record.cropName && cropCount > 0) {
       parts.push(`偷取 ${record.cropName} × ${cropCount}`);
@@ -86,6 +91,9 @@ function resolveCropName(cropId) {
 
   if (getPlantById(id)) return getPlantName(id);
   if (getPlantByFruitId(id)) return getFruitName(id);
+  // 变异展示 ID（如 1040112）不是独立作物，用来源作物名 + 变异效果兜底。
+  const mutantName = getPlantDisplayName(id);
+  if (mutantName && !String(mutantName).startsWith('植物')) return mutantName;
 
   return '';
 }

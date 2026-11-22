@@ -237,7 +237,7 @@ const runLabel = computed(() => currentAccountDisconnected.value ? '牧场未运
 const featureCards = [
   { key: 'crop', title: '图鉴', subtitle: '普通 / 巨大', icon: '/game-config/resource-icons/illustrated-crop.png', to: '/ranch/illustrated' },
   { key: 'pet', title: '个人', subtitle: '仓库 / 设施', icon: '/dashboard/icon-pet.png', to: '/ranch/personal' },
-  { key: 'book', title: '好友', subtitle: '牧场好友', icon: '/dashboard/icon-ranking.svg', to: '/ranch/friends' },
+  { key: 'rank', title: '排行榜', subtitle: '本站排行', icon: '/dashboard/icon-ranking.svg', to: '/ranking' },
   { key: 'shop', title: '商城', subtitle: '牧场商品', icon: '/dashboard/icon-shop.png', to: '/ranch/shop' },
   { key: 'gift', title: '活动', subtitle: '精彩活动', icon: '/dashboard/icon-gift.png', to: '/activity' },
   { key: 'chart', title: '分析', subtitle: '牧场数据', icon: '/dashboard/icon-chart.png', to: '/ranch/analytics' },

@@ -466,6 +466,65 @@ function getPlantName(plantId) {
     return plant ? plant.name : `植物${  plantId}`;
 }
 
+// 变异展示 ID 索引：客户端用 plant.mutant_effect_plant（如 5:1120112:1）把普通作物
+// 映射成变异后的展示 ID，这些 ID 不是独立作物，Plant.json 里查不到名字和阶段图。
+let mutantDisplaySourceMap = null;
+
+function buildMutantDisplaySourceMap() {
+    if (mutantDisplaySourceMap) return mutantDisplaySourceMap;
+    mutantDisplaySourceMap = new Map();
+    for (const plant of plantMap.values()) {
+        const mapping = String(plant && plant.mutant_effect_plant || '').trim();
+        if (!mapping) continue;
+        for (const entry of mapping.split(';')) {
+            const [effectKey, targetIdText] = entry.split(':');
+            const targetId = Number(targetIdText) || 0;
+            const effectIds = String(effectKey || '')
+                .split('_')
+                .map(id => Number(id) || 0)
+                .filter(id => id > 0);
+            if (!targetId || effectIds.length === 0) continue;
+            const existing = mutantDisplaySourceMap.get(targetId);
+            // 组合变异（效果更多）比单效果更具体，优先作为展示来源。
+            if (!existing || effectIds.length >= existing.effectIds.length) {
+                mutantDisplaySourceMap.set(targetId, {
+                    plantId: Number(plant.id) || 0,
+                    effectIds,
+                });
+            }
+        }
+    }
+    return mutantDisplaySourceMap;
+}
+
+/** 变异展示 ID → { plantId, effectIds }；普通作物返回 null */
+function getMutantDisplaySource(plantId) {
+    const targetId = Number(plantId) || 0;
+    if (!targetId) return null;
+    return buildMutantDisplaySourceMap().get(targetId) || null;
+}
+
+/**
+ * 展示用作物名：变异展示 ID 回退到「来源作物名（变异效果）」。
+ * 直接渲染裸 ID 会显示「植物1040112」这类占位名，前端和日志都不能这样用。
+ */
+function getPlantDisplayName(plantId) {
+    const numericId = Number(plantId) || 0;
+    const plant = plantMap.get(numericId) || plantMap.get(plantId) || fruitToPlant.get(numericId);
+    if (plant) return plant.name || `植物${  numericId}`;
+    const item = itemInfoMap.get(numericId);
+    if (item && item.name) return item.name;
+    const source = getMutantDisplaySource(numericId);
+    if (source) {
+        const base = plantMap.get(source.plantId);
+        const effectNames = getMutantEffectsByIds(source.effectIds)
+            .map(effect => effect.effect_name || effect.name)
+            .filter(Boolean);
+        if (base) return effectNames.length ? `${base.name}（${effectNames.join('+')}）` : base.name;
+    }
+    return `植物${  numericId}`;
+}
+
 /** 根据种子ID获取植物名 */
 function getPlantNameBySeedId(seedId) {
     const plant = seedToPlant.get(seedId);
@@ -708,15 +767,41 @@ function getPlantImageByPhase(plantId, phase) {
         const commonImages = plantPhaseImageMap.get('__common');
         return commonImages && commonImages.seed || '';
     }
-    const plant = plantMap.get(Number(plantId) || 0);
-    if (!plant) return '';
+    let plant = plantMap.get(Number(plantId) || 0);
+    if (!plant) {
+        // 图鉴/互动里给的是果实 ID（如 1040112 黄金·风信子），先按果实找回作物。
+        plant = fruitToPlant.get(Number(plantId) || 0) || null;
+    }
+    if (!plant) {
+        // 变异展示 ID 没有独立资源，回退到来源作物（如 普通作物 + 黄金变异）的阶段图。
+        const source = getMutantDisplaySource(plantId);
+        if (!source || source.plantId === (Number(plantId) || 0)) return '';
+        return getPlantImageByPhase(source.plantId, phase);
+    }
     const seedId = Number(plant.seed_id) || 0;
-    const itemInfo = itemInfoMap.get(seedId);
-    const assetName = String(
-        plant.asset_name
-        || (itemInfo && itemInfo.asset_name)
-        || (seedId > 20000 ? `Crop_${seedId - 20000}` : `Plant_${plant.id}`)
-    ).trim();
+    const seedItem = itemInfoMap.get(seedId);
+    const fruitId = Number(plant.fruit && plant.fruit.id) || 0;
+    const fruitItem = fruitId ? itemInfoMap.get(fruitId) : null;
+    // 变异作物（黄金/活动）通常没有 seed_id 和 asset_name，果实物品的 asset_name 才是客户端资源名。
+    // 客户端没导出专属变异图时（如 gold/Crop_112），退回同名基础作物（Crop_112）。
+    // 优先保持原有解析顺序：作物自身资源名 -> 种子物品资源名 -> 按 ID 推导。
+    // 变异作物（黄金/活动）通常没有 seed_id 和 asset_name，果实物品的 asset_name 才是客户端资源名，
+    // 客户端没导出专属变异图时（如 gold/Crop_112）再退回同名基础作物（Crop_112）。
+    const primaryAssets = [
+        plant.asset_name,
+        seedItem && seedItem.asset_name,
+        seedId > 20000 ? `Crop_${seedId - 20000}` : `Plant_${plant.id}`,
+    ].map(name => String(name || '').trim()).filter(Boolean);
+    const fruitAsset = String(fruitItem && fruitItem.asset_name || '').trim();
+    const fallbackAssets = [];
+    if (fruitAsset) {
+        fallbackAssets.push(fruitAsset);
+        const fruitBase = fruitAsset.split('/').pop();
+        if (fruitBase && fruitBase !== fruitAsset) fallbackAssets.push(fruitBase);
+    }
+    const assetName = primaryAssets.find(name => plantPhaseImageMap.has(name))
+        || fallbackAssets.find(name => plantPhaseImageMap.has(name))
+        || '';
     if (!assetName) return '';
     const phases = plantPhaseImageMap.get(assetName);
     if (!phases) return '';
@@ -985,6 +1070,8 @@ module.exports = {
     getPlantById,
     getPlantBySeedId,
     getPlantName,
+    getPlantDisplayName,
+    getMutantDisplaySource,
     getPlantNameBySeedId,
     getPlantGrowTime,
     getPlantGrowPhases,

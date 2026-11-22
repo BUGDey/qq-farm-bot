@@ -315,10 +315,9 @@ export const useFriendStore = defineStore('friend', () => {
         headers: { 'x-account-id': accountId },
       })
       const result = res.data?.data || res.data || {}
-      await fetchFriends(accountId)
-      if (friendLands.value[friendId]) {
-        await fetchFriendLands(accountId, friendId)
-      }
+      // 只刷新受影响好友的土地：整套好友列表重拉在好友多时请求体大、串行耗时，
+      // 容易被误判成接口超时（操作回包本身已带这次操作的结果）。
+      await fetchFriendLands(accountId, friendId)
       return result
     }
     catch (e: any) {

@@ -1,6 +1,7 @@
 const { PlantPhase, PHASE_NAMES } = require('../config/config');
 const {
   getPlantName,
+  getPlantDisplayName,
   getPlantById,
   getPlantGrowTime,
   getSeedImageBySeedId,
@@ -37,10 +38,20 @@ const {
   getDisplayLandContext,
   isOccupiedSlaveLand,
   getQixiDewStatus,
+  getPlantMutantConfigIds,
 } = require('./farm-land-analyzer');
+
 const { classifyGatewayDefer, planNextSyncPacing } = require('./friend-dog-sync-pacing');
+const illustratedEntries = require('../gameConfig/Illustrated.json');
 
 const GOLDEN_BUG_ITEM_ID = 301101;
+const illustratedRows = Array.isArray(illustratedEntries) ? illustratedEntries : [];
+// 超变图鉴的 param 是果实 ID（如 1040112 黄金·风信子），不是作物 ID；
+// 判定时必须把展示作物换算成它的果实 ID 再比对，否则永远匹配不上。
+const SUPER_MUTANT_FRUIT_IDS = new Set(illustratedRows
+  .filter(row => String(row?.illustrated_type || '') === '超变图鉴')
+  .map(row => Number(row?.param) || 0)
+  .filter(id => id > 0));
 const GOLDEN_BUG_SOCIAL_TYPE = 2;
 /** 后台补数据等空闲窗口的上限：等不到就整批留到下一轮，不逐只硬闯 */
 const DOG_SYNC_IDLE_WAIT_MS = 3000;
@@ -52,7 +63,11 @@ const DOG_SYNC_IDLE_WAIT_MS = 3000;
  * Returns actionable ordinary-farm and golden-bug land groups.
  */
 function analyzeFriendLands(lands, myGid, friendName = '', options = {}) {
-  const { plantBlacklist = null } = options;
+  const {
+    plantBlacklist = null,
+    onlySuperMutant = false,
+    onlyMutant = false,
+  } = options;
   const result = {
     stealable: [],
     stealableInfo: [],
@@ -98,9 +113,20 @@ function analyzeFriendLands(lands, myGid, friendName = '', options = {}) {
     if (phase === PlantPhase.MATURE) {
       if (plant.stealable) {
         const plantId = toNum(plant.id);
-        const plantName = getPlantName(plantId) || plant.name || '未知';
+        const plantName = getPlantDisplayName(plantId) || plant.name || '未知';
         const plantInfo = getPlantById(plantId);
         const seedId = plantInfo ? toNum(plantInfo.seed_id) : 0;
+        const mutantIds = getPlantMutantConfigIds(plant, currentPhase);
+        const displayPlantId = getMutantDisplayPlantId(plantId, mutantIds);
+        const isMutant = mutantIds.length > 0;
+        const displayPlant = getPlantById(displayPlantId);
+        const displayFruitId = toNum(displayPlant && displayPlant.fruit && displayPlant.fruit.id)
+          || toNum(plantInfo && plantInfo.fruit && plantInfo.fruit.id);
+        const isSuperMutant = SUPER_MUTANT_FRUIT_IDS.has(displayFruitId)
+          || SUPER_MUTANT_FRUIT_IDS.has(displayPlantId);
+
+        if (onlyMutant && !isMutant) continue;
+        if (onlySuperMutant && !isSuperMutant) continue;
 
         // Respect plant blacklist
         if (plantBlacklist && seedId > 0 && plantBlacklist.includes(seedId)) continue;
@@ -608,7 +634,7 @@ async function getFriendLandsDetail(gid) {
       const plantId = toNum(targetPlant.id);
       const mutantConfigIds = targetPlant.mutant_config_ids || [];
       const displayPlantId = getMutantDisplayPlantId(plantId, mutantConfigIds);
-      const plantName = getPlantName(displayPlantId) || getPlantName(plantId) || targetPlant.name || '未知';
+      const plantName = getPlantDisplayName(displayPlantId) || getPlantName(plantId) || targetPlant.name || '未知';
       const plantInfo = getPlantById(plantId);
       const seedId = toNum(plantInfo && plantInfo.seed_id);
       const seedImage = seedId > 0 ? getSeedImageBySeedId(seedId) : '';

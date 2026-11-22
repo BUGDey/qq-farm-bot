@@ -5,6 +5,7 @@ export const ranchMenu = [
   { path: '/ranch/friends', label: '好友', icon: 'i-carbon-user-multiple' },
   { path: '/activity', label: '活动', icon: 'i-carbon-gift' },
   { path: '/ranch/shop', label: '商城', icon: 'i-carbon-shopping-cart' },
+  { path: '/ranking', label: '牧场排行', icon: 'i-carbon-trophy' },
   { path: '/ranch/illustrated', label: '图鉴', icon: 'i-carbon-book' },
   { path: '/ranch/analytics', label: '分析', icon: 'i-carbon-analytics' },
   { path: '/settings', label: '设置', icon: 'i-carbon-settings' },

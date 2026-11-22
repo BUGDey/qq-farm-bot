@@ -1,7 +1,8 @@
 /** Account-wide scene executor. A lease covers a complete business transaction, not one RPC. */
 const { AsyncLocalStorage } = require('node:async_hooks');
 function createRanchSession({ now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout,
-    minDwellMs = 15000, maxWaitMs = 30000, batchBudgetMs = 10000, maxQueued = 100 } = {}) {
+    minDwellMs = 15000, maxWaitMs = 30000, batchBudgetMs = 10000, maxQueued = 100,
+    queueTimeoutMs = 40000, manualQueueTimeoutMs = 20000 } = {}) {
     const context = new AsyncLocalStorage();
     let suspended = false;
     let epoch = 0, active = null, scene = null, enteredAt = 0, wake = null;
@@ -11,6 +12,10 @@ function createRanchSession({ now = Date.now, setTimer = setTimeout, clearTimer 
     const pending = [];
     const keyed = new Map();
     const cancelled = () => Object.assign(new Error('账号连接已重置或场景事务已结束，旧请求已取消'), { code: 'SCENE_CANCELLED' });
+    // 排队超时必须在网关断开之前返回可读错误，不能让请求一直挂在队列里等到反代 524。
+    const queueTimeout = (item, limit) => Object.assign(
+        new Error(`${item.scene === 'ranch' ? '牧场' : '农场'}场景排队超过 ${Math.round(limit / 1000)} 秒仍未开始执行，本次操作未提交，请稍后重试`),
+        { code: 'SCENE_QUEUE_TIMEOUT', scene: item.scene, waitedMs: now() - item.queuedAt });
     function assertAllowed() {
         const lease = context.getStore();
         if (suspended) throw new Error('账号场景调度已停止，等待重新登录');
@@ -36,6 +41,7 @@ function createRanchSession({ now = Date.now, setTimer = setTimeout, clearTimer 
         const item = choose();
         if (!item) return;
         pending.splice(pending.indexOf(item), 1);
+        if (item.timer !== null) { clearTimer(item.timer); item.timer = null; }
         const lease = { scene: item.scene, epoch: item.epoch, closed: false, invalid: false,
             prepared: false, visiting: false, requests: Promise.resolve(), startedAt: now() };
         active = lease;
@@ -69,7 +75,25 @@ function createRanchSession({ now = Date.now, setTimer = setTimeout, clearTimer 
         let resolve, reject;
         const promise = new Promise((a, b) => { resolve = a; reject = b; });
         if (key) keyed.set(key, promise);
-        pending.push({ scene: target, fn, epoch, queuedAt: now(), manual: !!options.manual, key, promise, resolve, reject });
+        const limit = options.manual ? manualQueueTimeoutMs : queueTimeoutMs;
+        const item = { scene: target, fn, epoch, queuedAt: now(), manual: !!options.manual, key, promise, resolve, reject, timer: null };
+        // 定时器可能被上层合并触发，必须按真实等待时长复核，早触发时重新挂表而不是提前失败。
+        const arm = () => {
+            if (limit <= 0) return;
+            item.timer = setTimer(() => {
+                item.timer = null;
+                const at = pending.indexOf(item);
+                if (at < 0) return;
+                const elapsed = now() - item.queuedAt;
+                if (elapsed < limit) { arm(); return; }
+                pending.splice(at, 1);
+                if (item.key && keyed.get(item.key) === item.promise) keyed.delete(item.key);
+                reject(queueTimeout(item, limit));
+                clearWake(); pump();
+            }, Math.max(1, limit - (now() - item.queuedAt)));
+        };
+        arm();
+        pending.push(item);
         pump();
         return promise;
     }
@@ -156,7 +180,10 @@ function createRanchSession({ now = Date.now, setTimer = setTimeout, clearTimer 
         resume: () => { suspended = false; },
         reset: () => {
             epoch++; scene = null; retryAt = 0; retryByScene.clear(); blockedScenes.clear(); clearWake();
-            for (const item of pending.splice(0)) item.reject(cancelled());
+            for (const item of pending.splice(0)) {
+                if (item.timer !== null) { clearTimer(item.timer); item.timer = null; }
+                item.reject(cancelled());
+            }
             keyed.clear();
             if (active) active.invalid = true;
         },

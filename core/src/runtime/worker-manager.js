@@ -74,6 +74,22 @@ function createWorkerManager(deps) {
         ranchConnect: 120000,
         ranchDisconnect: 120000,
         ranchAction: 120000,
+        // 读接口在好友/背包/商店数据量大时会长时间排队：抓包里 SyncAll 单次请求 10.7KB、
+        // 回包 51KB，10~30 秒默认值容易把正常慢读误判成超时。
+        syncFriendsFromGids: 120000,
+        getFriends: 60000,
+        batchGetFriendDogInfo: 90000,
+        fetchFriendsDogInfo: 120000,
+        getFriendLands: 90000,
+        getInteractRecords: 60000,
+        getProtectLogs: 45000,
+        getBagTab: 30000,
+        getShopInfo: 60000,
+        getActivityDiscoverySnapshot: 60000,
+        getActivityGroupSnapshot: 60000,
+        getLands: 45000,
+        getIllustratedList: 45000,
+        getCollectionsSnapshot: 45000,
     };
     const WATCHDOG_MAX_RESTARTS = 3;
     // 微信账号下线提醒的延迟确认窗口：自动刷新 Code（含重启 Worker）实测约需 10 秒上下，

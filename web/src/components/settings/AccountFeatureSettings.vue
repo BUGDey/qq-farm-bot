@@ -647,6 +647,19 @@ watch(() => props.currentAccountId, () => {
                   <BaseSwitch v-model="automation.automation.fertilizer_multi_season" label="多季补肥" />
                 </section>
 
+                <section class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
+                  <div class="text-sm text-gray-700 font-medium dark:text-gray-300">
+                    自动使用化肥
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.fertilizer_use_normal" label="自动使用无机化肥" />
+                    <BaseSwitch v-model="automation.automation.fertilizer_use_organic" label="自动使用有机化肥" />
+                  </div>
+                  <p class="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                    只负责把背包里闲置的化肥用掉，与上面的「施肥策略」互不影响：策略为「不使用化肥」时按开关使用，策略已开启时按策略执行并在开关打开时追加对应类型。
+                  </p>
+                </section>
+
                 <section v-if="automation.automation.fertilizer_buy_organic || automation.automation.fertilizer_buy_normal" class="border border-gray-200/90 rounded-xl bg-white/55 p-4 space-y-3 dark:border-gray-700">
                   <div class="text-sm font-medium">
                     自动补肥参数
@@ -704,7 +717,14 @@ watch(() => props.currentAccountId, () => {
                     巡查节奏说明
                   </div>
                   <p class="text-xs text-gray-500 dark:text-gray-400">
-                    偷菜巡查不再使用固定的巡查间隔或延迟设置。系统会根据已知好友农场的作物成熟时间动态计算下一次巡查的时机，成熟越近巡查越勤，避免固定间隔造成的空跑或错过窗口。开启右上角的开关即可自动运行。
+                    偷菜巡查不再使用固定的巡查间隔或延迟设置。系统会根据已知好友农场的作物成熟时间动态计算下一次巡查的时机。
+                  </p>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <BaseSwitch v-model="automation.automation.friend_steal_super_mutant_only" label="只偷超变图鉴作物" />
+                    <BaseSwitch v-model="automation.automation.friend_steal_mutant_only" label="只偷变异作物" />
+                  </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    开启后会在发送偷取请求前再次筛选，不符合条件的成熟作物会跳过。
                   </p>
                 </section>
               </div>

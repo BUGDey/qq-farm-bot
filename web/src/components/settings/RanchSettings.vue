@@ -20,6 +20,35 @@ const goodsLoading = ref(false)
 let goodsRequest = 0
 const poopGoods = computed(() => exchangeGoods.value.filter(g => String(g.costItemId) === '7002'))
 const pineGoods = computed(() => exchangeGoods.value.filter(g => String(g.costItemId) === '1008'))
+const strokeFriends = ref<{ gid: string, name: string }[]>([])
+const strokeFriendsLoading = ref(false)
+const strokeFriendsError = ref('')
+let strokeFriendsRequest = 0
+async function loadStrokeFriends() {
+  const accountId = account.currentAccountId
+  if (!accountId)
+    return
+  const request = ++strokeFriendsRequest
+  strokeFriendsLoading.value = true
+  strokeFriendsError.value = ''
+  try {
+    const res = await api.get('/api/friends', { headers: { 'x-account-id': accountId } })
+    if (request !== strokeFriendsRequest)
+      return
+    const rows = res.data?.ok ? (res.data.data?.friends || []) : []
+    strokeFriends.value = rows
+      .map((f: any) => ({ gid: String(f?.gid || ''), name: String(f?.nickname || f?.nickName || f?.remark || f?.gid || '') }))
+      .filter((f: { gid: string }) => /^[1-9]\d*$/.test(f.gid))
+  }
+  catch (e: any) {
+    if (request === strokeFriendsRequest)
+      strokeFriendsError.value = e?.response?.data?.error || e?.message || '好友名单读取失败'
+  }
+  finally {
+    if (request === strokeFriendsRequest)
+      strokeFriendsLoading.value = false
+  }
+}
 async function loadExchangeGoods() {
   const accountId = account.currentAccountId
   if (!accountId)
@@ -67,10 +96,11 @@ const moduleImages: Record<string, string> = {
 const activeInfo = computed(() => modules.find(m => m.key === active.value))
 const policyKeys: Record<string, string[]> = {
   husbandry: ['husbandryStrategy', 'husbandryFallbackStrategy', 'farmMin', 'farmMax'],
-  feed: ['canStrategy', 'smartSeconds', 'grassThresholdPercent', 'feedTargetCount', 'feedReserveCount'],
+  feed: ['canStrategy', 'smartSeconds', 'canMaxPerRun', 'feedAnimalMaxPerRun', 'grassThresholdPercent', 'feedTargetCount', 'feedReserveCount'],
   friends: ['helpMin', 'helpMax', 'quietEnabled', 'quietStart', 'quietEnd'],
   steal: [],
   merchant: ['exchangePoopOrder', 'exchangePineOrder'],
+  daily: ['strokeIncludeGids'],
 }
 const husbandryFallbackOptions = [
   { label: '任务幼崽优先（无任务时最高等级）', value: 'task' },
@@ -98,8 +128,11 @@ const options = computed(() => [
   { key: 'autoPlace', label: '自动入栏', capability: 'place', module: 'husbandry' },
   { key: 'autoAddFeed', label: '自动补充已有牧草', capability: 'addFeed', module: 'feed' },
   { key: 'autoUseCan', label: '自动装填罐头容器', capability: 'useCan', module: 'feed' },
+  { key: 'autoUseCanNormal', label: '自动使用无机罐头', capability: 'useCan', module: 'daily' },
+  { key: 'autoUseCanOrganic', label: '自动使用有机罐头', capability: 'useCan', module: 'daily' },
   { key: 'autoHelp', label: '自动帮助好友清理灾害', capability: 'friendActions', module: 'friends' },
-  { key: 'autoStroke', label: '自动照料好友动物', capability: 'friendActions', module: 'friends' },
+  { key: 'autoStroke', label: '自动抚摸动物', capability: 'friendActions', module: 'daily' },
+  { key: 'autoStrokeSelected', label: '只抚摸勾选的好友', capability: 'friendActions', module: 'daily' },
   { key: 'autoPutHazard', label: '自动向好友牧场放蚊子', capability: 'friendActions', module: 'friends' },
   { key: 'autoSteal', label: '自动偷取好友货架产物', capability: 'friendActions', module: 'steal' },
   { key: 'autoSell', label: '自动出售产物', capability: 'sell', module: 'husbandry' },
@@ -109,6 +142,7 @@ const options = computed(() => [
   { key: 'autoUpgradeRanch', label: '升级牧场', capability: 'upgradeBuilding', module: 'feed' },
   { key: 'autoUpgradeFacilities', label: '解锁棚与升级设施', capability: 'upgradeBuilding', module: 'feed' },
   { key: 'autoFeedAnimal', label: '自动使用罐头', capability: 'feedAnimal', module: 'feed' },
+  { key: 'autoProduceAfterFeed', label: '喂罐头后自动生产', capability: 'feedAnimal', module: 'feed' },
   { key: 'autoProduce', label: '自动开始生产', capability: 'produce', module: 'husbandry' },
   { key: 'autoCollect', label: '自动收集货架产物', capability: 'collect', module: 'husbandry' },
   { key: 'autoClean', label: '自动清理灾害', capability: 'clean', module: 'husbandry' },
@@ -126,8 +160,9 @@ async function toggleModule(key: string, value: boolean) {
   edit(key)
   const defaults: Record<string, string[]> = {
     husbandry: ['autoPlace', 'autoProduce', 'autoCollect', 'autoClean', 'autoHarvest'],
-    feed: ['autoAddFeed', 'autoUseCan', 'autoFeedAnimal'],
-    friends: ['autoHelp', 'autoStroke'],
+    feed: ['autoAddFeed', 'autoUseCan', 'autoFeedAnimal', 'autoProduceAfterFeed'],
+    friends: ['autoHelp'],
+    daily: ['autoClaimTasks', 'autoSubmitOrders', 'autoClaimIllustrated', 'autoClaimWeight', 'autoDailyBenefit', 'autoClaimShareReward', 'autoStroke'],
   }
   for (const option of moduleOptions(key))
     draft.value[option.key] = value && (defaults[key]?.includes(option.key) ?? true)
@@ -168,7 +203,18 @@ function edit(key: string) {
       policy.value.exchangePineOrder = []
     void loadExchangeGoods()
   }
+  if (key === 'daily') {
+    if (!Array.isArray(policy.value.strokeIncludeGids))
+      policy.value.strokeIncludeGids = []
+    void loadStrokeFriends()
+  }
   draft.value = Object.fromEntries(options.value.map(o => [o.key, data.value?.[o.key] === true]))
+}
+function toggleStrokeGid(gid: string) {
+  if (props.readonly)
+    return
+  const list: string[] = Array.isArray(policy.value.strokeIncludeGids) ? policy.value.strokeIncludeGids : []
+  policy.value.strokeIncludeGids = list.includes(gid) ? list.filter(id => id !== gid) : [...list, gid]
 }
 async function save() {
   if (props.readonly || !account.currentAccountId || loading.value || pending.has(account.currentAccountId))
@@ -183,11 +229,21 @@ async function save() {
     const switches = Object.fromEntries(moduleOptions(active.value)
       .filter(o => !isDaily || draft.value[o.key] !== (data.value?.[o.key] === true))
       .map(o => [o.key, draft.value[o.key]]))
-    if (isDaily && !Object.keys(switches).length) {
+    // 日常里除了开关还有「只抚摸勾选的好友」名单，需要一并提交策略；只带该字段，不覆盖其它策略。
+    const dailyPolicy: Record<string, unknown> = {}
+    for (const key of policyKeys.daily || []) {
+      const next = policy.value?.[key] ?? []
+      const prev = data.value?.policy?.[key] ?? []
+      if (JSON.stringify(next) !== JSON.stringify(prev))
+        dailyPolicy[key] = next
+    }
+    if (isDaily && !Object.keys(switches).length && !Object.keys(dailyPolicy).length) {
       active.value = ''
       return
     }
-    const patch = isDaily ? switches : { ...switches, policy: { mode: 'simple', ...Object.fromEntries((policyKeys[active.value] || []).map(key => [key, policy.value[key]])) } }
+    const patch = isDaily
+      ? { ...switches, ...(Object.keys(dailyPolicy).length ? { policy: dailyPolicy } : {}) }
+      : { ...switches, policy: { mode: 'simple', ...Object.fromEntries((policyKeys[active.value] || []).map(key => [key, policy.value[key]])) } }
     const res = await api.post('/api/ranch/settings', patch, { headers: { 'x-account-id': accountId } })
     if (!res.data.ok)
       throw new Error(res.data.error || '保存失败')
@@ -270,6 +326,12 @@ onUnmounted(() => {
                     <p v-if="option.key === 'autoClaimShareReward'" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                       在游戏内完成每日首次分享后自动检查并领取罐头（1 小时）×5，不会代你分享。
                     </p>
+                    <p v-if="option.key === 'autoUseCanNormal' || option.key === 'autoUseCanOrganic'" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      只使用背包里这一种罐头把它们用掉，与上面的「罐头使用策略」互不影响。
+                    </p>
+                    <p v-if="option.key === 'autoProduceAfterFeed'" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                      用罐头喂动物后，如果动物此时可以生产，会自动让它开始生产；只在「自动使用罐头」真正执行时触发。
+                    </p>
                   </div>
                 </div>
               </section>
@@ -307,11 +369,48 @@ onUnmounted(() => {
                   <BaseInput v-model.number="policy.farmMax" label="牧场巡查最大（秒）" type="number" min="1" :disabled="loading" />
                 </div>
               </section>
+              <section v-if="active === 'daily' && draft.autoStrokeSelected" class="border border-gray-100 rounded-lg p-4 space-y-2 dark:border-gray-700">
+                <h3 class="text-lg font-bold">
+                  抚摸指定好友
+                </h3>
+                <p class="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                  只在勾选的好友牧场里抚摸动物；一个都没勾选时不会抚摸任何人。
+                </p>
+                <p v-if="strokeFriendsLoading" class="flex items-center gap-2 text-sm text-gray-500">
+                  <span class="i-svg-spinners-ring-resize animate-spin" />正在读取好友名单…
+                </p>
+                <p v-else-if="strokeFriendsError" class="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                  {{ strokeFriendsError }}
+                  <button class="ml-2 underline" @click="loadStrokeFriends">重试</button>
+                </p>
+                <p v-else-if="!strokeFriends.length" class="text-sm text-gray-500">
+                  还没有好友名单，请先在「好友」页同步一次好友。
+                </p>
+                <div v-else class="max-h-64 grid gap-2 overflow-y-auto sm:grid-cols-2">
+                  <button v-for="friend in strokeFriends" :key="friend.gid" type="button" class="min-w-0 flex items-center gap-2 border rounded-lg px-3 py-2 text-left text-sm transition" :class="(policy.strokeIncludeGids || []).includes(friend.gid) ? 'border-[var(--theme-primary)] bg-[color-mix(in_srgb,var(--theme-primary)_10%,transparent)]' : 'border-gray-200 hover:border-[var(--theme-primary)] dark:border-gray-700'" @click="toggleStrokeGid(friend.gid)">
+                    <span class="grid h-5 w-5 shrink-0 place-items-center border rounded-full text-xs" :class="(policy.strokeIncludeGids || []).includes(friend.gid) ? 'border-[var(--theme-primary)] bg-[var(--theme-primary)] text-white' : 'border-gray-300 text-transparent dark:border-gray-600'">
+                      <span class="i-carbon-checkmark text-sm" />
+                    </span>
+                    <span class="min-w-0 truncate">{{ friend.name }}</span>
+                    <span class="ml-auto shrink-0 text-xs text-gray-400">{{ friend.gid }}</span>
+                  </button>
+                </div>
+                <p class="text-xs text-gray-500">
+                  已勾选 {{ (policy.strokeIncludeGids || []).length }} 人
+                </p>
+              </section>
               <section v-if="active === 'feed'" class="border border-gray-100 rounded-lg p-4 space-y-3 dark:border-gray-700">
                 <div class="grid gap-3 sm:grid-cols-2">
                   <BaseSelect v-model="policy.canStrategy" label="罐头使用策略" :options="canOptions" :disabled="loading" />
                   <BaseInput v-if="['smart', 'smart_only', 'smart_normal'].includes(policy.canStrategy)" v-model.number="policy.smartSeconds" label="快成熟判定秒数" type="number" min="30" max="3600" :disabled="loading" />
                 </div>
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <BaseInput v-model.number="policy.canMaxPerRun" label="单次装罐上限（个）" type="number" min="1" max="99" :disabled="loading" />
+                  <BaseInput v-model.number="policy.feedAnimalMaxPerRun" label="每轮喂动物上限（次）" type="number" min="1" max="99" :disabled="loading" />
+                </div>
+                <p class="text-xs text-gray-500">
+                  「单次装罐上限」控制自动装填罐头容器时每种罐头每轮最多装几个，实际数量还受容器缺口与库存预留限制，默认 1 个；「每轮喂动物上限」控制「自动使用罐头」每轮最多给几只动物使用罐头容器，默认 1 次，避免一次巡查把库存罐头喂完。
+                </p>
                 <div class="grid gap-3 sm:grid-cols-3">
                   <BaseInput v-model.number="policy.grassThresholdPercent" label="牧草机余量低于（%）时补草" type="number" min="1" max="100" :disabled="loading" />
                   <BaseInput v-model.number="policy.feedTargetCount" label="单次补草上限" type="number" min="1" max="999999" :disabled="loading" />

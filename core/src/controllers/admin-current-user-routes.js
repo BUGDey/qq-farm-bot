@@ -16,9 +16,38 @@ function registerRankingRoute({ app, requireAdminToken, store }) {
       if (!['farm', 'ranch'].includes(space)) {
         return res.status(400).json({ ok: false, error: '不支持的排行场景' });
       }
-      // 当前 rank 文件仅由农场统计生成；牧场尚无独立累计，不能复用农场值。
       if (space === 'ranch') {
-        return res.json({ ok: true, data: { period, type, space, available: false, list: [], reason: '牧场尚未提供独立收益和偷取统计，暂无牧场排行数据' } });
+        if (period !== 'total') {
+          return res.json({ ok: true, data: { period, type, space, available: false, list: [], reason: '牧场目前只保留总历史操作统计' } });
+        }
+        const dataDir = process.env.FARM_DATA_DIR || path.join(__dirname, '../../data');
+        const statsDir = path.join(dataDir, 'stats');
+        const accounts = store.getAccounts();
+        const accountList = accounts && Array.isArray(accounts.accounts) ? accounts.accounts : [];
+        const byId = new Map(accountList.map(account => [String(account.id), {
+          name: String(account.name || account.username || ''), avatar: String(account.avatar || ''),
+          platform: String(account.platform || 'qq'), owner: getAccountOwner(account),
+        }]));
+        const rows = [];
+        if (fs.existsSync(statsDir)) {
+          for (const file of fs.readdirSync(statsDir)) {
+            const match = /^ranch-(.+)\.json$/.exec(file);
+            if (!match) continue;
+            const accountId = match[1];
+            const meta = byId.get(accountId);
+            if (!meta) continue;
+            try {
+              const raw = JSON.parse(fs.readFileSync(path.join(statsDir, file), 'utf8'));
+              const ops = raw && raw.totalOperations && typeof raw.totalOperations === 'object' ? raw.totalOperations : {};
+              const steal = Number(ops.steal) || 0;
+              const earn = ['collect', 'harvest', 'produce', 'sell', 'exchange', 'claimTask', 'claimIllustrated', 'claimWeight', 'dailyBenefit']
+                .reduce((sum, key) => sum + (Number(ops[key]) || 0), 0);
+              rows.push({ accountId, ...meta, steal, earn, savedAt: Number(raw.savedAt) || 0 });
+            } catch {}
+          }
+        }
+        rows.sort((a, b) => (Number(b[type]) || 0) - (Number(a[type]) || 0));
+        return res.json({ ok: true, data: { period, type, space, available: true, list: rows.slice(0, 50) } });
       }
 
       const dataDir = process.env.FARM_DATA_DIR || path.join(__dirname, '../../data');
@@ -155,4 +184,4 @@ function registerAdminCurrentUserRoutes({
   });
 }
 
-module.exports = { registerAdminCurrentUserRoutes };
+module.exports = { registerAdminCurrentUserRoutes, registerRankingRoute };

@@ -65,7 +65,10 @@ printf '{"nonce":"%s","startedAt":%s}\n' "$startup_nonce" "$started_at" > "$ack_
 chmod 644 "$ack_tmp"
 mv -f "$ack_tmp" "$maintenance_dir/restart-ack.json"
 
-owner_pid=$$
+# NapCat 启动时会往 os.tmpdir() 建 napcat-plugin-uploads；容器里提前建好，避免只读/受限 /tmp 时直接退出。
+mkdir -p "${TMPDIR:-/tmp}/napcat-plugin-uploads" 2>/dev/null || true
+
+owner_pid=$
 bash /app/entrypoint.sh "$@" &
 napcat_pid=$!
 watch_pid=''

@@ -2,6 +2,38 @@ const { ACTION_SWITCH } = require('./ranch-settings');
 const benefitSchedule = require('./ranch-benefit-schedule');
 const { selectCub, feedTypes, quietNow, purchasableCubs } = require('./ranch-strategy');
 const CONFIG = require('../gameConfig/RanchConfig.json');
+// 没有已知好友 GID 时官方 GetAll 会稳定返回 1000020：这是名单缺失而不是故障，
+// 自动任务按「本轮跳过」处理，最多每 30 分钟提示一次，避免巡查日志被同一条错误刷屏。
+const ROSTER_MISSING_WARN_MS = 30 * 60 * 1000;
+let rosterMissingWarnAt = 0;
+// 好友拜访失败（未解锁/被拉黑/服务端拒绝）后 30 分钟内不再重复拜访，
+// 否则同一批好友会每轮巡查都被重试一遍，把巡检配额全耗在打不开的牧场里。
+const FRIEND_ENTRY_RETRY_MS = 30 * 60 * 1000;
+const friendRetryAt = new Map();
+// 服务端确认「今日次数用尽」后，当天不再排布该好友交互动作；次日上海时区日界自动恢复。
+// 只按服务端返回的 remaining_times===0 记录，超时回包不明不记录，避免误停排。
+// 状态按 service 实例隔离（每账号一个实例），避免账号之间互相影响。
+const INTERACTION_QUOTA_RESET_MS = 24 * 60 * 60 * 1000;
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
+function nextQuotaResetMs(serverMs) {
+    const base = Number(serverMs) || Date.now();
+    return base + INTERACTION_QUOTA_RESET_MS - ((base + SHANGHAI_OFFSET_MS) % INTERACTION_QUOTA_RESET_MS);
+}
+function createInteractionQuota() {
+    const exhaustedUntil = new Map();
+    return {
+        remember(action, remaining, serverMs) {
+            if (remaining === 0) exhaustedUntil.set(action, nextQuotaResetMs(serverMs));
+            else if (remaining > 0) exhaustedUntil.delete(action);
+        },
+        resetAt(action, nowMs = Date.now()) {
+            const reset = exhaustedUntil.get(action);
+            if (!reset || reset <= nowMs) { if (reset) exhaustedUntil.delete(action); return 0; }
+            return reset;
+        },
+    };
+}
+const QUOTA_OP_ACTIONS = { 11003: 'autoPutHazard', 11009: 'autoStroke' };
 const stock = (items, id, usable = false) => (items || []).filter(i => String(i.id) === String(id) && (!usable || (!i.locked && !i.is_locked && !i.isLocked && !i.detail?.ranchProduct && !i.item_detail?.ranch_product))).reduce((n, i) => n + BigInt(i.count || 0), 0n);
 const cap = (...values) => Number(values.map(BigInt).reduce((a, b) => a < b ? a : b));
 // 兑换货币余额：与真实兑换校验保持一致，只排除锁定物品（松果本身是牧场产物，不能再按产物标记排除）。
@@ -50,10 +82,17 @@ function assertAutomationPolicy(input, p, { state, market, exchangeEnabled = fal
 }
 async function runRanchExtraAutomation(ctx) {
     const { service, attempt, settings, policy, alive: isAlive, goodsMap, getCursor, setCursor, logError } = ctx;
+    // 修饰性开关（如「只抚摸勾选的好友」「无机/有机罐头」）不属于某个调度分组，
+    // 必须读未按分组过滤的原始设置，否则在 help/feed 分组下会被过滤成 false。
+    const rawSettings = typeof ctx.rawSettings === 'function' ? ctx.rawSettings : settings;
+    const quota = ctx.interactionQuota || createInteractionQuota();
+    const nowMs = () => Number(ctx.now ? ctx.now() : Date.now());
     let used = 0, cancelled = false;
     const alive = () => !cancelled && isAlive();
     const enabled = key => {
         if (settings()[key] && used >= policy().maxActionsPerRun) ctx.onLimit?.();
+        // 次数用尽的动作当天不再排队；重置时刻由服务端权威回包确定。
+        if (quota.resetAt(key, nowMs())) return false;
         return alive() && settings()[key] && used < policy().maxActionsPerRun;
     };
     const perform = async (input, key = ACTION_SWITCH[input.action]) => {
@@ -201,17 +240,26 @@ async function runRanchExtraAutomation(ctx) {
             .map(item => ({ itemId: String(item.id), uid: item.uid || '0', count: Number(item.count) }));
         if (items.length) await perform({ action: 'sell', items });
     });
-    if (enabled('autoUseCan')) for (const id of policy().canItemIds) await safely(async () => {
-        if (!enabled('autoUseCan')) return;
+    // 自动使用罐头：按「无机/有机」两个独立总开关过滤可用罐头，与罐头策略（canStrategy）互不影响。
+    const canLanes = [
+        { key: 'autoUseCanNormal', feedType: '无机罐头' },
+        { key: 'autoUseCanOrganic', feedType: '有机罐头' },
+    ].filter(lane => rawSettings()[lane.key]);
+    if (enabled('autoUseCan') || canLanes.length) for (const id of policy().canItemIds) await safely(async () => {
         const can = canConfig.get(id);
         if (!can) return;
+        const lane = canLanes.find(candidate => candidate.feedType === can.feed_type);
+        // 旧的「自动装填罐头容器」总开关优先；它没开时用对应的无机/有机独立开关。
+        const key = enabled('autoUseCan') ? 'autoUseCan' : lane && enabled(lane.key) ? lane.key : null;
+        if (!key) return;
         const state = await service.getStatus(); const p = policy();
         const item = state.items.find(i => String(i.id) === id && i.canUseCan && !i.locked);
         const surplus = stock(state.items, id, true) - BigInt(p.canReserveCount);
         const gap = BigInt(p.bucketTargetSeconds) - stock(state.items, bucketId(can));
         if (!item || surplus <= 0n || gap < BigInt(can.speed_up_secs)) return;
         const count = cap(item.count, surplus, gap / BigInt(can.speed_up_secs), p.canMaxPerRun);
-        if (count > 0) await perform({ action: 'useCan', itemId: id, uid: item.uid || '0', count });
+        // 容器已满（code=1003002）由写入层记录并跳过，不影响后续罐头与其他任务。
+        if (count > 0) await perform({ action: 'useCan', itemId: id, uid: item.uid || '0', count }, key);
     });
     if (enabled('autoPlace')) await safely(async () => {
         const ranches = (await service.getStatus()).ranches;
@@ -232,22 +280,34 @@ async function runRanchExtraAutomation(ctx) {
         }
     });
     if (enabled('autoFeedAnimal')) await safely(async () => {
+        // 每轮给动物用罐头的次数上限独立可配，默认 1，避免一次巡查把库存罐头全喂完。
+        const animalCap = Math.max(1, Math.min(99, Number(policy().feedAnimalMaxPerRun) || 1));
+        let fedThisRun = 0;
         const state = await service.getStatus();
         for (const ranch of state.ranches) for (const animal of ranch.animals) {
             for (const bucketType of feedTypes(animal, policy(), (ctx.now || Date.now)())) {
-                if (!enabled('autoFeedAnimal')) break;
-                if (stock(state.items, bucketType === 1 ? '7004' : '7003', true) > 0n) await perform({ action: 'feedAnimal', ranchId: ranch.ranchInstId, animalInstId: animal.animalInstId, bucketType });
+                if (!enabled('autoFeedAnimal') || fedThisRun >= animalCap) break;
+                if (stock(state.items, bucketType === 1 ? '7004' : '7003', true) > 0n) {
+                    await perform({ action: 'feedAnimal', ranchId: ranch.ranchInstId, animalInstId: animal.animalInstId, bucketType });
+                    fedThisRun++;
+                }
             }
         }
     });
-    if (enabled('autoUpgradeRanch') || enabled('autoUpgradeFacilities')) await safely(async () => {
-        for (const facility of (await service.getStatus()).facilities) {
+    // 棚解锁是入栏/生产的前置条件，因此入栏或生产开关也会驱动这一段，否则只开自动入栏时棚永远不会被解锁。
+    const shedOptIn = ['autoUpgradeFacilities', 'autoPlace', 'autoProduce'].some(enabled);
+    if (enabled('autoUpgradeRanch') || shedOptIn) await safely(async () => {
+        // 状态里可能没有 facilities（部分场景只回 ranches），缺失时按「没有设施」处理。
+        for (const facility of ((await service.getStatus()).facilities || [])) {
             const key = facility.facilityKind === 'MODULE_TYPE_MAIN_CITY' ? 'autoUpgradeRanch' : 'autoUpgradeFacilities';
-            if (!enabled(key)) continue;
-            if (Number(facility.state) === 3 && facility.facilityKind === 'MODULE_TYPE_RANCH_SHED') {
-                await perform({ action: 'activateFacility', facilityInstId: facility.instId }, key);
+            // 待解锁（READY=3）的棚是入栏/生产的前置条件：只要入栏或生产开关开着，
+            // 即使没开「解锁棚与升级设施」也要先把棚解锁，否则棚里的自动化永远不会开始。
+            const shedKey = ['autoUpgradeFacilities', 'autoPlace', 'autoProduce'].find(candidate => settings()[candidate]);
+            if (Number(facility.state) === 3 && facility.facilityKind === 'MODULE_TYPE_RANCH_SHED' && shedKey) {
+                await perform({ action: 'activateFacility', facilityInstId: facility.instId }, shedKey);
                 continue; // Upgrade from a fresh snapshot on the next scheduler pass.
             }
+            if (!enabled(key)) continue;
             if (facility.state != null && Number(facility.state) !== 1) continue;
             if (facility.upgradeState) {
                 if (Number(facility.upgradeEndTime) > 0 && Number(facility.upgradeEndTime) * 1000 <= (ctx.now || Date.now)()) await perform({ action: 'completeUpgrade', facilityInstId: facility.instId }, key);
@@ -264,7 +324,18 @@ async function runRanchExtraAutomation(ctx) {
         let friends, size, start;
         if (continuation?.friendBatch) ({ friends, size, start } = continuation.friendBatch);
         else {
-            const roster = await (ctx.readFriendRoster ? ctx.readFriendRoster() : service.getResource('friends'));
+            let roster;
+            try {
+                roster = await (ctx.readFriendRoster ? ctx.readFriendRoster() : service.getResource('friends'));
+            } catch (err) {
+                if (!/\bcode=1000020\b/.test(err.message || '')) throw err;
+                const at = (ctx.now || Date.now)();
+                if (at - rosterMissingWarnAt >= ROSTER_MISSING_WARN_MS) {
+                    rosterMissingWarnAt = at;
+                    ctx.logError?.(Object.assign(new Error('牧场好友名单为空：请在好友页同步一次好友，之后才会自动巡查好友牧场'), { code: 'ROSTER_EMPTY' }));
+                }
+                return;
+            }
             if (!roster) return; // Saved scan will resume on the next ranch lease.
             const all = roster.friends || [];
             friends = all.filter(f => !p.friendExcludeGids.includes(String(f.gid)) && (!p.friendIncludeGids.length || p.friendIncludeGids.includes(String(f.gid))));
@@ -281,8 +352,30 @@ async function runRanchExtraAutomation(ctx) {
             const hostGid = String(friends[(start + offset) % friends.length].gid);
             const current = policy();
             if (current.friendExcludeGids.includes(hostGid) || (current.friendIncludeGids.length && !current.friendIncludeGids.includes(hostGid))) return;
-            const visit = await service.action({ action: 'visitFriend', hostGid });
+            // 拜访失败的牧场先冷却一段时间再试：服务端拒绝（未解锁/非好友/被限制）不会自己恢复，
+            // 每轮重试只会白白消耗巡查配额，还会把日志刷满。
+            const nowValue = (ctx.now || Date.now)();
+            const retryAt = friendRetryAt.get(hostGid) || 0;
+            if (nowValue < retryAt) return;
+            let visit;
+            try {
+                visit = await service.action({ action: 'visitFriend', hostGid });
+            } catch (err) {
+                // 只有「服务端明确拒绝」才冷却这条好友；请求超时/连接中断等结果未知的错误
+                // 下一次巡查应当正常重试，不能因为一次抖动就跳过一个好友半小时。
+                if (!['REQUEST_TIMEOUT', 'ENCODE_TIMEOUT', 'CONNECTION_CLOSED', 'SCENE_CANCELLED', 'GATEWAY_BUSY', 'AUTOMATION_BUSY'].includes(err.code)) {
+                    friendRetryAt.set(hostGid, nowValue + FRIEND_ENTRY_RETRY_MS);
+                }
+                throw err;
+            }
+            friendRetryAt.delete(hostGid);
             ctx.maturityPlan?.observe(hostGid, visit.friend?.ranches);
+            // 服务端权威次数：用尽的动作当天停排，次日重置后再排队。
+            const serverMs = Number(ctx.serverNow ? ctx.serverNow() : Date.now());
+            for (const op of visit.friend?.ops || []) {
+                const action = QUOTA_OP_ACTIONS[String(op.opId)];
+                if (action && /^\d+$/.test(String(op.remainingTimes))) quota.remember(action, Number(op.remainingTimes), serverMs);
+            }
             // Missing quota is not permission to write. Refresh from each completed
             // hazard action so multiple sheds cannot reuse the same remaining count.
             const hazardQuota = friend => {
@@ -302,18 +395,44 @@ async function runRanchExtraAutomation(ctx) {
                 // Production can immediately create stealable shelves. Only consume freshly
                 // queried shelves, never infer loot or retry a completed production write.
                 let stealRanch;
-                if (enabled('autoSteal') && (!ctx.maturityPlan || ctx.maturityPlan.canSteal(hostGid))) {
+                // 助产属于好友帮助巡查，不应被「自动偷取」开关绑死。
+                // 两个开关都开时沿用偷取任务的写入键；只开帮助时用 autoHelp，
+                // 这样关闭偷取后仍能独立执行好友助产。
+                const canProduceFriend = enabled('autoSteal') || enabled('autoHelp');
+                const produceAllowed = ctx.maturityPlan
+                    ? (enabled('autoSteal') ? ctx.maturityPlan.canSteal(hostGid) : ctx.maturityPlan.canHelp(hostGid))
+                    : true;
+                if (canProduceFriend && produceAllowed) {
+                    const produceKey = rawSettings().autoSteal === true ? 'autoSteal' : 'autoHelp';
                     for (const animal of ranch.animals || []) if (animal.canTriggerProduce) {
-                        const produced = await perform({ ...base, action: 'friendProduce', animalInstId: animal.animalInstId });
+                        const produced = await perform({ ...base, action: 'friendProduce', animalInstId: animal.animalInstId }, produceKey);
                         if (produced) stealRanch = produced.friend?.ranches?.find(r => String(r.ranchInstId) === String(ranch.ranchInstId)) || { shelves: [] };
                     }
                 }
                 if (stealRanch) await stealAvailable(stealRanch.shelves);
                 if (enabled('autoHelp') && (!ctx.maturityPlan || ctx.maturityPlan.canHelp(hostGid)) && ranch.hazards?.length) await perform({ ...base, action: 'help' });
-                if (enabled('autoStroke') && (!ctx.maturityPlan || ctx.maturityPlan.canHelp(hostGid))) for (const animal of ranch.animals || []) if (animal.canStroke) await perform({ ...base, action: 'stroke', animalInstId: animal.animalInstId });
+                if (enabled('autoStroke') && (!ctx.maturityPlan || ctx.maturityPlan.canHelp(hostGid))) {
+                    // 「只抚摸勾选的好友」：白名单为空时不抚摸任何人，避免误操作非指定好友。
+                    const strokeOnly = rawSettings().autoStrokeSelected === true;
+                    const strokeList = current.strokeIncludeGids || [];
+                    if (!strokeOnly || strokeList.includes(hostGid)) {
+                        for (const animal of ranch.animals || []) if (animal.canStroke) {
+                            const stroked = await perform({ ...base, action: 'stroke', animalInstId: animal.animalInstId });
+                            // 写后以服务端次数为准；用尽即停排，不再继续抚摸其他动物。
+                            const after = stroked?.friend?.ops?.find(op => String(op.opId) === '11009');
+                            if (after && /^\d+$/.test(String(after.remainingTimes))) {
+                                quota.remember('autoStroke', Number(after.remainingTimes), serverMs);
+                                if (quota.resetAt('autoStroke', nowMs())) break;
+                            }
+                        }
+                    }
+                }
                 if (enabled('autoPutHazard') && hazardsRemaining > 0n && (!ctx.maturityPlan || ctx.maturityPlan.canHelp(hostGid))) {
                     const placed = await perform({ ...base, action: 'putHazard' });
                     hazardsRemaining = hazardQuota(placed?.friend);
+                    // 写后再次以服务端剩余次数为准，用尽则当天停排。
+                    const after = placed?.friend?.ops?.find(op => String(op.opId) === '11003');
+                    if (after && /^\d+$/.test(String(after.remainingTimes))) quota.remember('autoPutHazard', Number(after.remainingTimes), serverMs);
                 }
             }
             // Keep the current friend in the continuation until all its safe actions
@@ -322,4 +441,4 @@ async function runRanchExtraAutomation(ctx) {
         });
     });
 }
-module.exports = { runRanchExtraAutomation, assertAutomationPolicy };
+module.exports = { runRanchExtraAutomation, assertAutomationPolicy, createInteractionQuota, nextQuotaResetMs };

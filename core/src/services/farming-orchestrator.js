@@ -306,11 +306,16 @@ async function runFarmOperation(opType) {
 
   // ── 智能施肥（巡田时触发）──
   if (opType === 'all') {
-    const fertilizerMode = getAutomation().fertilizer || 'none';
-    if (fertilizerMode === 'smart' || fertilizerMode === 'smart_only' || fertilizerMode === 'smart_normal' ||
-        fertilizerMode === 'final_normal' || fertilizerMode === 'final_organic') {
+    const automationNow = getAutomation() || {};
+    const fertilizerMode = automationNow.fertilizer || 'none';
+    // 独立开关（与「施肥策略」下拉框无关）：把背包里闲置的无机/有机化肥用掉。
+    const useNormalSwitch = automationNow.fertilizer_use_normal === true;
+    const useOrganicSwitch = automationNow.fertilizer_use_organic === true;
+    const modeRuns = fertilizerMode === 'smart' || fertilizerMode === 'smart_only' || fertilizerMode === 'smart_normal' ||
+        fertilizerMode === 'final_normal' || fertilizerMode === 'final_organic';
+    if (modeRuns || useNormalSwitch || useOrganicSwitch) {
       try {
-        const fertResult = await runFertilizerByConfig([], { skipNormal: true });
+        const fertResult = await runFertilizerByConfig([], { skipNormal: modeRuns && !useNormalSwitch });
         if (fertResult.organic > 0) actions.push(`有机肥${  fertResult.organic}`);
         else if (fertResult.normal > 0) actions.push(`普通肥${  fertResult.normal}`);
       } catch (err) {

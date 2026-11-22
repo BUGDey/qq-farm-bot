@@ -119,7 +119,10 @@ export function useRanchResource(page: Ref<string>) {
     finally {
       pending.delete(accountId)
       if (version === sequence) {
-        await refresh()
+        // 失败时不刷新：刷新会再发一次完整读取，网关超时后的失败容易被二次请求拖成
+        // 更长的等待，页面上还会看到两个错误。保留原数据，只显示这次操作的错误。
+        if (!actionError)
+          await refresh()
         if (version === sequence && actionError)
           error.value = actionError
       }

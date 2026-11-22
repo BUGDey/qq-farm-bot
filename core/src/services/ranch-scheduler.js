@@ -1,5 +1,10 @@
 // Independent randomized deadlines; due groups run serially on the shared connection.
 const FRIEND_KEYS = ['autoSteal', 'autoHelp', 'autoStroke', 'autoPutHazard'];
+// Preference switches never start a patrol without an actual action enabled.
+const PREFERENCE_KEYS = ['autoStrokeSelected', 'autoExchangePriority'];
+function hasEnabledAutomation(settings, group = 'all') {
+    return Object.entries(settings).some(([key, value]) => value === true && !PREFERENCE_KEYS.includes(key) && inGroup(key, group));
+}
 function inGroup(key, group) {
     if (group === 'all') return true;
     if (group === 'steal') return key === 'autoSteal';
@@ -12,7 +17,7 @@ function createRanchScheduler({ now = Date.now, random = Math.random } = {}) {
     let ticking = false;
     function sync(settings, policy) {
         for (const [key, queue] of Object.entries(queues)) {
-            const enabled = Object.entries(settings).some(([name, value]) => value === true && inGroup(name, key));
+            const enabled = hasEnabledAutomation(settings, key);
             const signature = `${policy[`${key}Min`]}:${policy[`${key}Max`]}`;
             if (!enabled) Object.assign(queue, { enabled: false, nextAt: 0, intervalSec: 0 });
             else if (!queue.enabled || queue.signature !== signature) Object.assign(queue, { enabled: true, nextAt: now(), intervalSec: 0 });
@@ -71,4 +76,4 @@ function createRanchScheduler({ now = Date.now, random = Math.random } = {}) {
     }
     return { tick, status, reset };
 }
-module.exports = { createRanchScheduler, inGroup };
+module.exports = { createRanchScheduler, inGroup, hasEnabledAutomation };
