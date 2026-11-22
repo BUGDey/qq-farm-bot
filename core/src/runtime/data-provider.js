@@ -245,6 +245,9 @@ function createDataProvider(deps) {
         syncFriendsFromGids: (ref, gids) => callWorkerApi(resolveAccountId(ref), 'syncFriendsFromGids', gids, SYNC_TIMEOUT),
         fetchFriendsDogInfo: (ref) => callWorkerApi(resolveAccountId(ref), 'fetchFriendsDogInfo', DOG_INFO_TIMEOUT),
         delFriend: (ref, gid) => callWorkerApi(resolveAccountId(ref), 'delFriend', gid),
+        // 手动批量加好友：items = [{ uid, openid, shareSource, shareKey }]，逐条返回结果
+        applyFriendInvites: (ref, items, options) => callWorkerApi(
+            resolveAccountId(ref), 'applyFriendInvites', items, options, { _timeoutMs: 300000 }),
 
         // ========== 仓库 ==========
         useItem: (ref, itemId, count, uid) => callWorkerApi(resolveAccountId(ref), 'useItem', itemId, count, uid),

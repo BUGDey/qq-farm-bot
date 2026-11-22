@@ -275,6 +275,8 @@ async function loadProto() {
     types.VisitEnterReply = root.lookupType('gamepb.visitpb.EnterReply');
     types.VisitLeaveRequest = root.lookupType('gamepb.visitpb.LeaveRequest');
     types.VisitLeaveReply = root.lookupType('gamepb.visitpb.LeaveReply');
+    types.ApplyFriendRequest = root.lookupType('gamepb.friendpb.ApplyFriendRequest');
+    types.ApplyFriendReply = root.lookupType('gamepb.friendpb.ApplyFriendReply');
     types.BriefDogInfo = root.lookupType('gamepb.visitpb.BriefDogInfo');
     types.GetDogInfoRequest = root.lookupType('gamepb.dogpb.GetDogInfoRequest');
     types.GetDogInfoReply = root.lookupType('gamepb.dogpb.GetDogInfoReply');

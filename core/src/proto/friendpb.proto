@@ -116,6 +116,20 @@ message AcceptFriendsReply {
     repeated GameFriend friends = 1;
 }
 
+// --- 发送好友申请（分享链接场景） ---
+// 抓包实证（2026-11-21, Reqable #334, 明文 85 字节）：
+//   field 1 = 对方 gid (varint)
+//   field 2 = 申请令牌字符串 "<64位hex>:<对方gid>"，来自 VisitService.Enter 回包顶层 field 10
+//   field 3 = 0 (varint)
+// 回包为空消息，errorCode=0 即申请已发送（对方同意后才是好友）
+message ApplyFriendRequest {
+    int64 gid = 1;
+    string apply_token = 2;  // VisitService.Enter 回包的 apply_token
+    int32 source = 3;        // 抓包: 0
+}
+
+message ApplyFriendReply {}
+
 // --- 拒绝好友申请 ---
 message RejectFriendsRequest {
     repeated int64 friend_gids = 1;

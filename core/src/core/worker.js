@@ -2005,6 +2005,11 @@ async function stopBot() {
     loginReady = false;
     accountRunStartedAt = 0;
     friendSyncPaused = false;
+    if (friendSyncResumeTimer) {
+        clearTimeout(friendSyncResumeTimer);
+        friendSyncResumeTimer = null;
+    }
+    batchInviteRunning = false;
 
     stopUnifiedScheduler();
     stopMysteryShopAutoBuyTimer();
@@ -2099,6 +2104,49 @@ const MANUAL_WRITE_METHODS = new Set([
 // 藏品写操作（激活/升星/领奖/展示）由 services/collections 内部串行化，不纳入自动化互斥：
 // 它们不影响农场调度，且单次操作含多次背包/状态核对，放进 30s 手动锁容易误判占用。
 
+// 批量加好友期间需要独占发包：先把正在跑的自动任务等收尾，再开始逐条发申请。
+const AUTOMATION_BUSY_TIMEOUT_MS = 60000;
+// 前端按 10 条一批提交，批与批之间会恢复一次；留一段宽限期，
+// 避免下一批刚进来又要等一轮农场 tick（宽限期内来新批次会自动续上）。
+const BATCH_INVITE_RESUME_GRACE_MS = 10000;
+let friendSyncResumeTimer = null;
+let batchInviteRunning = false;
+
+function holdFriendSyncPause() {
+    if (friendSyncResumeTimer) {
+        clearTimeout(friendSyncResumeTimer);
+        friendSyncResumeTimer = null;
+    }
+    friendSyncPaused = true;
+}
+
+function scheduleFriendSyncResume(reason = '批量加好友') {
+    if (friendSyncResumeTimer) clearTimeout(friendSyncResumeTimer);
+    friendSyncResumeTimer = setTimeout(() => {
+        friendSyncResumeTimer = null;
+        friendSyncPaused = false;
+        log('系统', `${reason}结束，已恢复自动化进程`, {
+            module: 'system', event: '批量加好友恢复'
+        });
+    }, BATCH_INVITE_RESUME_GRACE_MS);
+    if (friendSyncResumeTimer.unref) friendSyncResumeTimer.unref();
+}
+
+// 等自动任务把账号锁让出来（批量加好友要在独占状态下发申请）。
+// 这里查的是 automation-lock 的实况，而不是零散的任务标志位：
+// bot 的定时巡检/立即执行都走那把锁，锁空即代表没有自动任务在跑。
+async function waitForAutomationIdle(timeoutMs = AUTOMATION_BUSY_TIMEOUT_MS) {
+    const { isAutomationBusy } = require('../services/automation-lock');
+    const startedAt = Date.now();
+    while (isAutomationBusy() && Date.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    return {
+        idle: !isAutomationBusy(),
+        waitedMs: Date.now() - startedAt,
+    };
+}
+
 async function handleApiCall(msg) {
     if (!msg || !MANUAL_WRITE_METHODS.has(String(msg.method || ''))) {
         return handleApiCallInternal(msg);
@@ -2117,11 +2165,54 @@ async function handleApiCall(msg) {
 
 async function handleApiCallInternal(msg) {
     const { id, method } = msg;
+    // 批量加好友：在进入场景租约之前先暂停并等待其他自动化收尾。
+    // 必须放在租约外——若持有农场租约再等，正在跑的自动化反而拿不到租约，
+    // 只会互相卡到超时（leaseTimeoutMs=180s）。
+    const isBatchInvite = method === 'applyFriendInvites';
+    if (isBatchInvite) {
+        if (batchInviteRunning) {
+            sendToMaster({ type: 'api_response', id, result: null, error: '批量加好友任务正在进行中，请等待当前批次结束' });
+            return;
+        }
+        batchInviteRunning = true;
+        try {
+            holdFriendSyncPause();
+            log('系统', '批量加好友开始，已暂停其他自动化进程', {
+                module: 'system', event: '批量加好友暂停', method
+            });
+            const { idle, waitedMs } = await waitForAutomationIdle();
+            log('邀请', idle
+                ? `其他自动化已全部让出（等待 ${waitedMs}ms），开始批量加好友`
+                : `等待自动化收尾超时（${waitedMs}ms），仍开始批量加好友`, {
+                module: 'friend', event: '批量加好友独占', result: idle ? 'idle' : 'timeout'
+            });
+        } catch (err) {
+            // 暂停/等待阶段就失败时要把暂停和运行标记收回，否则后续自动化会一直被憋住
+            batchInviteRunning = false;
+            scheduleFriendSyncResume();
+            sendToMaster({
+                type: 'api_response', id, result: null,
+                error: err && err.message ? err.message : String(err || '批量加好友启动失败'),
+                errorDetails: serializeWorkerError(err)
+            });
+            return;
+        }
+    }
+
     const session = require('../services/ranch-session').ranchSession;
     const enter = method.startsWith('ranch') ? session.inRanch : session.inFarm;
-    return session.detached(() => enter(
-        () => runWithRequestPriority('foreground', () => handleApiCallInScene(msg)), { manual: true }
-    )).catch(err => sendToMaster({ type: 'api_response', id, result: null, error: err.message, errorDetails: serializeWorkerError(err) }));
+    try {
+        return await session.detached(() => enter(
+            () => runWithRequestPriority('foreground', () => handleApiCallInScene(msg)), { manual: true }
+        ));
+    } catch (err) {
+        return sendToMaster({ type: 'api_response', id, result: null, error: err.message, errorDetails: serializeWorkerError(err) });
+    } finally {
+        if (isBatchInvite) {
+            batchInviteRunning = false;
+            scheduleFriendSyncResume();
+        }
+    }
 }
 
 async function handleApiCallInScene(msg) {
@@ -2197,6 +2288,10 @@ async function handleApiCallInScene(msg) {
                 break;
             case 'delFriend':
                 result = await delFriend(args[0]);
+                break;
+            // 手动批量加好友：逐条 Enter 拿 apply_token 再 ApplyFriend，不走 share.txt 轮询
+            case 'applyFriendInvites':
+                result = await require('../services/invite').applyInviteList(args[0], args[1] || {});
                 break;
             case 'getSeeds':
                 result = await getAvailableSeeds();

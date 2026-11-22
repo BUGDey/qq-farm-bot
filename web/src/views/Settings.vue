@@ -6,6 +6,7 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 import AccountFeatureSettings from '@/components/settings/AccountFeatureSettings.vue'
 import RanchSettings from '@/components/settings/RanchSettings.vue'
 import AccountSettingsTab from '@/components/settings/AccountSettingsTab.vue'
+import FriendImportTab from '@/components/settings/FriendImportTab.vue'
 import AutoCodeRefreshCard from '@/components/settings/AutoCodeRefreshCard.vue'
 import ChangePasswordCard from '@/components/settings/ChangePasswordCard.vue'
 import OfflineReminderCard from '@/components/settings/OfflineReminderCard.vue'
@@ -28,14 +29,17 @@ const route = useRoute()
 const isAdminUser = computed(() => userStore.isAdmin)
 /** 管理后台仅超级管理员可见 */
 const isSuperAdminUser = computed(() => userStore.isSuperAdmin)
-type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'my-account' | 'admin-panel'
+type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'friend-import' | 'my-account' | 'admin-panel'
 
-const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'my-account', 'admin-panel']
+const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'friend-import', 'my-account', 'admin-panel']
 const LEGACY_SETTINGS_TABS: Record<string, SettingsTabKey> = {
   'strategy': 'account-config',
   'automation': 'account-config',
   'default-plan': 'account-config',
   'user': 'notification',
+  // 好友/邀请旧页签入口并入批量加好友
+  'friend': 'friend-import',
+  'invite': 'friend-import',
   // 系统配置页签已移除：定时刷新重登并入我的账号，连接参数等并入管理后台全局设置
   'system': 'my-account',
   'capture': 'my-account',
@@ -76,6 +80,7 @@ const tabs = [
   { key: 'account', label: '账号管理', icon: 'i-carbon-user-settings' },
   { key: 'account-config', label: '账号设置', icon: 'i-carbon-settings-adjust' },
   { key: 'notification', label: '通知设置', icon: 'i-carbon-notification' },
+  { key: 'friend-import', label: '批量加好友', icon: 'i-carbon-user-follow' },
   { key: 'my-account', label: '我的账号', icon: 'i-carbon-user-avatar' },
   { key: 'admin-panel', label: '管理后台', icon: 'i-carbon-user-admin' },
 ] as const
@@ -577,6 +582,9 @@ onMounted(async () => {
           />
           <ChangePasswordCard />
         </div>
+
+        <!-- 批量加好友：粘贴微信群分享链接，按账号批量发送好友申请 -->
+        <FriendImportTab v-else-if="activeTab === 'friend-import'" />
 
         <!-- 管理后台：用户 / 卡密 / 流水 / 日志（复用 AdminPanel 页面，仅超级管理员可见该 tab） -->
         <AdminPanel v-else-if="activeTab === 'admin-panel' && isSuperAdminUser" />

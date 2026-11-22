@@ -198,6 +198,53 @@ function registerAdminFriendRoutes({
     }
   });
 
+  // 手动批量加好友：接收「分享链接解析出来的 uid + openid」，逐条发送好友申请。
+  // 单次最多 20 条（前端分批提交并展示进度），不读写 share.txt，不影响自动邀请流程。
+  app.post("/api/friends/apply-invites", async (req, res) => {
+    const accountId = getAccountOrRespond(req, res, access);
+    if (!accountId) return;
+
+    const body = req.body || {};
+    const rawItems = Array.isArray(body.items) ? body.items : [];
+    if (rawItems.length === 0) {
+      return res.status(400).json({ ok: false, error: "没有可提交的邀请数据" });
+    }
+    if (rawItems.length > 20) {
+      return res.status(400).json({ ok: false, error: "单次最多提交 20 条，请分批处理" });
+    }
+
+    const items = rawItems
+      .map((item) => ({
+        uid: String((item && item.uid) == null ? "" : item.uid).trim(),
+        openid: String((item && (item.openid || item.openId)) || "").trim(),
+        shareSource: item && item.shareSource != null
+          ? item.shareSource
+          : (item && item.share_source != null ? item.share_source : ""),
+        // 等级筛选用：进对方农场需要卡片里的 share_key
+        shareKey: String((item && (item.shareKey || item.share_key)) || "").trim(),
+      }))
+      .filter((item) => item.uid && item.openid);
+
+    if (items.length === 0) {
+      return res.status(400).json({ ok: false, error: "解析结果为空：每条记录都需要 uid 和 openid" });
+    }
+
+    const delayMs = Number(body.delayMs);
+    const minLevel = Number(body.minLevel);
+    try {
+      const data = await provider.applyFriendInvites(accountId, items, {
+        delayMs: Number.isFinite(delayMs) ? delayMs : undefined,
+        minLevel: Number.isFinite(minLevel) ? minLevel : 0,
+        allowUnknownLevel: body.allowUnknownLevel === true,
+        // 默认开启：先在本地好友列表里比对，已是好友的不再发申请
+        skipExistingFriends: body.skipExistingFriends !== false,
+      });
+      res.json({ ok: true, data });
+    } catch (error) {
+      sendProviderError(res, error);
+    }
+  });
+
   app.get("/api/friend-blacklist", async (req, res) => {
     const accountId = getAccountOrRespond(req, res, access);
     if (!accountId) return;
