@@ -245,6 +245,14 @@ function createDataProvider(deps) {
         syncFriendsFromGids: (ref, gids) => callWorkerApi(resolveAccountId(ref), 'syncFriendsFromGids', gids, SYNC_TIMEOUT),
         fetchFriendsDogInfo: (ref) => callWorkerApi(resolveAccountId(ref), 'fetchFriendsDogInfo', DOG_INFO_TIMEOUT),
         delFriend: (ref, gid) => callWorkerApi(resolveAccountId(ref), 'delFriend', gid),
+        // 手动批量加好友：items = [{ uid, openid, shareSource, shareKey }]，逐条返回结果
+        // 每条要 Enter 拿令牌再 ApplyFriend，10 条一批约 20-60s，给足超时
+        applyFriendInvites: (ref, items, options) => callWorkerApi(
+            resolveAccountId(ref), 'applyFriendInvites', items, options, { _timeoutMs: 300000 }),
+
+        // 批量读取分享人等级/昵称（Enter → Leave），用于号池按等级筛选；不发好友申请
+        fetchSharerLevels: (ref, items, options) => callWorkerApi(
+            resolveAccountId(ref), 'fetchSharerLevels', items, options, { _timeoutMs: 300000 }),
 
         // ========== 仓库 ==========
         useItem: (ref, itemId, count, uid) => callWorkerApi(resolveAccountId(ref), 'useItem', itemId, count, uid),

@@ -42,7 +42,7 @@ function registerAdminCardRoutes({
   app.post('/api/admin/cards', requireAdminToken, requireAdminRole, (req, res) => {
     try {
       const {
-        description, days, type, durationValue, durationUnit, isPermanent, value, count,
+        description, days, type, durationValue, durationUnit, isPermanent, value, count, vip,
       } = req.body || {};
       const countNum = Math.max(Number.parseInt(count, 10) || 1, 1);
       if (!requireDangerConfirmation(req, res, countNum > 1 ? 'CREATE_CARDS_BATCH' : 'CREATE_CARD')) return;
@@ -60,6 +60,7 @@ function registerAdminCardRoutes({
         isPermanent,
         value,
         count: countNum,
+        vip: vip === true,
         createdBy: req.currentUser?.username || '',
       });
       if (!result.ok) return res.status(400).json(result);

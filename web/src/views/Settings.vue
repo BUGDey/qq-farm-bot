@@ -8,6 +8,7 @@ import RanchSettings from '@/components/settings/RanchSettings.vue'
 import AccountSettingsTab from '@/components/settings/AccountSettingsTab.vue'
 import AutoCodeRefreshCard from '@/components/settings/AutoCodeRefreshCard.vue'
 import ChangePasswordCard from '@/components/settings/ChangePasswordCard.vue'
+import FriendApplyTab from '@/components/settings/FriendApplyTab.vue'
 import OfflineReminderCard from '@/components/settings/OfflineReminderCard.vue'
 import ServerStatusBadge from '@/components/settings/ServerStatusBadge.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -28,14 +29,18 @@ const route = useRoute()
 const isAdminUser = computed(() => userStore.isAdmin)
 /** 管理后台仅超级管理员可见 */
 const isSuperAdminUser = computed(() => userStore.isSuperAdmin)
-type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'my-account' | 'admin-panel'
+type SettingsTabKey = 'account' | 'account-config' | 'notification' | 'friend-apply' | 'my-account' | 'admin-panel'
 
-const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'my-account', 'admin-panel']
+const SETTINGS_TAB_KEYS: SettingsTabKey[] = ['account', 'account-config', 'notification', 'friend-apply', 'my-account', 'admin-panel']
 const LEGACY_SETTINGS_TABS: Record<string, SettingsTabKey> = {
   'strategy': 'account-config',
   'automation': 'account-config',
   'default-plan': 'account-config',
   'user': 'notification',
+  // 旧的「好友」/「邀请」/「批量加好友」都并入「好友申请」页签（链接在管理后台号池导入）
+  'friend': 'friend-apply',
+  'invite': 'friend-apply',
+  'friend-import': 'friend-apply',
   // 系统配置页签已移除：定时刷新重登并入我的账号，连接参数等并入管理后台全局设置
   'system': 'my-account',
   'capture': 'my-account',
@@ -76,6 +81,7 @@ const tabs = [
   { key: 'account', label: '账号管理', icon: 'i-carbon-user-settings' },
   { key: 'account-config', label: '账号设置', icon: 'i-carbon-settings-adjust' },
   { key: 'notification', label: '通知设置', icon: 'i-carbon-notification' },
+  { key: 'friend-apply', label: '好友申请', icon: 'i-carbon-user-follow' },
   { key: 'my-account', label: '我的账号', icon: 'i-carbon-user-avatar' },
   { key: 'admin-panel', label: '管理后台', icon: 'i-carbon-user-admin' },
 ] as const
@@ -535,6 +541,7 @@ onMounted(async () => {
           </section>
         </div>
 
+        <FriendApplyTab v-else-if="activeTab === 'friend-apply'" />
         <div v-else-if="activeTab === 'notification'" class="space-y-4">
           <div class="flex items-center justify-between">
             <div>

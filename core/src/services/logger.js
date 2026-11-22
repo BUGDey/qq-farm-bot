@@ -177,6 +177,80 @@ function ensureFallbackLogDir() {
   return fallbackLogDir;
 }
 
+/** 统一的日志目录（win 控制台输出和落盘日志是同一份内容） */
+function getLogDir() {
+  return process.env.FARM_LOG_DIR
+    ? path.resolve(process.env.FARM_LOG_DIR)
+    : path.join(ensureDataDir(), 'logs');
+}
+
+const RECENT_READ_BYTES = 512 * 1024;
+
+function readTailText(filePath, maxBytes = RECENT_READ_BYTES) {
+  try {
+    const st = fs.statSync(filePath);
+    const size = Math.min(st.size, maxBytes);
+    const start = st.size - size;
+    const fd = fs.openSync(filePath, 'r');
+    const buffer = Buffer.alloc(size);
+    fs.readSync(fd, buffer, 0, size, start);
+    fs.closeSync(fd);
+    let text = buffer.toString('utf8');
+    if (start > 0) {
+      const newline = text.indexOf('\n');
+      if (newline >= 0) text = text.slice(newline + 1);
+    }
+    return text;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * 读取最近的日志行（面板「系统日志」用）。
+ * 直接读落盘的 combined 日志：Windows 下它和控制台面板打印的内容一致，
+ * Linux/Docker 下就是容器日志，两个环境行为一致。
+ */
+function readRecentLogLines(limit = 300) {
+  const max = Math.min(Math.max(Number(limit) || 300, 1), 2000);
+  const logDir = getLogDir();
+  let names = [];
+  try {
+    names = fs.readdirSync(logDir)
+      .filter((name) => /^combined-.*\.log$/.test(name))
+      .map((name) => ({ name, mtime: fs.statSync(path.join(logDir, name)).mtimeMs }))
+      .sort((a, b) => a.mtime - b.mtime)
+      .slice(-2)
+      .map((item) => item.name);
+  } catch {
+    return { lines: [], logDir };
+  }
+
+  const lines = [];
+  for (const name of names) {
+    const text = readTailText(path.join(logDir, name));
+    for (const raw of text.split(/\r?\n/)) {
+      if (!raw.trim()) continue;
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch {}
+      if (parsed && typeof parsed === 'object') {
+        lines.push({
+          ts: parsed.timestamp || parsed.ts || '',
+          level: String(parsed.level || 'info'),
+          module: String(parsed.module || ''),
+          message: String(parsed.message || ''),
+          raw,
+        });
+      } else {
+        lines.push({ ts: '', level: '', module: '', message: raw, raw });
+      }
+    }
+  }
+
+  // 日志按时间升序写盘；保留最后 max 行
+  return { lines: lines.slice(-max), logDir };
+}
+
 /** 追加 fallback 日志到文件 */
 function appendFallbackLog(level, moduleName, message, meta) {
   try {
@@ -329,6 +403,8 @@ function createModuleLogger(name = 'app') {
 
 module.exports = {
   createModuleLogger,
+  getLogDir,
+  readRecentLogLines,
   sanitizeMeta,
   redactString,
   buildHourlyLogFilename,

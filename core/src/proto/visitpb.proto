@@ -30,6 +30,11 @@ enum EnterReason {
 message EnterRequest {
     int64 host_gid = 1;      // 好友的GID
     int32 reason = 2;        // EnterReason 进入原因
+    int32 host_type = 3;     // 抓包: 0
+    int64 share_id = 4;      // 抓包: 0（分享场景带入）
+    string share_open_id = 5; // 分享人 open_id（分享场景）
+    int64 share_cfg_id = 6;  // 抓包: 0（分享渠道 id）
+    string share_key = 7;    // 分享卡片里的 32 位 share_key（reason=5 时必带）
 }
 
 message EnterReply {
@@ -38,6 +43,9 @@ message EnterReply {
     bytes brief_dog_info = 3;                       // 好友当前农场护主犬摘要(抓包: length-delimited)
     bytes nudge_info = 4;                           // 催熟信息(抓包: length-delimited)
     gamepb.weatherpb.WeatherStatus weather = 13;    // 当前农场天气状态
+    // 抓包实证（2026-11-21 00:18, Reqable #334）：顶层 field 10 为好友申请令牌，
+    // 格式 "<64位hex>:<对方gid>"，原样作为 ApplyFriendRequest.apply_token 发回即可
+    string apply_token = 10;
 }
 
 // ============ 离开好友农场 ============

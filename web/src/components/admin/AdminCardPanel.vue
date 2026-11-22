@@ -22,10 +22,11 @@ const showCreateModal = ref(false)
 const createForm = ref({
   description: '',
   type: 'time' as 'time' | 'quota',
-  durationValue: 3,
+  durationValue: 1,
   durationUnit: 'day' as 'day' | 'hour' | 'week' | 'month' | 'year' | 'permanent',
   value: 1,
   isPermanent: false,
+  vip: false,
   count: 1,
 })
 const creating = ref(false)
@@ -66,6 +67,7 @@ async function submitCreate() {
       description: createForm.value.description.trim(),
       type: createForm.value.type,
       count: createForm.value.count,
+      vip: createForm.value.vip,
     }
     if (createForm.value.type === 'quota') {
       payload.value = createForm.value.value
@@ -429,6 +431,10 @@ defineExpose({ load })
             <div>
               <label class="mb-1 block text-xs text-gray-500">生成数量</label>
               <input v-model.number="createForm.count" type="number" min="1" max="200" class="form-input">
+            </div>
+            <div class="sm:col-span-2 flex items-center gap-2">
+              <input id="card-vip" v-model="createForm.vip" type="checkbox" class="accent-primary">
+              <label for="card-vip" class="text-xs text-gray-600 dark:text-gray-300">VIP 权限（核销后账号解锁好友申请）</label>
             </div>
             <template v-if="createForm.type === 'time'">
               <div>

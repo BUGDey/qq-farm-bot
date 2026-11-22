@@ -28,6 +28,7 @@ export interface User {
   email: string
   phone: string
   remark: string
+  vip?: boolean
   accountLimit: number
   subscription: Subscription | null
   /** 兼容旧字段，等价于 subscription */
@@ -49,6 +50,7 @@ export interface Card {
   code: string
   type: CardType
   description: string
+  vip?: boolean
   durationValue: number
   durationUnit: string
   durationMs: number | null

@@ -982,6 +982,31 @@ function createWorkerManager(deps) {
     persistInactiveActivities();
     scheduler.setIntervalTask('inactive_activity_config', WATCHDOG_PING_MS, persistInactiveActivities);
 
+    // 好友号池：每天挑一个空闲的微信账号读一小批等级/犬种（见 services/friend-pool-autoread.js）。
+    // 实际读取在 worker 内执行，会先等自动任务收尾、再暂停好友同步，尽量不打断巡查。
+    const kickFriendPoolAutoRead = () => {
+        try {
+            const { maybeRunDailyAutoRead } = require('../services/friend-pool-autoread');
+            const accountList = (typeof getAccounts === 'function' ? (getAccounts().accounts || []) : [])
+                .map((account) => ({ id: account.id, name: account.name, platform: account.platform }));
+            maybeRunDailyAutoRead({ accounts: accountList, callWorkerApi })
+                .then((result) => {
+                    if (!result) return;
+                    if (result.skipped) {
+                        if (result.reason === '号池资料已齐全') log('好友', '每日自动读取等级：号池资料已齐全，跳过');
+                        return;
+                    }
+                    log('好友', `每日自动读取等级：本轮读取 ${result.read} 条，共用 ${result.accounts.length} 个账号，今日还剩 ${result.remainingToday} 条`);
+                })
+                .catch((error) => log('好友', `每日自动读取等级异常：${error && error.message ? error.message : error}`));
+        } catch (error) {
+            log('好友', `每日自动读取等级异常：${error && error.message ? error.message : error}`);
+        }
+    };
+    // 启动 2 分钟后试一次，之后每 10 分钟轮询：每轮只读几小批，读完当天预算就停
+    scheduler.setTimeoutTask('friend_pool_auto_read_boot', 120000, kickFriendPoolAutoRead);
+    scheduler.setIntervalTask('friend_pool_auto_read', 10 * 60 * 1000, kickFriendPoolAutoRead);
+
     scheduler.setIntervalTask('watchdog_tick', WATCHDOG_PING_MS, () => {
         const now = Date.now();
         for (const [accountId, wrk] of Object.entries(workers)) {

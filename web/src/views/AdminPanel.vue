@@ -3,6 +3,8 @@ import type { LoginLog, Redemption } from '@/stores/user'
 import { onMounted, ref, watch } from 'vue'
 import AdminAnnouncementPanel from '@/components/admin/AdminAnnouncementPanel.vue'
 import AdminCardPanel from '@/components/admin/AdminCardPanel.vue'
+import AdminFriendPoolPanel from '@/components/admin/AdminFriendPoolPanel.vue'
+import AdminSystemLogsPanel from '@/components/admin/AdminSystemLogsPanel.vue'
 import AdminGlobalSettingsPanel from '@/components/admin/AdminGlobalSettingsPanel.vue'
 import AdminMailPanel from '@/components/admin/AdminMailPanel.vue'
 // 插件系统暂时关闭（后端 PLUGIN_SYSTEM_ENABLED=false）：面板与入口整体注释保留，
@@ -15,16 +17,18 @@ import { useUserStore } from '@/stores/user'
 const userStore = useUserStore()
 const toast = useToastStore()
 
-type TabKey = 'users' | 'cards' | 'redemptions' | 'logs' | 'settings' | 'announcement' | 'mail' | 'plugins'
+type TabKey = 'users' | 'cards' | 'redemptions' | 'logs' | 'settings' | 'announcement' | 'mail' | 'friend-pool' | 'system-logs' | 'plugins'
 const tab = ref<TabKey>('users')
 const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'users', label: '用户管理', icon: 'i-carbon-user-multiple' },
   { key: 'cards', label: '卡密管理', icon: 'i-carbon-purchase' },
   { key: 'redemptions', label: '核销流水', icon: 'i-carbon-receipt' },
   { key: 'logs', label: '登录日志', icon: 'i-carbon-document' },
-  { key: 'settings', label: '全局设置', icon: 'i-carbon-settings' },
   { key: 'announcement', label: '公告', icon: 'i-carbon-notification' },
   { key: 'mail', label: '邮件通知', icon: 'i-carbon-send-alt' },
+  { key: 'friend-pool', label: '好友号池', icon: 'i-carbon-data-base' },
+  { key: 'settings', label: '全局设置', icon: 'i-carbon-settings' },
+  { key: 'system-logs', label: '系统日志', icon: 'i-carbon-terminal' },
   // 插件系统暂时关闭：导航入口注释保留（PLUGIN_SYSTEM_ENABLED=false）
   // { key: 'plugins', label: '插件', icon: 'i-carbon-plug' },
 ]
@@ -294,6 +298,8 @@ onMounted(() => {
 
     <AdminAnnouncementPanel v-else-if="tab === 'announcement'" />
     <AdminMailPanel v-else-if="tab === 'mail'" />
+    <AdminFriendPoolPanel v-else-if="tab === 'friend-pool'" />
+    <AdminSystemLogsPanel v-else-if="tab === 'system-logs'" />
     <!-- 插件管理（活动插件 / 素材插件）：插件系统暂时关闭，恢复时取消注释 -->
     <!-- <AdminPluginsPanel v-else-if="tab === 'plugins'" /> -->
   </div>

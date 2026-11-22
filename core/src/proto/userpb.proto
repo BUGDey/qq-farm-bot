@@ -117,6 +117,36 @@ message ReportArkClickReply {
     // 通常为空响应
 }
 
+// ============ 用户设置 ============
+// 抓包实证（2026-11-22，Reqable #3 / #169 / #674 / #1293）：
+// GetUserSettingsReply 顶层 field 1 是设置结构，内层 field 6 = 1 表示
+// 「好友功能 · 点击分享链接可拜访好友」已开启；
+// field 6 为 0/缺省时，VisitService.Enter(reason=5, share_key) 会直接返回
+// code=1002007 未打开拜访好友开关 → 拿不到 apply_token → 无法加好友。
+message UserSettings {
+    int32 field_2 = 2;
+    int32 field_5 = 5;
+    int32 visit_by_share_key = 6;
+}
+
+message GetUserSettingsRequest {
+    // 空请求
+}
+
+message GetUserSettingsReply {
+    UserSettings settings = 1;
+}
+
+// 写设置：抓包实证 SetUserSettings 请求体就是 {"field":6,"value":"1"}，
+// 即只提交要改的那一项（visit_by_share_key = 1 打开拜访好友开关）。
+message SetUserSettingsRequest {
+    int32 visit_by_share_key = 6;
+}
+
+message SetUserSettingsReply {
+    // 空回包
+}
+
 // ============ 服务器推送通知 ============
 
 // 基本信息变化通知 (升级/金币变化等)

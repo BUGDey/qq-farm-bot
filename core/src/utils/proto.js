@@ -276,6 +276,15 @@ async function loadProto() {
     types.VisitLeaveRequest = root.lookupType('gamepb.visitpb.LeaveRequest');
     types.VisitLeaveReply = root.lookupType('gamepb.visitpb.LeaveReply');
     types.BriefDogInfo = root.lookupType('gamepb.visitpb.BriefDogInfo');
+    // 通过分享链接加好友：ApplyFriend 用 Enter 回包的 apply_token
+    types.ApplyFriendRequest = root.lookupType('gamepb.friendpb.ApplyFriendRequest');
+    types.ApplyFriendReply = root.lookupType('gamepb.friendpb.ApplyFriendReply');
+    // 用户设置（好友拜访开关）
+    types.GetUserSettingsRequest = root.lookupType('gamepb.userpb.GetUserSettingsRequest');
+    types.GetUserSettingsReply = root.lookupType('gamepb.userpb.GetUserSettingsReply');
+    types.UserSettings = root.lookupType('gamepb.userpb.UserSettings');
+    types.SetUserSettingsRequest = root.lookupType('gamepb.userpb.SetUserSettingsRequest');
+    types.SetUserSettingsReply = root.lookupType('gamepb.userpb.SetUserSettingsReply');
     types.GetDogInfoRequest = root.lookupType('gamepb.dogpb.GetDogInfoRequest');
     types.GetDogInfoReply = root.lookupType('gamepb.dogpb.GetDogInfoReply');
     types.ClaimSkillGiftsRequest = root.lookupType('gamepb.dogpb.ClaimSkillGiftsRequest');

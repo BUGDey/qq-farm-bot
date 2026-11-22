@@ -116,6 +116,17 @@ message AcceptFriendsReply {
     repeated GameFriend friends = 1;
 }
 
+// --- 通过分享链接主动加好友 ---
+// 抓包实证（2026-11-21 00:18, Reqable #334）：先 VisitService.Enter(reason=5,
+// share_key) 拿回包顶层 field 10 的 apply_token，原样作为 apply_token 发回。
+message ApplyFriendRequest {
+    int64 gid = 1;           // 对方 GID
+    string apply_token = 2;  // VisitService.Enter 回包的 apply_token
+    int32 source = 3;        // 抓包: 0
+}
+
+message ApplyFriendReply {}
+
 // --- 拒绝好友申请 ---
 message RejectFriendsRequest {
     repeated int64 friend_gids = 1;

@@ -67,6 +67,9 @@ const { registerAdminNapcatLoginRoutes } = require("./admin-napcat-login-routes"
 const { createAdminRouteHelpers } = require("./admin-route-helpers");
 const { registerAdminSettingsRoutes } = require("./admin-settings-routes");
 const { registerAdminMailerRoutes } = require("./admin-mailer-routes");
+const { registerAdminFriendPoolRoutes } = require("./admin-friend-pool-routes");
+const { registerAdminAutoImportRoutes } = require("./admin-auto-import-routes");
+const { registerAdminLogRoutes } = require("./admin-log-routes");
 const { registerAdminShopRoutes } = require("./admin-shop-routes");
 const { createAdminSessionManager } = require("./admin-session-manager");
 const { registerAdminSystemRoutes } = require("./admin-system-routes");
@@ -650,6 +653,22 @@ function startAdminServer(dataProvider) {
     app,
     store,
     userStore,
+    requireAdminRole,
+    sendProviderError,
+  });
+  registerAdminFriendPoolRoutes({
+    app,
+    provider,
+    requireAdminRole,
+    sendProviderError,
+  });
+  registerAdminAutoImportRoutes({
+    app,
+    requireAdminRole,
+  });
+
+  registerAdminLogRoutes({
+    app,
     requireAdminRole,
     sendProviderError,
   });

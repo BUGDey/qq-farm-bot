@@ -167,6 +167,7 @@ function registerAdminAuthRoutes({
         session.subscription = result.subscription;
         session.card = result.subscription;
         session.accountLimit = result.accountLimit;
+        session.vip = result.user?.vip === true;
       },
     );
     return res.json({
@@ -218,6 +219,7 @@ function registerAdminAuthRoutes({
           session.subscription = result.subscription;
           session.card = result.subscription;
           session.accountLimit = result.accountLimit;
+          session.vip = result.user?.vip === true;
         },
       );
       return res.json({

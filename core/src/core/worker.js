@@ -2005,6 +2005,12 @@ async function stopBot() {
     loginReady = false;
     accountRunStartedAt = 0;
     friendSyncPaused = false;
+    // 停止时清掉批量加好友的恢复定时器，避免残留暂停态/定时器
+    if (friendSyncResumeTimer) {
+        clearTimeout(friendSyncResumeTimer);
+        friendSyncResumeTimer = null;
+    }
+    batchInviteRunning = false;
 
     stopUnifiedScheduler();
     stopMysteryShopAutoBuyTimer();
@@ -2099,6 +2105,103 @@ const MANUAL_WRITE_METHODS = new Set([
 // 藏品写操作（激活/升星/领奖/展示）由 services/collections 内部串行化，不纳入自动化互斥：
 // 它们不影响农场调度，且单次操作含多次背包/状态核对，放进 30s 手动锁容易误判占用。
 
+// ===== 批量加好友（applyFriendInvites）=====
+// 逐条 Enter 拿令牌再 ApplyFriend，期间需要独占发包：先把正在跑的自动化等收尾。
+
+// 等待其他自动化让出的上限
+const AUTOMATION_BUSY_TIMEOUT_MS = 60000;
+// 前端按 10 条一批提交，批与批之间会恢复一次；留一段宽限期，
+// 避免下一批刚进来又要等一轮农场 tick（宽限期内来新批次会自动续上）。
+const BATCH_INVITE_RESUME_GRACE_MS = 10000;
+let friendSyncResumeTimer = null;
+// 同一时刻只允许一个批量加好友任务，避免两个批次互相抢号池/抢发包
+let batchInviteRunning = false;
+
+function holdFriendSyncPause() {
+    if (friendSyncResumeTimer) {
+        clearTimeout(friendSyncResumeTimer);
+        friendSyncResumeTimer = null;
+    }
+    friendSyncPaused = true;
+}
+
+function scheduleFriendSyncResume(reason = '批量加好友') {
+    if (friendSyncResumeTimer) clearTimeout(friendSyncResumeTimer);
+    friendSyncResumeTimer = setTimeout(() => {
+        friendSyncResumeTimer = null;
+        friendSyncPaused = false;
+        log('系统', `${reason}结束，已恢复自动化进程`, {
+            module: 'system', event: '批量加好友恢复'
+        });
+    }, BATCH_INVITE_RESUME_GRACE_MS);
+    if (friendSyncResumeTimer.unref) friendSyncResumeTimer.unref();
+}
+
+function sleepQuiet(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** 距离最近的「一次性」任务到点还有多少毫秒（interval 心跳类不算，排除 api 超时类） */
+function soonestOneShotTaskMs(horizonMs) {
+    try {
+        const snapshot = getSchedulerRegistrySnapshot();
+        const now = Date.now();
+        let soonest = 0;
+        for (const scheduler of snapshot.schedulers) {
+            for (const task of scheduler.tasks) {
+                if (task.kind !== 'timeout') continue;
+                if (String(task.name).startsWith('api_timeout_')) continue;
+                if (!task.nextRunAt || task.nextRunAt <= now) continue;
+                const delta = task.nextRunAt - now;
+                if (delta > horizonMs) continue;
+                if (!soonest || delta < soonest) soonest = delta;
+            }
+        }
+        return soonest;
+    } catch (error) {
+        return 0;
+    }
+}
+
+/**
+ * 等到真正空闲再动手：没有任务占着账号锁，也不在 settleMs 内撞上一次到点的一次性任务。
+ * 用于自动补读等级这类「不着急、绝不能抢任务」的操作。
+ */
+async function waitForAutomationQuiet({ settleMs = 15000, maxWaitMs = 120000 } = {}) {
+    const startedAt = Date.now();
+    const { isAutomationBusy } = require('../services/automation-lock');
+    while (Date.now() - startedAt < maxWaitMs) {
+        if (isAutomationBusy()) {
+            await sleepQuiet(1000);
+            continue;
+        }
+        const soon = soonestOneShotTaskMs(settleMs);
+        if (soon > 0) {
+            await sleepQuiet(Math.min(soon + 1000, 5000));
+            continue;
+        }
+        // 再安静观察一小段，确认不是刚好在任务间隙里
+        await sleepQuiet(Math.min(settleMs, 5000));
+        if (!isAutomationBusy() && soonestOneShotTaskMs(2000) === 0) {
+            return { quiet: true, waitedMs: Date.now() - startedAt };
+        }
+    }
+    return { quiet: false, waitedMs: Date.now() - startedAt };
+}
+
+/** 等待其他自动化任务释放账号锁（automation-lock 是 worker 内统一的忙判据） */
+async function waitForAutomationIdle(timeoutMs = AUTOMATION_BUSY_TIMEOUT_MS) {
+    const startedAt = Date.now();
+    const { isAutomationBusy } = require('../services/automation-lock');
+    while (isAutomationBusy() && Date.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    return {
+        idle: !isAutomationBusy(),
+        waitedMs: Date.now() - startedAt,
+    };
+}
+
 async function handleApiCall(msg) {
     if (!msg || !MANUAL_WRITE_METHODS.has(String(msg.method || ''))) {
         return handleApiCallInternal(msg);
@@ -2119,9 +2222,56 @@ async function handleApiCallInternal(msg) {
     const { id, method } = msg;
     const session = require('../services/ranch-session').ranchSession;
     const enter = method.startsWith('ranch') ? session.inRanch : session.inFarm;
-    return session.detached(() => enter(
-        () => runWithRequestPriority('foreground', () => handleApiCallInScene(msg)), { manual: true }
-    )).catch(err => sendToMaster({ type: 'api_response', id, result: null, error: err.message, errorDetails: serializeWorkerError(err) }));
+
+    // 批量好友操作（发申请 / 读取等级）：在进入场景租约之前先暂停并等待其他自动化收尾。
+    // 必须放在租约外——若持有农场租约再等，正在跑的自动化反而拿不到租约，
+    // 只会互相卡到超时。
+    const isBatchInvite = method === 'applyFriendInvites' || method === 'fetchSharerLevels';
+    if (isBatchInvite) {
+        if (batchInviteRunning) {
+            sendToMaster({
+                type: 'api_response', id, result: null,
+                error: '批量好友任务正在进行中，请等待当前批次结束'
+            });
+            return;
+        }
+        batchInviteRunning = true;
+        holdFriendSyncPause();
+        log('系统', '批量好友操作开始，已暂停其他自动化进程', {
+            module: 'system', event: '批量好友暂停', method
+        });
+        const { idle, waitedMs } = await waitForAutomationIdle();
+        log('邀请', idle
+            ? `其他自动化已全部让出（等待 ${waitedMs}ms），开始批量好友操作`
+            : `等待自动化收尾超时（${waitedMs}ms），仍开始批量好友操作`, {
+            module: 'friend', event: '批量好友独占', result: idle ? 'idle' : 'timeout'
+        });
+        // 只有「自动补读」触发的读取才等安静窗口；界面上手动点读取要立刻响应
+        const batchArgs = Array.isArray(msg.args) ? msg.args : [];
+        const autoReadCall = method === 'fetchSharerLevels'
+            && batchArgs[1] && typeof batchArgs[1] === 'object' && batchArgs[1].autoRead === true;
+        if (autoReadCall) {
+            const quiet = await waitForAutomationQuiet({ settleMs: 15000, maxWaitMs: 120000 });
+            log('邀请', quiet.quiet
+                ? `已进入空闲窗口（额外等待 ${quiet.waitedMs}ms），开始读取等级`
+                : `安静窗口等待超时（${quiet.waitedMs}ms），仍开始读取等级`, {
+                module: 'friend', event: '读等级空闲窗口', result: quiet.quiet ? 'quiet' : 'timeout'
+            });
+        }
+    }
+
+    try {
+        return await session.detached(() => enter(
+            () => runWithRequestPriority('foreground', () => handleApiCallInScene(msg)), { manual: true }
+        ));
+    } catch (err) {
+        sendToMaster({ type: 'api_response', id, result: null, error: err.message, errorDetails: serializeWorkerError(err) });
+    } finally {
+        if (isBatchInvite) {
+            batchInviteRunning = false;
+            scheduleFriendSyncResume();
+        }
+    }
 }
 
 async function handleApiCallInScene(msg) {
@@ -2197,6 +2347,15 @@ async function handleApiCallInScene(msg) {
                 break;
             case 'delFriend':
                 result = await delFriend(args[0]);
+                break;
+            case 'fetchSharerLevels':
+                // 批量读取分享人等级/昵称（只 Enter → Leave，不发申请），写回号池供筛选
+                result = await require('../services/invite').fetchLevelsForItems(args[0], args[1] || {});
+                break;
+            case 'applyFriendInvites':
+                // 手动批量加好友：逐条 Enter 拿 apply_token 再 ApplyFriend，
+                // 不走 share.txt 轮询；号池状态与每日上限在 services/invite 里维护
+                result = await require('../services/invite').applyInviteList(args[0], args[1] || {});
                 break;
             case 'getSeeds':
                 result = await getAvailableSeeds();

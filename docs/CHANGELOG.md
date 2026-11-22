@@ -44,11 +44,25 @@ flowchart TB
     CA --> CB[2026-11-20 · v2.18.7<br/>账号设置加载与保存优化] --> CC[2026-11-20 · v2.18.8<br/>兑换集市优先级与好友同步修复] --> CD[2026-11-21 · v2.18.9<br/>罐头化肥双开关与牧场物品图标]
     CD --> CE[2026-11-21 · v2.18.10<br/>牧场购买超时与分析周期修正]
     CE --> CF[2026-11-22 · v2.18.11<br/>牧场排行榜与偷取筛选]
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV,AW,AX,AY,AZ,BA,BB,BC,BD,BE,BF,BG,BH,BI,BJ,BK,BL,BM,BN,BO,BP,BQ,BR,BS,BT,BU,BV,BW,BX,BY,BZ,CA,CB,CC,CD,CE,CF seed;
+    CF --> CG[2026-11-23 · v2.18.12<br/>好友号池与自动加好友]
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK,AL,AM,AN,AO,AP,AQ,AR,AS,AT,AU,AV,AW,AX,AY,AZ,BA,BB,BC,BD,BE,BF,BG,BH,BI,BJ,BK,BL,BM,BN,BO,BP,BQ,BR,BS,BT,BU,BV,BW,BX,BY,BZ,CA,CB,CC,CD,CE,CF,CG seed;
 ```
 
 ## 详细记录
 
+### v2.18.12 · 好友号池、好友申请与自动加好友（2026-11-23）
+
+**好友号池**
+- 新增好友号池（`data/friend-pool.json` v2）与后台「好友号池」管理面板：支持批量导入 UID、按 UID 筛选与全选全部结果，条目自动补读等级（按账号 24h 冷却、每批 2 条、worker 空闲执行）。
+- 采集器用账号密码登录面板后按 `name` 自动注册；导入记录展示完整卡片数据并支持一键复制与手动导入，多个采集器可同时接入。
+
+**好友申请与自动化**
+- 微信 / QQ 账号可自动加好友：从分享链接批量读取好友资料，经 `Enter(reason=5, share_key)` 获取 `apply_token` 后调用 `FriendService.ApplyFriend` 发送申请；支持按农场等级与犬种筛选、自动补读等级与拜访状态。
+- 好友拜访开关接入自动化，按错误码区分未开拜访开关、token 过期、今日上限与好友位已满。
+
+**权限与日志**
+- 好友功能接入 VIP 卡密权限网关，非 VIP 返回 `errorType: vip_required`。
+- 后台新增「系统日志」面板，集中查看运行与错误日志。
 ### v2.18.11 · 牧场排行榜、偷取筛选与作物信息补全（2026-11-22）
 
 **牧场排行榜**

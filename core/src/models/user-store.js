@@ -333,6 +333,7 @@ function normalizeUser(raw) {
     accountLimit,
     subscription: normalizeSubscription(input.subscription || input.card, input.username),
     remark: String(input.remark || ''),
+    vip: input.vip === true,
     mustChangePassword: input.mustChangePassword === true,
     createdAt: Number(input.createdAt) || now(),
     updatedAt: Number(input.updatedAt) || Number(input.createdAt) || now(),
@@ -356,6 +357,7 @@ function toPublicUser(user, extra = {}) {
     email: user.email || '',
     phone: user.phone || '',
     remark: user.remark || '',
+    vip: user.vip === true || isElevatedRole(user.role),
     accountLimit: user.accountLimit,
     subscription,
     /** @deprecated 兼容旧字段，等价于 subscription */
@@ -424,6 +426,7 @@ function normalizeCard(raw) {
     code: String(input.code || generateCardCode()).toUpperCase(),
     type,
     description: String(input.description || ''),
+    vip: input.vip === true,
     enabled,
     revoked,
     status,
@@ -786,6 +789,10 @@ function redeemCard(username, code, { operator = '', allowQuota = true, allowTim
     summary = duration.isPermanent ? '永久有效' : `有效期 +${formatDuration(duration)}`;
   }
 
+  if (card.vip === true) {
+    user.vip = true;
+    summary = summary ? `${summary} + VIP` : 'VIP';
+  }
   card.usedBy = user.username;
   card.usedAt = timestamp;
   card.status = CARD_STATUS.USED;
@@ -921,7 +928,7 @@ function registerUser(username, password, cardCode, options = {}) {
 }
 
 /** 管理员直接开号（可不使用卡密，直接指定有效期/额度） */
-function createUserByAdmin({ username, password, role = USER_ROLES.USER, accountLimit, expiresAt, isPermanent, nick, email, phone, remark, operator = '' }) {
+function createUserByAdmin({ username, password, role = USER_ROLES.USER, accountLimit, expiresAt, isPermanent, nick, email, phone, remark, vip = false, operator = '' }) {
   const nameCheck = validateUsername(username);
   if (!nameCheck.ok) return nameCheck;
 
@@ -960,6 +967,7 @@ function createUserByAdmin({ username, password, role = USER_ROLES.USER, account
     email: email || '',
     phone: phone || '',
     remark: remark || '',
+    vip: vip === true,
     accountLimit: isElevatedRole(targetRole)
       ? UNLIMITED
       : (Number.isFinite(Number(accountLimit)) ? toInt(accountLimit, DEFAULT_ACCOUNT_LIMIT) : DEFAULT_ACCOUNT_LIMIT),
@@ -1005,6 +1013,7 @@ function validateUser(username, password, ip = 'unknown') {
       accountLimit: UNLIMITED,
       subscription: normalizeSubscription({ isPermanent: true, source: 'config' }, superName),
       card: normalizeSubscription({ isPermanent: true, source: 'config' }, superName),
+      vip: true,
       mustChangePassword: false,
     };
   }
@@ -1047,6 +1056,7 @@ function validateUser(username, password, ip = 'unknown') {
     accountLimit: publicUser.accountLimit,
     subscription: publicUser.subscription,
     card: publicUser.subscription,
+    vip: publicUser.vip === true,
     mustChangePassword: publicUser.mustChangePassword,
   };
 }
@@ -1232,6 +1242,7 @@ function editUser(username, updates = {}) {
   if (updates.email !== undefined) user.email = String(updates.email || '');
   if (updates.phone !== undefined) user.phone = String(updates.phone || '');
   if (updates.remark !== undefined) user.remark = String(updates.remark || '');
+  if (updates.vip !== undefined) user.vip = updates.vip === true;
   user.updatedAt = timestamp;
 
   saveUsers(users);
@@ -1365,7 +1376,7 @@ function peekCard(code) {
   };
 }
 
-function createCard({ description, type = CARD_TYPES.TIME, days, durationValue, durationUnit, isPermanent, value, count = 1, createdBy = '' }) {
+function createCard({ description, type = CARD_TYPES.TIME, days, durationValue, durationUnit, isPermanent, value, count = 1, createdBy = '', vip = false }) {
   const cardType = type === CARD_TYPES.QUOTA ? CARD_TYPES.QUOTA : CARD_TYPES.TIME;
   const requested = Number(cardType === CARD_TYPES.QUOTA ? value ?? days : durationValue ?? days);
   const permanentRequested = isPermanent === true || requested === -1;
@@ -1389,6 +1400,7 @@ function createCard({ description, type = CARD_TYPES.TIME, days, durationValue, 
       code: generateCardCode(),
       type: cardType,
       description: String(description || '').trim(),
+      vip: vip === true,
       days: requested,
       durationValue: cardType === CARD_TYPES.TIME ? requested : undefined,
       durationUnit,

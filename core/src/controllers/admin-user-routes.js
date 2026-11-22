@@ -60,7 +60,7 @@ function registerAdminUserRoutes({
     try {
       const {
         username, password, role, accountLimit, expiresAt, isPermanent,
-        nick, email, phone, remark,
+        nick, email, phone, remark, vip,
       } = req.body || {};
       if (!username || !password) {
         return res.status(400).json({ ok: false, error: '请提供用户名和密码' });
@@ -102,7 +102,7 @@ function registerAdminUserRoutes({
 
       const {
         newUsername, password, role, accountLimit, expiresAt, isPermanent,
-        enabled, nick, email, phone, remark,
+        enabled, nick, email, phone, remark, vip,
       } = req.body || {};
 
       const targetUser = typeof userStore.getUserByName === 'function'
@@ -142,6 +142,7 @@ function registerAdminUserRoutes({
         email,
         phone,
         remark,
+        vip,
       });
       if (!result.ok) return res.status(400).json(result);
 
@@ -163,6 +164,7 @@ function registerAdminUserRoutes({
           session.card = result.user.subscription;
           session.accountLimit = result.user.accountLimit;
           session.role = result.user.role;
+          session.vip = result.user.vip === true;
         },
       );
       res.json({ ok: true, data: result.user });
@@ -251,6 +253,7 @@ function registerAdminUserRoutes({
           session.subscription = result.subscription;
           session.card = result.subscription;
           session.accountLimit = result.accountLimit;
+          session.vip = result.user?.vip === true;
         },
       );
       adminLogger.warn('管理员代续费', {

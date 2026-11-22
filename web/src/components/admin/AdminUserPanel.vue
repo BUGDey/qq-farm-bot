@@ -30,6 +30,7 @@ const form = ref({
   accountLimit: 2,
   expiresAt: '',
   isPermanent: false,
+  vip: false,
   nick: '',
   remark: '',
 })
@@ -75,6 +76,7 @@ function openCreate() {
     accountLimit: 2,
     expiresAt: '',
     isPermanent: false,
+    vip: false,
     nick: '',
     remark: '',
   }
@@ -93,6 +95,7 @@ function openEdit(user: User) {
       ? new Date(user.subscription.expiresAt).toISOString().slice(0, 16)
       : '',
     isPermanent: user.subscription?.isPermanent === true,
+    vip: user.vip === true,
     nick: user.nick || '',
     remark: user.remark || '',
   }
@@ -128,6 +131,7 @@ async function submitCreateOrEdit() {
       nick: form.value.nick,
       remark: form.value.remark,
       isPermanent: form.value.isPermanent,
+      vip: form.value.vip,
       expiresAt: form.value.isPermanent ? null : (form.value.expiresAt || null),
     }
     const result = modal.value === 'create'
@@ -449,6 +453,8 @@ defineExpose({ load })
             <div class="flex items-center gap-2">
               <input id="user-permanent" v-model="form.isPermanent" type="checkbox" class="accent-primary">
               <label for="user-permanent" class="text-xs text-gray-600 dark:text-gray-300">永久有效</label>
+              <input id="user-vip" v-model="form.vip" type="checkbox" class="accent-primary ml-4">
+              <label for="user-vip" class="text-xs text-gray-600 dark:text-gray-300">VIP 权限（好友申请）</label>
             </div>
             <div v-if="!form.isPermanent">
               <label class="mb-1 block text-xs text-gray-500">到期时间</label>
